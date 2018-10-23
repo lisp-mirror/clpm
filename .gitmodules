@@ -1,0 +1,87 @@
+[submodule "ext/log4cl"]
+	path = ext/log4cl
+	url = https://github.com/sharplispers/log4cl.git
+[submodule "ext/bordeaux-threads"]
+	path = ext/bordeaux-threads
+	url = https://github.com/sionescu/bordeaux-threads.git
+[submodule "ext/alexandria"]
+	path = ext/alexandria
+	url = https://gitlab.common-lisp.net/alexandria/alexandria.git
+[submodule "ext/clon"]
+	path = ext/clon
+	url = https://github.com/didierverna/clon
+[submodule "ext/named-readtables"]
+	path = ext/named-readtables
+	url = https://github.com/melisgl/named-readtables
+[submodule "ext/drakma"]
+	path = ext/drakma
+	url = https://github.com/edicl/drakma.git
+[submodule "ext/chunga"]
+	path = ext/chunga
+	url = https://github.com/edicl/chunga.git
+[submodule "ext/trivial-gray-streams"]
+	path = ext/trivial-gray-streams
+	url = https://github.com/trivial-gray-streams/trivial-gray-streams.git
+[submodule "ext/flexi-streams"]
+	path = ext/flexi-streams
+	url = https://github.com/edicl/flexi-streams.git
+[submodule "ext/cl-ppcre"]
+	path = ext/cl-ppcre
+	url = https://github.com/edicl/cl-ppcre.git
+[submodule "ext/chipz"]
+	path = ext/chipz
+	url = https://github.com/sharplispers/chipz.git
+[submodule "ext/usocket"]
+	path = ext/usocket
+	url = https://github.com/usocket/usocket.git
+[submodule "ext/split-sequence"]
+	path = ext/split-sequence
+	url = https://github.com/sharplispers/split-sequence.git
+[submodule "ext/cl-plus-ssl"]
+	path = ext/cl-plus-ssl
+	url = https://github.com/cl-plus-ssl/cl-plus-ssl.git
+[submodule "ext/cffi"]
+	path = ext/cffi
+	url = https://github.com/cffi/cffi.git
+[submodule "ext/trivial-features"]
+	path = ext/trivial-features
+	url = https://github.com/trivial-features/trivial-features.git
+[submodule "ext/babel"]
+	path = ext/babel
+	url = https://github.com/cl-babel/babel.git
+[submodule "ext/trivial-garbage"]
+	path = ext/trivial-garbage
+	url = https://github.com/trivial-garbage/trivial-garbage.git
+[submodule "ext/osicat"]
+	path = ext/osicat
+	url = https://github.com/osicat/osicat.git
+[submodule "ext/archive"]
+	path = ext/archive
+	url = https://github.com/daewok/archive.git
+[submodule "ext/cl-fad"]
+	path = ext/cl-fad
+	url = https://github.com/edicl/cl-fad.git
+[submodule "ext/anaphora"]
+	path = ext/anaphora
+	url = https://github.com/tokenrove/anaphora
+[submodule "ext/iterate"]
+	path = ext/iterate
+	url = https://gitlab.common-lisp.net/iterate/iterate.git
+[submodule "ext/cl-base64"]
+	path = ext/cl-base64
+	url = http://git.kpe.io/cl-base64.git
+[submodule "ext/puri"]
+	path = ext/puri
+	url = http://git.kpe.io/puri.git
+[submodule "ext/cl-toml"]
+	path = ext/cl-toml
+	url = https://github.com/cxxxr/cl-toml.git
+[submodule "ext/trivial-types"]
+	path = ext/trivial-types
+	url = https://github.com/m2ym/trivial-types.git
+[submodule "ext/esrap"]
+	path = ext/esrap
+	url = https://github.com/scymtym/esrap.git
+[submodule "ext/local-time"]
+	path = ext/local-time
+	url = https://github.com/dlowe-net/local-time.git
