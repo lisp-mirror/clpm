@@ -1,0 +1,6 @@
+image: daewok/sbcl:latest
+
+build:
+  stage: build
+  script:
+    - sbcl --no-sysinit --no-userinit --non-interactive --load build.lisp --eval "(clpm-build:build)"

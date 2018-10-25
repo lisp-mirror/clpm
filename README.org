@@ -1,0 +1,53 @@
+#+TITLE: Common Lisp Package Manager - CLPM
+#+AUTHOR: Eric Timmons
+#+EMAIL: etimmons@mit.edu
+#+OPTIONS: email:t toc:2 num:nil
+
+**WARNING**: This is ALPHA quality. It is being published right now so I can
+start testing it and hammering at it in my normal work flow. There are definite
+bugs and it will eat your code.
+
+* Description
+
+  CLPM is a package manager for Common Lisp. It supports installing either
+  versioned releases of packages or development releases straight from source
+  control. Additionally, it allows versioned dependencies to be specified for
+  individual projects you are hacking on, allowing you to create project
+  specific contexts.
+
+  It consists of two major pieces. First is a CLI program that is responsible
+  for all the heavy lifting of fetching and unpacking releases in the correct
+  place, finding systems, and managing project specific environments. The second
+  is a small client library written in portable Common Lisp that interfaces with
+  ASDF and calls the CLI program as necessary to find and install missing
+  systems.
+
+* Motivation
+
+  CLPM is far from the only package manager available for Common Lisp[fn:1], but
+  it makes very different assumptions and design choices than the other
+  available solutions. We try to point those out in this section.
+
+  + Minimize footprint in client image :: CLPM handles most of the heavy work of
+       parsing source lists, downloading packages, installing packages, and
+       finding installed packages in a separate process. This keeps the size of
+       any image using CLPM small and enables many of the other benefits
+       discussed later.
+  + Use existing libraries where possible :: Because CLPM is never loaded into a
+       client image, there are no issues with version conflicts or
+       incompatibilities between third party libraries used by CLPM and the
+       client image. This means that existing libraries can be leveraged where
+       it makes sense and we don't need to reimplement things inside CLPM itself.
+  + Support HTTPS :: There are Lisp packages that support requests over HTTPS
+                     and we can use them without fear of bloating or causing
+                     issues in the client image.
+  + Support installing multiple package versions :: CLPM supports installing
+       multiple versions of the same package simultaneously. This is an enabling
+       feature for managing project specific dependencies as well as global
+       dependencies.
+  + Enable use of implementation specific features :: Because most of the work
+       is in a separate process, the main CLPM executable can be built using a
+       different Common Lisp implementation than the client that uses CLPM. This
+       means that CLPM can support only a small subset of implementations (and
+       use their specific features) without placing adverse constraints on
+       users.

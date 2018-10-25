@@ -1,0 +1,55 @@
+#+TITLE: CLPM Configuration
+
+CLPM is configured using toml configuration files.
+
+* Configuration Values
+** git
+*** remotes
+    This table contains options for connecting to remote git servers. Each key
+    in the table must be the hostname of the remote server (in all
+    lowercase). The value of each key is a table containing the following
+    values:
+
+    | key      | Type   | value                                                                            |
+    |----------+--------+----------------------------------------------------------------------------------|
+    | type     | String | The type of the remote server                                                    |
+    | method   | String | The preferred method for fetching code. Can be one of "https" (default) or "ssh" |
+    | username | String | The username to use when fetching over https.                                    |
+    | password | String | The password to use when fetching over https.                                    |
+
+** http
+*** headers
+    This table provides a mechanism to specify headers to send to servers when
+    downloading files over HTTP(S). This does *not* work when fetching git repos
+    over HTTP(S), see [[*remotes]] instead.
+
+    Each key in this table is the hostname of a server (in all lowercase) and
+    the values are tables, where each table maps a header name to either a
+    string or another table. If the header name is mapped to a string, that
+    string is sent as the value of the header. If the header name is mapped to
+    another table, the following keys are recognized. Behavior is undefined if
+    both =value= and =exec= are provided.
+
+    | key         | type    | value                                                                        |
+    |-------------+---------+------------------------------------------------------------------------------|
+    | secure-only | Boolean | If true, this header is sent only over HTTPS connections. Defaults to false. |
+    | value       | String  | This value is used as the value of the header.                               |
+    | exec        | String  | Must point to an executable that prints out the value to use to its stdout.  |
+
+    For example, you can use the following to access release tarballs from
+    private projects on gitlab.com using a Personal Access Token.
+
+    #+begin_src conf-toml
+      [http.headers."gitlab.com"]
+      private-token = { exec = "command-that-prints-my-pat" , secure-only = true}
+    #+end_src
+
+** grovel
+*** sandbox
+    This table lets you configure the sandboxing mechanism used when locally
+    determining (groveling for) the dependencies of some ASDF system. Currently
+    accepts the following keys:
+
+    | key    | type   | value                                         |
+    |--------+--------+-----------------------------------------------|
+    | method | string | The sandbox method to use. Defaults to "auto" |
