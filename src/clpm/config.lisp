@@ -37,14 +37,15 @@
   (uiop:xdg-config-pathnames "clpm/"))
 
 (defparameter *default-clpm-config-directories*
-  (append (user-config-directories)
-          (system-config-directories)))
+  (list 'user-config-directories
+        'system-config-directories))
 
-(defvar *clpm-config-directories* *default-clpm-config-directories*)
+(defvar *clpm-config-directories*)
 
 (defun compute-clpm-config-dirs ()
   (let* ((env-dirs (uiop:getenv-absolute-directories "CLPM_CONFIG_DIRS"))
-         (nil-cell (member nil env-dirs)))
+         (nil-cell (member nil env-dirs))
+         (*default-clpm-config-directories* (reduce #'append (mapcar #'funcall *default-clpm-config-directories*))))
     (if env-dirs
         (progn
           (when nil-cell
@@ -66,7 +67,7 @@
 
 (uiop:register-image-restore-hook 'compute-clpm-config-dirs)
 (uiop:register-image-dump-hook (lambda ()
-                                 (setf *clpm-config-directories* *default-clpm-config-directories*)))
+                                 (setf *clpm-config-directories* nil)))
 
 (defun gethashes (hash-table &rest keys)
   (gethashes* hash-table keys))
