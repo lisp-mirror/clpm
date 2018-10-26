@@ -30,6 +30,8 @@ build-musl:
 
 release-glibc:
   stage: deploy
+  variables:
+    GIT_SUBMODULE_STRATEGY: none
   script:
     - mv build-glibc/bin/clpm clpm
   artifacts:
@@ -41,6 +43,8 @@ release-glibc:
 
 release-musl:
   stage: deploy
+  variables:
+    GIT_SUBMODULE_STRATEGY: none
   script:
     - mv build-musl/bin/clpm clpm
   artifacts:
