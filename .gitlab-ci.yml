@@ -1,5 +1,8 @@
 image: daewok/sbcl:debian
 
+variables:
+  GIT_SUBMODULE_STRATEGY: recursive
+
 build:
   stage: build
   script:
