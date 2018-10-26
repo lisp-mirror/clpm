@@ -1,15 +1,51 @@
-image: daewok/sbcl:debian
+image: debian
 
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
 
-build:
+build-glibc:
+  image: daewok/sbcl:debian
   stage: build
   script:
     - apt-get update
-    - apt-get install -y libssl-dev build-essential
+    - apt-get install -y libssl-dev
     - sbcl --no-sysinit --no-userinit --non-interactive --load build.lisp --eval "(clpm-build:build)"
+    - mv build build-glibc
   artifacts:
     paths:
-      - build/bin/clpm
+      - build-glibc/bin/clpm
     expire_in: 2 days
+
+build-musl:
+  image: daewok/sbcl:alpine
+  stage: build
+  script:
+    - apk add openssl-dev
+    - sbcl --no-sysinit --no-userinit --non-interactive --load build.lisp --eval "(clpm-build:build)"
+    - mv build build-musl
+  artifacts:
+    paths:
+      - build-musl/bin/clpm
+    expire_in: 2 days
+
+release-glibc:
+  stage: deploy
+  script:
+    - mv build-glibc/bin/clpm clpm
+  artifacts:
+    name: clpm-${CI_COMMIT_TAG}-linux-gnu
+    paths:
+      - clpm
+  only:
+    - tags
+
+release-musl:
+  stage: deploy
+  script:
+    - mv build-musl/bin/clpm clpm
+  artifacts:
+    name: clpm-${CI_COMMIT_TAG}-linux-musl
+    paths:
+      - clpm
+  only:
+    - tags
