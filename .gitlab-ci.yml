@@ -9,3 +9,7 @@ build:
     - apt-get update
     - apt-get install -y libssl-dev build-essential
     - sbcl --no-sysinit --no-userinit --non-interactive --load build.lisp --eval "(clpm-build:build)"
+  artifacts:
+    paths:
+      - build/bin/clpm
+    expire_in: 2 days
