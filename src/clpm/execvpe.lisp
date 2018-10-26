@@ -2,8 +2,6 @@
     (:use #:cl
           #:alexandria
           #:cffi)
-  (:import-from #:osicat
-                #:environment)
   (:export #:execvpe))
 
 (in-package #:clpm/execvpe)
@@ -14,9 +12,12 @@
   (envp :pointer))
 
 (defun execvpe (file args env &optional augment-env-p)
-  (let ((env (append env (when augment-env-p (environment)))))
+  (let* ((env (mapcar (lambda (c)
+                        (concatenate 'string (car c) "=" (cdr c)))
+                      env))
+         (new-env (append env (when augment-env-p (sb-ext:posix-environ)))))
     (with-foreign-objects ((foreign-args :pointer (+ 2 (length args)))
-                           (foreign-env :pointer (+ 1 (length env))))
+                           (foreign-env :pointer (+ 1 (length new-env))))
 
       ;; pack the args into foreign memory
       (setf (mem-aref foreign-args :pointer 0) (foreign-string-alloc file))
@@ -32,10 +33,10 @@
       ;; pack the environment variables into foreign memory
       (loop
         :for i :upfrom 0
-        :for (var-name . var-value) :in env
+        :for assignment :in new-env
         :do
            (setf (mem-aref foreign-env :pointer i)
-                 (foreign-string-alloc (concatenate 'string var-name "=" var-value))))
-      (setf (mem-aref foreign-env :pointer (length env))
+                 (foreign-string-alloc assignment)))
+      (setf (mem-aref foreign-env :pointer (length new-env))
             (null-pointer))
       (%execvpe file foreign-args foreign-env))))

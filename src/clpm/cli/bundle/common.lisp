@@ -11,8 +11,6 @@
                 #:getopt
                 #:remainder
                 #:help)
-  (:import-from #:osicat
-                #:environment)
   (:export #:*bundle-arguments*
            #:define-bundle-entry))
 
@@ -72,7 +70,13 @@
 (register-command "bundle" 'cli-bundle)
 
 (defun merge-git-auth-config ()
-  (let* ((env (environment))
+  (let* ((env (mapcar (lambda (x)
+                        (let* ((split (uiop:split-string (reverse x)
+                                                         :max 2 :separator '(#\=)))
+                               (name (reverse (second split)))
+                               (value (reverse (first split))))
+                          (cons name value)))
+                      (sb-ext:posix-environ)))
          (git-auth-vars (remove-if-not (curry #'starts-with-subseq "CLPM_BUNDLE_GIT_AUTH_")
                                        env :key #'car))
          (ht (make-hash-table :test 'equal

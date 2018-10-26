@@ -8,9 +8,6 @@
   (:import-from #:uiop
                 #:read-file-form
                 #:with-safe-io-syntax)
-  #-os-windows
-  (:import-from #:osicat
-                #:file-permissions)
   (:export #:ensure-file-fetched
            #:fetch-url))
 
@@ -23,8 +20,11 @@
 
 #-os-windows
 (defun pathname-executable-p (pathname)
-  (intersection '(:user-exec :group-exec :other-exec)
-                (file-permissions pathname)))
+  (let* ((stat (sb-posix:stat pathname))
+         (mode (sb-posix:stat-mode stat)))
+    (or (not (zerop (boole boole-and mode sb-posix:s-ixoth)))
+        (not (zerop (boole boole-and mode sb-posix:s-ixgrp)))
+        (not (zerop (boole boole-and mode sb-posix:s-ixusr))))))
 
 #+os-windows
 (defun pathname-executable-p (pathname)
