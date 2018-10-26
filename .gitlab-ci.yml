@@ -7,5 +7,5 @@ build:
   stage: build
   script:
     - apt-get update
-    - apt-get install libssl-dev
+    - apt-get install -y libssl-dev
     - sbcl --no-sysinit --no-userinit --non-interactive --load build.lisp --eval "(clpm-build:build)"
