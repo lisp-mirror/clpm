@@ -215,56 +215,55 @@ otherwise."
   "Given a search node, return the search node representing its next child or
 nil (if there are no remaining children)."
   ;; First time we're visiting this node. Generate its children.
-  (unless (slot-boundp search-node 'data)
-    (handler-bind
-        ((groveler-dependency-missing
-           (lambda (c)
-             (let* ((missing-system-spec (groveler-dependency-missing/system c))
-                    (missing-req (convert-asd-system-spec-to-req missing-system-spec)))
-               (multiple-value-bind (status satisfying-system-release)
-                   (requirement-state search-node missing-req)
+  (handler-bind
+      ((groveler-dependency-missing
+         (lambda (c)
+           (let* ((missing-system-spec (groveler-dependency-missing/system c))
+                  (missing-req (convert-asd-system-spec-to-req missing-system-spec)))
+             (multiple-value-bind (status satisfying-system-release)
+                 (requirement-state search-node missing-req)
 
-                 (ecase status
-                   (:sat
-                    (unless (release-installed-p (system-release/release satisfying-system-release))
-                      (install-release (system-release/release satisfying-system-release)))
-                    (invoke-restart 'add-asd-and-retry
-                                    (system-release/absolute-asd-pathname satisfying-system-release)))
-                   (:unsat
-                    (return-from next-child nil))
-                   (:unknown
-                    (setf (search-node/data search-node) nil)
-                    (return-from next-child
-                      (values
-                       (aprog1 (copy-search-node search-node)
-                         (push missing-req (search-node/unresolved-reqs it)))
-                       t)))))))))
-
+               (ecase status
+                 (:sat
+                  (unless (release-installed-p (system-release/release satisfying-system-release))
+                    (install-release (system-release/release satisfying-system-release)))
+                  (invoke-restart 'add-asd-and-retry
+                                  (system-release/absolute-asd-pathname satisfying-system-release)))
+                 (:unsat
+                  (return-from next-child nil))
+                 (:unknown
+                  (setf (search-node/data search-node) nil)
+                  (return-from next-child
+                    (values
+                     (aprog1 (copy-search-node search-node)
+                       (push missing-req (search-node/unresolved-reqs it)))
+                     t)))))))))
+    (unless (slot-boundp search-node 'data)
       ;; Look at the first unresolved requirement and resolve it.
       (let* ((this-req (first (search-node/unresolved-reqs search-node)))
              (resolutions (resolve-requirement this-req (search-node/sources search-node))))
-        (setf (search-node/data search-node) resolutions))))
+        (setf (search-node/data search-node) resolutions)))
 
-  ;; While we still have children, generate search nodes for them.
-  (when (search-node/data search-node)
-    (let ((out (copy-search-node search-node)))
-      (destructuring-bind (release . system-releases)
-          (pop (search-node/data search-node))
-        (declare (ignore release))
-        ;; Pop off this satisfied requirement
-        (pop (search-node/unresolved-reqs out))
-        ;; Add all activated system releases.
-        (setf (search-node/activated-system-releases out)
-              (append
-               system-releases
-               (search-node/activated-system-releases out)))
+    ;; While we still have children, generate search nodes for them.
+    (when (search-node/data search-node)
+      (let ((out (copy-search-node search-node)))
+        (destructuring-bind (release . system-releases)
+            (pop (search-node/data search-node))
+          (declare (ignore release))
+          ;; Pop off this satisfied requirement
+          (pop (search-node/unresolved-reqs out))
+          ;; Add all activated system releases.
+          (setf (search-node/activated-system-releases out)
+                (append
+                 system-releases
+                 (search-node/activated-system-releases out)))
 
-        ;; Add the unresolved requirements to the new search node.
-        (setf (search-node/unresolved-reqs out)
-              (append (apply #'append (mapcar #'system-release/requirements system-releases))
-                      (search-node/unresolved-reqs out)))
-        ;; Cleanup the search node and return it
-        (cleanup-search-node! out)))))
+          ;; Add the unresolved requirements to the new search node.
+          (setf (search-node/unresolved-reqs out)
+                (append (apply #'append (mapcar #'system-release/requirements system-releases))
+                        (search-node/unresolved-reqs out)))
+          ;; Cleanup the search node and return it
+          (cleanup-search-node! out))))))
 
 
 ;; * resolve all requirements
