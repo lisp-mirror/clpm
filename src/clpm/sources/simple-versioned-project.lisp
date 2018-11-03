@@ -15,6 +15,6 @@
 
 (defmethod release-> ((release-1 simple-versioned-release)
                       (release-2 simple-versioned-release))
-  (assert (eql (release/project release-1) (release/project release-2)))
+  ;;(assert (eql (release/project release-1) (release/project release-2)))
   (string> (release/version release-1)
            (release/version release-2)))
