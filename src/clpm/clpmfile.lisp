@@ -168,6 +168,14 @@
                                                    (second version))))))
     (push req (clpmfile/user-requirements clpmfile))))
 
+(defun parse-system-statement (clpmfile name &key source)
+  (push (make-instance 'system-requirement
+                       :name (string-downcase (string name))
+                       :source (when source
+                                 (find-source-or-error (clpmfile/user-global-sources clpmfile)
+                                                       source)))
+        (clpmfile/user-requirements clpmfile)))
+
 (defun parse-gitlab-statement (clpmfile name
                                &key (host "gitlab.com") repo branch commit tag systems)
   (let ((source (get-git-source :gitlab host)))
@@ -233,6 +241,8 @@
        (apply #'parse-source-statement clpmfile args))
       (:gitlab
        (apply #'parse-gitlab-statement clpmfile args))
+      (:system
+       (apply #'parse-system-statement clpmfile args))
       (:req
        (apply #'parse-req-statement clpmfile args))
       (:asd
