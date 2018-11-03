@@ -532,7 +532,7 @@ include it."
       (uiop:with-current-directory (project-cache)
         (apply
          #'uiop:run-program
-         `(,@prefix "fetch" "--tags" "--prune" ,uri-string)
+         `(,@prefix "fetch" "--tags" "--prune" ,uri-string "+refs/*:refs/*")
          :input :interactive
          :output :interactive
          :error-output :interactive
