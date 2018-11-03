@@ -342,9 +342,9 @@
 
       (cond
         ((typep release 'fs-release)
-         (assert (length= 1 system-files-in-release))
-         (collect `(:local-asd
-                    :path ,(system-file/asd-enough-namestring (first system-files-in-release)))))
+         (dolist (file system-files-in-release)
+           (collect `(:local-asd
+                      :path ,(system-file/asd-enough-namestring file)))))
         ((typep release 'git-release)
          (let ((version (release/version release))
                (source (release/source release)))
