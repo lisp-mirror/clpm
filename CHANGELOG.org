@@ -1,5 +1,8 @@
 #+TITLE: CLPM Changelog
 
+* v0.0.3 - 2018-12-02
+  Get git auth info from environment variables for bundle operations even if the
+  local bundle config file is missing.
 * v0.0.2 - 2018-12-02
   Bug fixes and easing some requirements on release->.
 * v0.0.1 - 2018-10-13
