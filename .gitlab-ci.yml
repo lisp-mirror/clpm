@@ -5,12 +5,14 @@ variables:
 
 build-glibc:
   image:
-    name: daewok/sbcl:debian
+    name: daewok/sbcl:1.4.13-debian-build
     entrypoint: [""]
   stage: build
   script:
     - apt-get update
     - apt-get install -y libssl-dev
+    - echo "(lambda (list) (pushnew :sb-core-compression list) list)" > /usr/local/src/sbcl-${SBCL_VERSION}/customize-target-features.lisp
+    - rebuild-sbcl
     - sbcl --no-sysinit --no-userinit --non-interactive --load build.lisp --eval "(clpm-build:build)"
     - mv build build-glibc
   artifacts:
@@ -20,11 +22,13 @@ build-glibc:
 
 build-musl:
   image:
-    name: daewok/sbcl:alpine
+    name: daewok/sbcl:1.4.13-alpine-build
     entrypoint: [""]
   stage: build
   script:
     - apk add openssl-dev
+    - echo "(lambda (list) (pushnew :sb-core-compression list) list)" > /usr/local/src/sbcl-${SBCL_VERSION}/customize-target-features.lisp
+    - rebuild-sbcl
     - sbcl --no-sysinit --no-userinit --non-interactive --load build.lisp --eval "(clpm-build:build)"
     - mv build build-musl
   artifacts:
