@@ -114,8 +114,8 @@
          (process-common-arguments)
          (let ((local-config (merge-pathnames ".clpm/bundle.toml"
                                               (uiop:getcwd))))
+           (merge-git-auth-config)
            (when (probe-file local-config)
-             (merge-git-auth-config)
              (merge-file-into-config local-config)))
          (unless (progn ,@body)
            (uiop:quit 1)))
