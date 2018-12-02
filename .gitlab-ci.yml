@@ -4,7 +4,9 @@ variables:
   GIT_SUBMODULE_STRATEGY: recursive
 
 build-glibc:
-  image: daewok/sbcl:debian
+  image:
+    name: daewok/sbcl:debian
+    entrypoint: [""]
   stage: build
   script:
     - apt-get update
@@ -17,7 +19,9 @@ build-glibc:
     expire_in: 2 days
 
 build-musl:
-  image: daewok/sbcl:alpine
+  image:
+    name: daewok/sbcl:alpine
+    entrypoint: [""]
   stage: build
   script:
     - apk add openssl-dev
