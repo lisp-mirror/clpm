@@ -1,4 +1,6 @@
 #+TITLE: CLPM Changelog
 
+* v0.0.2 - 2018-12-02
+  Bug fixes and easing some requirements on release->.
 * v0.0.1 - 2018-10-13
   Initial release.
