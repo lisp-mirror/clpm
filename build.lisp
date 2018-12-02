@@ -108,7 +108,7 @@
              (uiop:read-file-form ,(merge-pathnames "version.sexp" clpm-deps-root)))
 
        (defmethod asdf:perform ((cl-user::o asdf:image-op) (cl-user::c asdf:system))
-         (uiop:dump-image (asdf:output-file cl-user::o cl-user::c) :executable (typep cl-user::o 'asdf:program-op) :compression t))
+         (uiop:dump-image (asdf:output-file cl-user::o cl-user::c) :executable (typep cl-user::o 'asdf:program-op) #+:sb-core-compression ,@(list :compression t)))
        ;; (uiop:register-image-restore-hook
        ;;  (lambda ()
        ;;    (eval `(trace ,(uiop:find-symbol* :filter-requirements :clpm/resolve))))
