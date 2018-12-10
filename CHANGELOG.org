@@ -1,5 +1,7 @@
 #+TITLE: CLPM Changelog
 
+* v0.0.4 - 2018-12-10
+  Allow http for a gitlab method.
 * v0.0.3 - 2018-12-02
   Get git auth info from environment variables for bundle operations even if the
   local bundle config file is missing.

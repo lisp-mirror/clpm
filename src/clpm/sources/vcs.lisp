@@ -265,6 +265,12 @@ hostname or NIL."
                          "https://"
                          (source/host source)
                          "/"
+                         path-with.git))
+           ("http"
+            (concatenate 'string
+                         "http://"
+                         (source/host source)
+                         "/"
                          path-with.git))))))))
 
 (defun vcs-project/cache-directory (project)
