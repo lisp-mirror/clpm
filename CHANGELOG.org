@@ -1,5 +1,7 @@
 #+TITLE: CLPM Changelog
 
+* v0.0.5 - 2018-12-10
+  Allow specifying a port for http.
 * v0.0.4 - 2018-12-10
   Allow http for a gitlab method.
 * v0.0.3 - 2018-12-02

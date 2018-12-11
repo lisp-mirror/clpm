@@ -248,6 +248,8 @@ hostname or NIL."
               (method (if remote-config
                           (gethash "method" remote-config "https")
                           "https"))
+              (port (when remote-config
+                      (gethash "port" remote-config nil)))
               (path (vcs-project/path project))
               (path-with.git (if (not (ends-with-subseq ".git" path))
                                  (concatenate 'string path ".git")
@@ -270,6 +272,8 @@ hostname or NIL."
             (concatenate 'string
                          "http://"
                          (source/host source)
+                         (when port
+                           (format nil ":~A" port))
                          "/"
                          path-with.git))))))))
 
