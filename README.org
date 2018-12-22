@@ -51,3 +51,7 @@ bugs and it will eat your code.
        means that CLPM can support only a small subset of implementations (and
        use their specific features) without placing adverse constraints on
        users.
+
+* Footnotes
+
+[fn:1] See, for example: [[https://www.quicklisp.org/beta/][Quicklisp]], [[https://github.com/fukamachi/qlot/][Qlot]], and [[https://github.com/CodyReichert/qi][Qi]].
