@@ -17,10 +17,11 @@ bugs and it will eat your code.
 
   It consists of two major pieces. First is a CLI program that is responsible
   for all the heavy lifting of fetching and unpacking releases in the correct
-  place, finding systems, and managing project specific environments. The second
-  is a small client library written in portable Common Lisp that interfaces with
-  ASDF and calls the CLI program as necessary to find and install missing
-  systems.
+  place, finding systems, and managing project specific environments. This piece
+  is generally referred to as the CLPM core. The second is a small client
+  library written in portable Common Lisp that interfaces with ASDF and calls
+  the CLI program as necessary to find and install missing systems. This piece
+  is generally referred to as the CLPM client.
 
 * Motivation
 
@@ -30,14 +31,15 @@ bugs and it will eat your code.
 
   + Minimize footprint in client image :: CLPM handles most of the heavy work of
        parsing source lists, downloading packages, installing packages, and
-       finding installed packages in a separate process. This keeps the size of
-       any image using CLPM small and enables many of the other benefits
-       discussed later.
-  + Use existing libraries where possible :: Because CLPM is never loaded into a
-       client image, there are no issues with version conflicts or
+       finding installed packages in a separate process (CLPM core). This keeps
+       the size of any image using CLPM small and enables many of the other
+       benefits discussed later.
+  + Use existing libraries where possible :: Because CLPM core is never loaded
+       into a client image, there are no issues with version conflicts or
        incompatibilities between third party libraries used by CLPM and the
        client image. This means that existing libraries can be leveraged where
-       it makes sense and we don't need to reimplement things inside CLPM itself.
+       it makes sense and we don't need to reimplement things inside CLPM
+       itself.
   + Support HTTPS :: There are Lisp packages that support requests over HTTPS
                      and we can use them without fear of bloating or causing
                      issues in the client image.
@@ -46,11 +48,15 @@ bugs and it will eat your code.
        feature for managing project specific dependencies as well as global
        dependencies.
   + Enable use of implementation specific features :: Because most of the work
-       is in a separate process, the main CLPM executable can be built using a
+       is in a separate process, the core CLPM executable can be built using a
        different Common Lisp implementation than the client that uses CLPM. This
        means that CLPM can support only a small subset of implementations (and
        use their specific features) without placing adverse constraints on
        users.
+
+* Documentation
+
+  For more documentation on CLPM, start at [[file:doc/overview.org][overview.org]].
 
 * Footnotes
 
