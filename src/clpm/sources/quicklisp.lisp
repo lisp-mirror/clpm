@@ -3,7 +3,7 @@
           #:alexandria
           #:anaphora
           #:clpm/cache
-          #:clpm/fetch
+          #:clpm/http-client
           #:clpm/requirement
           #:clpm/sources/defs
           #:clpm/sources/simple-versioned-project

@@ -14,7 +14,7 @@
           #:clpm/config
           #:clpm/data
           #:clpm/deps
-          #:clpm/fetch
+          #:clpm/http-client
           #:clpm/requirement
           #:clpm/sources/defs
           #:clpm/sources/semantic-versioned-project

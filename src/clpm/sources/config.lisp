@@ -4,7 +4,7 @@
           #:clpm/cache
           #:clpm/config
           #:clpm/data
-          #:clpm/fetch
+          #:clpm/http-client
           #:clpm/sources/defs
           #:clpm/sources/quicklisp
           #:clpm/utils)

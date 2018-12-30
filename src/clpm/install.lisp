@@ -4,7 +4,7 @@
           #:clpm/archives
           #:clpm/cache
           #:clpm/data
-          #:clpm/fetch
+          #:clpm/http-client
           #:clpm/log
           #:clpm/source
           #:clpm/sources/vcs)
