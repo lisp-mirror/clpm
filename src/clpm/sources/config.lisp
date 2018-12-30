@@ -6,7 +6,8 @@
           #:clpm/data
           #:clpm/fetch
           #:clpm/sources/defs
-          #:clpm/sources/quicklisp)
+          #:clpm/sources/quicklisp
+          #:clpm/utils)
   (:import-from #:uiop
                 #:read-file-form
                 #:with-safe-io-syntax)

@@ -7,6 +7,7 @@
           #:clpm/requirement
           #:clpm/sources/defs
           #:clpm/sources/simple-versioned-project
+          #:clpm/utils
           #:clpm/version-strings
           #:puri
           #:split-sequence)

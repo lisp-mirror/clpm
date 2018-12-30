@@ -1,6 +1,8 @@
 (uiop:define-package #:clpm/utils
-    (:use #:cl)
-  (:export #:run-program-augment-env-args))
+    (:use #:cl
+          #:puri)
+  (:export #:run-program-augment-env-args
+           #:uri-to-string))
 
 (in-package #:clpm/utils)
 
@@ -14,3 +16,8 @@ process."
                      (sb-ext:posix-environ))))
     #-sbcl (error "not implemented")
     (list :environment env)))
+
+(defun uri-to-string (uri)
+  "Convert a puri URI to a string."
+  (with-output-to-string (s)
+    (render-uri uri s)))

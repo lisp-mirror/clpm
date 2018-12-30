@@ -74,7 +74,6 @@
            #:system-version
            #:tarball-release
            #:tarball-release/urls
-           #:uri-to-string
            #:urls))
 
 (in-package #:clpm/sources/defs)
@@ -396,8 +395,3 @@ system-release-2."))
                      (uri-host uri)
                      (split-sequence #\/ (uri-path uri)
                                      :remove-empty-subseqs t))))
-
-(defun uri-to-string (uri)
-  "Convert a puri URI to a string."
-  (with-output-to-string (s)
-    (render-uri uri s)))
