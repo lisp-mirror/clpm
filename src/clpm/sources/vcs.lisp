@@ -614,7 +614,7 @@ include it."
           (setf archive-proc (uiop:launch-program `("git" "archive"
                                                           ,(git-release/commit release))
                                                   :output :stream)))
-        (unarchive :tar-stream (uiop:process-info-output archive-proc)
+        (unarchive 'tar-archive (uiop:process-info-output archive-proc)
                    install-root)
         (uiop:wait-process archive-proc)))))
 

@@ -110,7 +110,8 @@
         (with-open-file (archive-stream archive-pathname
                                         :direction :output
                                         :element-type '(unsigned-byte 8))
-          (unarchive t archive-stream (uiop:pathname-parent-directory-pathname install-root)))))
+          (unarchive 'gzipped-tar-archive
+                     archive-stream (uiop:pathname-parent-directory-pathname install-root)))))
     (when activate-globally
       (activate-release-globally! release))))
 

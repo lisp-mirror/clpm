@@ -18,8 +18,7 @@
                 #:entry-symbolic-link-p
                 #:mtime
                 #:name
-                #:open-archive
-                #:tar-archive)
+                #:open-archive)
   (:import-from #:sb-posix
                 #:symlink
                 #:utimes))
@@ -39,22 +38,16 @@
   #-:os-windows
   (utimes pathname time time))
 
-(defmethod unarchive ((archive-type t) archive-stream destination-pathname)
-  (let (tar-stream
-        archive)
-    (setf tar-stream (chipz:make-decompressing-stream 'chipz:gzip archive-stream))
-    (unwind-protect
-         (let ((*default-pathname-defaults* (pathname destination-pathname)))
-           (setf archive (open-archive 'tar-archive tar-stream))
-           (archive::extract-files-from-archive archive
-                                                (lambda (name)
-                                                  (not (null (pathname-directory name))))))
-      (close-archive archive))))
+(defmethod unarchive ((archive-type gzipped-tar-archive) archive-stream destination-pathname)
+  (call-next-method archive-type (chipz:make-decompressing-stream 'chipz:gzip archive-stream)
+                    destination-pathname))
 
-(defmethod unarchive ((archive-type (eql :tar-stream)) archive-stream destination-pathname)
+(defmethod unarchive ((archive-type tar-archive) archive-stream destination-pathname)
   (let (archive)
     (unwind-protect
          (let ((*default-pathname-defaults* (pathname destination-pathname)))
-           (setf archive (open-archive 'tar-archive (make-flexi-stream archive-stream)))
-           (archive::extract-files-from-archive archive))
+           (setf archive (open-archive 'archive:tar-archive (make-flexi-stream archive-stream)))
+           (archive::extract-files-from-archive archive
+                                                (lambda (name)
+                                                  (not (null (pathname-directory name))))))
       (close-archive archive))))
