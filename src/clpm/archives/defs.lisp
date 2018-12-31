@@ -4,4 +4,4 @@
 
 (in-package #:clpm/archives/defs)
 
-(defgeneric unarchive (archive-type archive-pathname destination-pathname))
+(defgeneric unarchive (archive-type archive-stream destination-pathname))

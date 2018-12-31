@@ -107,7 +107,10 @@
     (unless (uiop:probe-file* install-root)
       (let ((archive-pathname (fetch-release release)))
         (log:debug "Package distfiles located at ~A" archive-pathname)
-        (unarchive t archive-pathname (uiop:pathname-parent-directory-pathname install-root))))
+        (with-open-file (archive-stream archive-pathname
+                                        :direction :output
+                                        :element-type '(unsigned-byte 8))
+          (unarchive t archive-stream (uiop:pathname-parent-directory-pathname install-root)))))
     (when activate-globally
       (activate-release-globally! release))))
 

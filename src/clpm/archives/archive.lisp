@@ -39,19 +39,17 @@
   #-:os-windows
   (utimes pathname time time))
 
-(defmethod unarchive ((archive-type t) archive-pathname destination-pathname)
+(defmethod unarchive ((archive-type t) archive-stream destination-pathname)
   (let (tar-stream
         archive)
-    (with-open-file (gzip-stream archive-pathname
-                                 :element-type '(unsigned-byte 8))
-      (setf tar-stream (chipz:make-decompressing-stream 'chipz:gzip gzip-stream))
-      (unwind-protect
-           (let ((*default-pathname-defaults* (pathname destination-pathname)))
-             (setf archive (open-archive 'tar-archive tar-stream))
-             (archive::extract-files-from-archive archive
-                                                  (lambda (name)
-                                                    (not (null (pathname-directory name))))))
-        (close-archive archive)))))
+    (setf tar-stream (chipz:make-decompressing-stream 'chipz:gzip archive-stream))
+    (unwind-protect
+         (let ((*default-pathname-defaults* (pathname destination-pathname)))
+           (setf archive (open-archive 'tar-archive tar-stream))
+           (archive::extract-files-from-archive archive
+                                                (lambda (name)
+                                                  (not (null (pathname-directory name))))))
+      (close-archive archive))))
 
 (defmethod unarchive ((archive-type (eql :tar-stream)) archive-stream destination-pathname)
   (let (archive)
