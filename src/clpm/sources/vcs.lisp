@@ -225,15 +225,15 @@ hostname or NIL."
     :accessor vcs-project/releases-by-spec)))
 
 (defun find-remote-config (hostname)
-  (config-value "git" "remotes" (string-downcase hostname)))
+  (config-value :git :remotes (string-downcase hostname)))
 
 (defun git-project/git-credentials (project)
   (let* ((creds nil)
          (source (project/source project))
          (remote-config (find-remote-config (source/host source))))
     (when remote-config
-      (let ((username (gethash "username" remote-config))
-            (password (gethash "password" remote-config)))
+      (let ((username (gethash :username remote-config))
+            (password (gethash :password remote-config)))
         (when username
           (push (cons :username username) creds))
         (when password
@@ -246,10 +246,10 @@ hostname or NIL."
       (gitlab-source
        (let* ((remote-config (find-remote-config (source/host source)))
               (method (if remote-config
-                          (gethash "method" remote-config "https")
+                          (gethash :method remote-config "https")
                           "https"))
               (port (when remote-config
-                      (gethash "port" remote-config nil)))
+                      (gethash :port remote-config nil)))
               (path (vcs-project/path project))
               (path-with.git (if (not (ends-with-subseq ".git" path))
                                  (concatenate 'string path ".git")

@@ -40,7 +40,7 @@
 (define-config-entry default (*synopsis*)
   ;; Unpack the command line arguments.
   (let* ((force-p (getopt :long-name "force"))
-         (sources.conf (clpm-config '("sources.conf") :direction :output)))
+         (sources.conf (clpm-config-pathname '("sources.conf") :direction :output)))
     (log:info "Writing a default sources.conf file to ~A" sources.conf)
     (with-open-file (s sources.conf :direction :output
                                     :if-exists (if force-p

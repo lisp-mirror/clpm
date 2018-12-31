@@ -18,7 +18,7 @@
 
 (defun sources-config-pathname ()
   "Return the pathname to the sources.conf file containing the list of sources."
-  (clpm-config '("sources.conf")))
+  (clpm-config-pathname '("sources.conf")))
 
 (defun sources-config-form ()
   "Read the form from SOURCES-CONFIG-PATHNAME."
@@ -136,13 +136,8 @@ and change its class."
            (new-args (loop
                        :for key :in trimmed-args :by #'cddr
                        :for value :in (rest trimmed-args) :by #'cddr
-                       :appending (list key (case value
-                                              (cl-toml:true
-                                               t)
-                                              (cl-toml:false
-                                               nil)
-                                              (t
-                                               value)))))
+                       :collect key
+                       :collect value))
            (source
              (if type
                  (apply #'make-instance (resolve-type (make-keyword (string-upcase type)))
@@ -156,19 +151,11 @@ and change its class."
       (resolve-raw-source! source t)
       source)))
 
-(defun table-to-plist (table)
-  (let ((out nil))
-    (maphash (lambda (k v)
-               (push v out)
-               (push (make-keyword (string-upcase k)) out))
-             table)
-    out))
-
 (defun load-sources ()
-  (let ((sources-table (config-value "sources"))
+  (let ((sources-table (config-value :sources))
         (source-forms nil))
     (maphash (lambda (k v)
-               (push (cons k (table-to-plist v)) source-forms))
+               (push (cons k (hash-table-plist v)) source-forms))
              sources-table)
     (mapcar #'load-source-from-form source-forms)))
 

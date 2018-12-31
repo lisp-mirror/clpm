@@ -1,32 +1,94 @@
 (uiop:define-package #:clpm/config
     (:use #:cl
-          #:alexandria)
-  (:import-from #:cl-toml
-                #:false
-                #:true)
+          #:alexandria
+          #:iterate)
   (:export #:*clpm-config-directories*
-           #:clpm-config
+           #:clpm-config-pathname
            #:config-value
-           #:false
            #:merge-file-into-config
            #:merge-ht-into-config
-           #:print-config
-           #:true))
+           #:print-config))
 
 (in-package #:clpm/config)
 
+(uiop:define-package #:clpm-user-config
+    (:use #:cl)
+  (:import-from #:clpm/config
+                #:clpm-config))
+
 (defparameter *default-config*
-  (alist-hash-table
-   `(("grovel" . ,(alist-hash-table
-                   `(("sandbox" . ,(alist-hash-table
-                                    `(("method" . "auto"))
-                                    :test 'equal)))
-                   :test 'equal)))
-   :test 'equal)
+  `(:grovel
+    (:sandbox
+     (:method :auto)))
   "Default configuration of clpm")
 
-(defvar *config* nil
+(defvar *config* (make-hash-table :test 'equalp)
   "Active configuration. Computed at program execution time.")
+
+(defvar *inner-config* nil)
+
+
+;; * Parsing configs
+
+(defun names-path-p (path-1 path-2)
+  (or (equal path-1 path-2)
+      (and (eql '* (first path-2))
+           (names-path-p (rest path-1)
+                         (rest path-2)))))
+
+(defun path-table-p (path)
+  (switch (path :test #'names-path-p)
+    ('(:git)
+      t)
+    ('(:remotes :git)
+      t)
+    ('(* :remotes :git)
+      t)
+    ('(:http)
+      t)
+    ('(:headers :http)
+      t)
+    ('(* :headers :http)
+      t)
+    ('(* * :headers :http)
+      t)
+    ('(:grovel)
+      t)
+    ('(:sandbox :grovel)
+      t)
+    ('(:sources)
+      t)
+    ('(* :sources)
+      t)))
+
+(defun merge-tables (&rest tables)
+  (let ((out (make-hash-table :test 'equalp)))
+    (iter
+      (for table :in (reverse tables))
+      (setf out (merge-hts table out)))
+    out))
+
+(defun parse-table (path table)
+  (let ((out (make-hash-table :test 'equalp)))
+    (iter
+      (for (key value) :on table :by #'cddr)
+      (for new-path := (list* key path))
+      (for value-table-p := (path-table-p new-path))
+      (if value-table-p
+          (setf (gethash key out) (parse-table new-path value))
+          (setf (gethash key out) value)))
+    out))
+
+(defmacro clpm-config (&rest directives &key &allow-other-keys)
+  `(setf *inner-config*
+         (merge-tables ,@(iter
+                           (for (key value) :on (append directives *default-config*) :by #'cddr)
+                           (for table := (gensym))
+                           (collect
+                               `(let ((,table (make-hash-table :test 'equalp)))
+                                  (setf (gethash ,key ,table)
+                                        (parse-table (list ,key) ',value))
+                                  ,table))))))
 
 
 
@@ -57,7 +119,7 @@
           (setf *clpm-config-directories* env-dirs))
         (setf *clpm-config-directories* *default-clpm-config-directories*))))
 
-(defun clpm-config (x &key (direction :input) ensure-directory)
+(defun clpm-config-pathname (x &key (direction :input) ensure-directory)
   (let ((files (mapcar (lambda (defaults)
                          (uiop:resolve-absolute-location (list* defaults x)
                                                          :ensure-directory ensure-directory))
@@ -130,21 +192,30 @@
   (setf *config* (merge-hts new-ht *config*)))
 
 (defun merge-file-into-config (pathname)
-  (let ((config-ht (cl-toml:parse-file pathname :array-as :list)))
-    (merge-ht-into-config config-ht)))
+  (let ((*package* (find-package :clpm-user-config))
+        (*inner-config* nil))
+    (load pathname)
+    (when *inner-config*
+      (merge-ht-into-config *inner-config*))))
 
 (defun load-global-config ()
-  (let* ((config-file (clpm-config '("clpm.toml"))))
-    (setf *config* (copy-hash-table *default-config*))
-    (when config-file
-      (merge-file-into-config config-file))
+  (let* ((config-file (clpm-config-pathname '("clpm.conf"))))
+    (merge-file-into-config config-file)
     *config*))
 
 (defun clear-global-config ()
-  (setf *config* nil))
+  (setf *config* (make-hash-table :test 'equalp)))
+
+(defun flatten-hts (ht)
+  (iter
+    (for (key value) :on (hash-table-plist ht) :by #'cddr)
+    (collect key)
+    (if (hash-table-p value)
+        (collect (flatten-hts value))
+        (collect value))))
 
 (defun print-config (stream)
-  (cl-toml:encode *config* stream))
+  (format stream "~S~%" (flatten-hts *config*)))
 
 (uiop:register-clear-configuration-hook 'clear-global-config)
 (uiop:register-image-restore-hook 'load-global-config)

@@ -46,7 +46,7 @@
 
 (defun get-additional-headers-for-hostname (hostname scheme)
   ;; Read the header file if it exists.
-  (let ((header-pathname (clpm-config '("headers.conf")))
+  (let ((header-pathname (clpm-config-pathname '("headers.conf")))
         (out nil))
     (when header-pathname
       (let* ((host-alist (with-safe-io-syntax ()

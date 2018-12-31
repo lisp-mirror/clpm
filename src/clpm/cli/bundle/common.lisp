@@ -112,7 +112,7 @@
                                        ,args)
                        :synopsis ,synopsis)
          (process-common-arguments)
-         (let ((local-config (merge-pathnames ".clpm/bundle.toml"
+         (let ((local-config (merge-pathnames ".clpm/bundle.conf"
                                               (uiop:getcwd))))
            (merge-git-auth-config)
            (when (probe-file local-config)

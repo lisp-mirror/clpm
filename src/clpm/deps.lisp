@@ -67,7 +67,7 @@
     (unwind-protect
          (uiop:launch-program
           (sandbox-augment-command
-           (config-value "grovel" "sandbox" "method")
+           (config-value :grovel :sandbox :method)
            `("sbcl"
              "--noinform"
              "--noprint"
