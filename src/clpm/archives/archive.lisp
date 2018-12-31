@@ -1,4 +1,4 @@
-(uiop:define-package #:clpm/archives/tar
+(uiop:define-package #:clpm/archives/archive
     (:use #:cl
           #:alexandria
           #:clpm/archives/defs)
@@ -24,7 +24,7 @@
                 #:symlink
                 #:utimes))
 
-(in-package #:clpm/archives/tar)
+(in-package #:clpm/archives/archive)
 
 (defun strip-components (pathname number)
   (assert (uiop:relative-pathname-p pathname))
