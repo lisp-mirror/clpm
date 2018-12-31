@@ -19,7 +19,11 @@
 (defparameter *default-config*
   `(:grovel
     (:sandbox
-     (:method :auto)))
+     (:method :auto))
+    :http-client
+    (:curl
+     (:path "curl")
+     :method :auto))
   "Default configuration of clpm")
 
 (defvar *config* (make-hash-table :test 'equalp)
@@ -51,6 +55,10 @@
     ('(* :headers :http)
       t)
     ('(* * :headers :http)
+      t)
+    ('(:http-client)
+      t)
+    ('(:curl :http-client)
       t)
     ('(:grovel)
       t)

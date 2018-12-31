@@ -1,7 +1,6 @@
 (uiop:define-package #:clpm/http-client
     (:use #:cl
-          #:clpm/http-client/curl
-          #:clpm/http-client/defs
+          #:clpm/http-client/all
           #:alexandria
           #:clpm/config
           #:iterate)
@@ -61,7 +60,7 @@
 (defun fetch-url (url)
   (let ((url (puri:parse-uri url)))
     (with-output-to-string (s)
-      (fetch-url-to-stream (make-instance 'curl-client) url s
+      (fetch-url-to-stream url s
                            :headers (get-additional-headers-for-hostname (puri:uri-host url)
                                                                          (puri:uri-scheme url))))))
 
@@ -85,7 +84,7 @@ older than refresh-time in seconds."
              (with-open-file (file-stream tmp-pathname :direction :output
                                                        :if-exists :supersede
                                                        :element-type '(unsigned-byte 8))
-               (fetch-url-to-stream (make-instance 'curl-client) url file-stream
+               (fetch-url-to-stream url file-stream
                                     :headers (get-additional-headers-for-hostname
                                               (puri:uri-host url)
                                               (puri:uri-scheme url))))

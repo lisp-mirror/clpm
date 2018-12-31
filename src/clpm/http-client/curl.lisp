@@ -7,7 +7,15 @@
 (in-package #:clpm/http-client/curl)
 
 (defclass curl-client ()
-  ())
+  ((path
+    :initarg :path
+    :initform "curl"
+    :accessor curl-path)))
+
+(defmethod client-available-p ((client curl-client))
+  (ignore-errors
+   (zerop (nth-value 2 (uiop:run-program `(,(curl-path client) "--version")
+                                         :ignore-error-status t)))))
 
 (defun header-pair-to-string (pair)
   (destructuring-bind (name . value) pair
@@ -15,15 +23,15 @@
     (check-type value string)
     (format nil "~A: ~A" name value)))
 
-(defmethod fetch-url-to-stream ((client curl-client) url out-stream
-                                &key headers)
+(defmethod %fetch-url-to-stream ((client curl-client) url out-stream
+                                 &key headers)
   (flet ((write-headers-to-stream (stream)
            (loop
              :for (name . value) :in headers
              :do (format stream "~A: ~A~%" name value))
            (close stream)))
     (multiple-value-bind (out err exit-code)
-        (uiop:run-program `("curl"
+        (uiop:run-program `(,(curl-path client)
                             ;; Add the requested headers. Pass them in on stdin
                             ;; to prevent them from being visible in the process
                             ;; list (in case any of them are authentication
@@ -49,3 +57,5 @@
                :format-control "Error from curl:~%~%~A"
                :format-arguments (list err)))
       t)))
+
+(register-http-client :curl 'curl-client)
