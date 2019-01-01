@@ -108,7 +108,7 @@
       (let ((archive-pathname (fetch-release release)))
         (log:debug "Package distfiles located at ~A" archive-pathname)
         (with-open-file (archive-stream archive-pathname
-                                        :direction :output
+                                        :direction :input
                                         :element-type '(unsigned-byte 8))
           (unarchive 'gzipped-tar-archive
                      archive-stream (uiop:pathname-parent-directory-pathname install-root)))))
