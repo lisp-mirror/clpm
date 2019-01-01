@@ -3,6 +3,7 @@
           #:alexandria
           #:anaphora
           #:clpm/cache
+          #:clpm/data
           #:clpm/http-client
           #:clpm/requirement
           #:clpm/sources/defs
@@ -39,6 +40,24 @@
     :accessor source/raw-systems)
    (db
     :accessor source/db)))
+
+(defmethod source/cache-directory ((source quicklisp-source))
+  (clpm-cache
+   `("sources"
+     "quicklisp"
+     ,(string-downcase (string (uri-scheme (source/url source))))
+     ,(uri-host (source/url source))
+     ,@(split-sequence #\/ (uri-path (source/url source)) :remove-empty-subseqs t))
+   :ensure-directory t))
+
+(defmethod source/lib-directory ((source quicklisp-source))
+  (clpm-data
+   `("sources"
+     "quicklisp"
+     ,(string-downcase (string (uri-scheme (source/url source))))
+     ,(uri-host (source/url source))
+     ,@(split-sequence #\/ (uri-path (source/url source)) :remove-empty-subseqs t))
+   :ensure-directory t))
 
 (defun save-db (source)
   (let ((db-file (merge-pathnames "db.sexp" (source/cache-directory source))))

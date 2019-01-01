@@ -107,20 +107,10 @@ directory on the file system.")
     (values)))
 
 (defgeneric source/cache-directory (source)
-  (:documentation "The source's cache directory.")
-  (:method (source)
-    (clpm-cache
-     `("sources"
-       ,(source/name source))
-     :ensure-directory t)))
+  (:documentation "The source's cache directory."))
 
 (defgeneric source/lib-directory (source)
-  (:documentation "The source's lib directory.")
-  (:method (source)
-    (clpm-data
-     `("sources"
-       ,(source/name source))
-     :ensure-directory t)))
+  (:documentation "The source's lib directory."))
 
 (defun source-context-pathname (source context-name)
   (merge-pathnames (make-pathname :type "sexp"
