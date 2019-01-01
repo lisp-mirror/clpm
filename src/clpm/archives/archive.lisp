@@ -38,11 +38,7 @@
   #-:os-windows
   (utimes pathname time time))
 
-(defmethod unarchive ((archive-type gzipped-tar-archive) archive-stream destination-pathname)
-  (call-next-method archive-type (chipz:make-decompressing-stream 'chipz:gzip archive-stream)
-                    destination-pathname))
-
-(defmethod unarchive ((archive-type tar-archive) archive-stream destination-pathname)
+(defmethod unarchive-tar (client archive-stream destination-pathname)
   (let (archive)
     (unwind-protect
          (let ((*default-pathname-defaults* (pathname destination-pathname)))

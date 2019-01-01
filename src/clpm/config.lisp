@@ -20,6 +20,10 @@
   `(:grovel
     (:sandbox
      (:method :auto))
+    :archives
+    (:tar-method :auto
+     :tar
+     (:path "tar"))
     :http-client
     (:curl
      (:path "curl")
@@ -42,6 +46,10 @@
 
 (defun path-table-p (path)
   (switch (path :test #'names-path-p)
+    ('(:archives)
+      t)
+    ('(:tar :archives)
+      t)
     ('(:git)
       t)
     ('(:remotes :git)
