@@ -256,19 +256,19 @@ hostname or NIL."
                                  path)))
 
          (eswitch (method :test #'equal)
-           ("ssh"
+           (:ssh
             (concatenate 'string
                          "git@"
                          (source/host source)
                          ":"
                          path-with.git))
-           ("https"
+           (:https
             (concatenate 'string
                          "https://"
                          (source/host source)
                          "/"
                          path-with.git))
-           ("http"
+           (:http
             (concatenate 'string
                          "http://"
                          (source/host source)
