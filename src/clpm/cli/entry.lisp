@@ -63,6 +63,8 @@
   (format *standard-output* "CLPM version ~A~%" (clpm-version))
   (format *standard-output* "~A ~A~%" (lisp-implementation-type) (lisp-implementation-version))
   (format *standard-output* "ASDF ~A~%" (asdf:asdf-version))
+  (format *standard-output* "Software Type: ~A~%" (software-type))
+  (format *standard-output* "Software Version: ~A~%" (software-version))
   (with-standard-io-syntax
     (let ((*print-pretty* t))
       (format *standard-output* "Features:~%~S~%" *features*))))
