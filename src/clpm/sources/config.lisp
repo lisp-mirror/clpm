@@ -33,7 +33,6 @@ and type."
   "Ensures that the source has a name, and a type. Additionally, ensures the URL
 matches any previously seen source with the same name and that the type hasn't
 changed since this source was last seen."
-  (assert (not (typep source 'raw-source)))
   (let* ((name (source/name source))
          (url (source/url source))
          (type-keyword (source-type-keyword source))
@@ -56,39 +55,6 @@ changed since this source was last seen."
     (when pair-matching-name
       ;; We've seen this name before. Make sure the URLs match.
       (assert (equal (uri-to-string url) (getf (rest pair-matching-name) :url))))))
-
-(defun resolve-raw-source! (s &optional lazy)
-  "Given a RAW-SOURCE instance S, determine what type of source it actually is
-and change its class."
-  (when (typep s 'raw-source)
-    (unless (resolve-raw-source-from-metadata! s)
-      (unless lazy
-        (let* ((source-contents (fetch-url (source/url s))))
-          (dolist (test-fun *source-test-functions*)
-            (multiple-value-bind (class-name initargs) (funcall test-fun (source/url s) source-contents)
-              (when class-name
-                (apply #'change-class s class-name (append (source/args s) initargs))
-                (validate-source s)
-                (return))))))))
-  (unless (typep s 'raw-source)
-    (validate-source s))
-  s)
-
-(defun resolve-raw-source-from-metadata! (s)
-  "Try to change S's class to the right type based only on local metadata."
-  (check-type s raw-source)
-  (let* ((url (uri-to-string (source/url s)))
-         (source-map (sources-map-form))
-         (source-metadata (assoc-value source-map url :test #'string-equal))
-         (type (getf source-metadata :type))
-         (name (getf source-metadata :name)))
-    (when type
-      (apply #'change-class s
-             (resolve-type type)
-             (append (source/args s)
-                     (list :name name)))
-      (validate-source s)
-      t)))
 
 (defun update-metadata (source)
   (let ((source-map (sources-map-form))
@@ -116,23 +82,18 @@ and change its class."
       f
     (assert (stringp name))
     (assert (stringp url))
+    (assert (keywordp type))
     (let* ((trimmed-args (remove-from-plist args :url :type))
            (new-args (loop
                        :for key :in trimmed-args :by #'cddr
                        :for value :in (rest trimmed-args) :by #'cddr
                        :collect key
                        :collect value))
-           (source
-             (if type
-                 (apply #'make-instance (resolve-type (make-keyword (string-upcase type)))
-                        :name name
-                        :url url
-                        new-args)
-                 (make-instance 'raw-source
-                                :name name
-                                :url url
-                                :args new-args))))
-      (resolve-raw-source! source t)
+           (source (apply #'make-instance (resolve-type type)
+                          :name name
+                          :url url
+                          new-args)))
+      (validate-source source)
       source)))
 
 (defun load-sources ()
@@ -142,8 +103,3 @@ and change its class."
                (push (cons k (hash-table-plist v)) source-forms))
              sources-table)
     (mapcar #'load-source-from-form source-forms)))
-
-(defmethod sync-source ((source raw-source))
-  (resolve-raw-source! source)
-  (unless (typep source 'raw-source)
-    (sync-source source)))

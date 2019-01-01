@@ -40,17 +40,6 @@
    (db
     :accessor source/db)))
 
-(defun quicklisp-source-tester (url contents)
-  (declare (ignore url))
-  (when (and (starts-with-subseq "name:" contents)
-             (search (format nil "~%version:") contents)
-             (search (format nil "~%distinfo-subscription-url:") contents)
-             (search (format nil "~%release-index-url:") contents)
-             (search (format nil "~%system-index-url:") contents))
-    (values 'quicklisp-source `(:name ,(getf (parse-distinfo contents) :name)))))
-
-(register-source-test-function 'quicklisp-source-tester)
-
 (defun save-db (source)
   (let ((db-file (merge-pathnames "db.sexp" (source/cache-directory source))))
     (with-open-file (s db-file :direction :output :if-exists :supersede)

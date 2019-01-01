@@ -8,8 +8,7 @@
           #:clpm/data
           #:puri
           #:split-sequence)
-  (:export #:*source-test-functions*
-           #:clpm-known-source
+  (:export #:clpm-known-source
            #:clpm-project
            #:clpm-release
            #:clpm-system-release
@@ -21,8 +20,6 @@
            #:project/releases
            #:project/repo
            #:project/source
-           #:raw-source
-           #:register-source-test-function
            #:release->
            #:release/lib-pathname
            #:release/project
@@ -81,17 +78,6 @@
 
 ;; * Sources
 
-(defvar *source-test-functions* nil
-  "Every function on this list must accept two arguments: a puri URL and the
-contents of what is located at that URL. The functions must return either NIL or
-two VALUES. The first value is the name of the class which should be used to
-instantiate the source located at the URL. The second value is a list of
-initargs for that class.")
-
-(defun register-source-test-function (f)
-  "Convenience function for adding a function to *SOURCE-TEST-FUNCTIONS*."
-  (pushnew f *source-test-functions*))
-
 (defclass clpm-source ()
   ((url
     :initarg :url
@@ -108,12 +94,6 @@ systems."))
 (defclass clpm-known-source (clpm-source)
   ()
   (:documentation "Base class for any CLPM source whose type is known."))
-
-(defclass raw-source (clpm-source)
-  ((args
-    :initarg :args
-    :accessor source/args))
-  (:documentation "A source with an undeclared type."))
 
 (defmethod initialize-instance :after ((self clpm-source) &rest initargs &key url)
   "Ensure that the URL field on a CLPM-SOURCE instance is a puri URL."
