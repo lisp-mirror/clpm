@@ -16,22 +16,6 @@
 
 (in-package #:clpm/sources/config)
 
-(defun sources-config-pathname ()
-  "Return the pathname to the sources.conf file containing the list of sources."
-  (clpm-config-pathname '("sources.conf")))
-
-(defun sources-config-form ()
-  "Read the form from SOURCES-CONFIG-PATHNAME."
-  (with-safe-io-syntax ()
-    (read-file-form (sources-config-pathname))))
-
-(defun raw-sources-config-forms ()
-  "Get a list of forms from SOURCES-CONFIG-PATHNAME representing all sources the
-user wants to use."
-  (let ((sources-config-form (sources-config-form)))
-    (assert (eql :clpm-sources (first sources-config-form)))
-    (rest sources-config-form)))
-
 (defun sources-map-pathname ()
   "Return the pathname to the source-map file."
   (clpm-data '("source-map")))
