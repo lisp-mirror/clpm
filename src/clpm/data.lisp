@@ -6,7 +6,7 @@
 
 (uiop:define-package #:clpm/data
     (:use #:cl)
-  (:export #:clpm-data))
+  (:export #:clpm-data-pathname))
 
 (in-package #:clpm/data)
 
@@ -27,7 +27,7 @@ home."
 (uiop:register-clear-configuration-hook 'clear-clpm-data-root)
 (uiop:register-image-restore-hook 'compute-clpm-data-root)
 
-(defun clpm-data (x &key ensure-directory)
+(defun clpm-data-pathname (x &key ensure-directory)
   "Given a list of directories, optionally ending with a file name and type,
 ~x~ relative to ~*clpm-data-root*~, return an absolute pathname. If
 ~ensure-directory~ is non-NIL, ensures the returned pathname is a directory."

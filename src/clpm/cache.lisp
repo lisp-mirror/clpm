@@ -6,7 +6,7 @@
 
 (uiop:define-package #:clpm/cache
     (:use #:cl)
-  (:export #:clpm-cache))
+  (:export #:clpm-cache-pathname))
 
 (in-package #:clpm/cache)
 
@@ -27,7 +27,7 @@ home."
 (uiop:register-clear-configuration-hook 'clear-clpm-cache-root)
 (uiop:register-image-restore-hook 'compute-clpm-cache-root)
 
-(defun clpm-cache (x &key ensure-directory)
+(defun clpm-cache-pathname (x &key ensure-directory)
   "Given a list of directories, optionally ending with a file name and type,
 ~x~ relative to ~*clpm-cache-root*~, return an absolute pathname. If
 ~ensure-directory~ is non-NIL, ensures the returned pathname is a directory."

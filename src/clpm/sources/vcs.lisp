@@ -186,14 +186,14 @@ hostname or NIL."
 
 (defmethod source/cache-directory ((source git-source))
   "The cache directory for this source is based on the hostname."
-  (clpm-cache
+  (clpm-cache-pathname
    `("vcs-sources"
      ,(source/host source))
    :ensure-directory t))
 
 (defmethod source/lib-directory ((source git-source))
   "The lib directory is based on the hostname."
-  (clpm-data
+  (clpm-data-pathname
    `("vcs-sources"
      ,(source/host source))
    :ensure-directory t))

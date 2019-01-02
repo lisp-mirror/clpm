@@ -42,7 +42,7 @@
     :accessor source/db)))
 
 (defmethod source/cache-directory ((source quicklisp-source))
-  (clpm-cache
+  (clpm-cache-pathname
    `("sources"
      "quicklisp"
      ,(string-downcase (string (uri-scheme (source/url source))))
@@ -51,7 +51,7 @@
    :ensure-directory t))
 
 (defmethod source/lib-directory ((source quicklisp-source))
-  (clpm-data
+  (clpm-data-pathname
    `("sources"
      "quicklisp"
      ,(string-downcase (string (uri-scheme (source/url source))))

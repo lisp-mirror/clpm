@@ -21,11 +21,11 @@
 (defvar *deps-version* nil)
 
 (defun ensure-deps-system-in-cache! (&optional forcep)
-  (let ((deps-system-pathname (clpm-cache
+  (let ((deps-system-pathname (clpm-cache-pathname
                                `("deps-groveler-system" ,*deps-version* "clpm-deps.asd")))
-        (deps-source-pathname (clpm-cache
+        (deps-source-pathname (clpm-cache-pathname
                                `("deps-groveler-system" ,*deps-version* "main.lisp")))
-        (deps-version-pathname (clpm-cache
+        (deps-version-pathname (clpm-cache-pathname
                                 `("deps-groveler-system" ,*deps-version* "version.sexp"))))
     (ensure-directories-exist deps-system-pathname)
     (unless (and (not forcep)
@@ -55,8 +55,8 @@
              (format s "Missing dependency: ~S" (groveler-dependency-missing/system c)))))
 
 (defun launch-sub-lisp ()
-  (let ((cache-dir (clpm-cache '("deps-build")
-                               :ensure-directory t))
+  (let ((cache-dir (clpm-cache-pathname '("deps-build")
+                                        :ensure-directory t))
         (old-output-translations (uiop:getenv "ASDF_OUTPUT_TRANSLATIONS")))
     (ensure-directories-exist cache-dir)
     ;; This is kinda hacky, but UIOP's {launch,run}-program don't provide a way
@@ -87,7 +87,7 @@
   (let* ((proc-info (launch-sub-lisp))
          (in-stream (uiop:process-info-input proc-info))
          (out-stream (uiop:process-info-output proc-info))
-         (asd-pathname (clpm-cache
+         (asd-pathname (clpm-cache-pathname
                         `("deps-groveler-system" ,*deps-version* "clpm-deps.asd"))))
     (uiop:with-safe-io-syntax ()
       (format in-stream "(require :asdf)~%")
