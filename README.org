@@ -3,17 +3,14 @@
 #+EMAIL: etimmons@mit.edu
 #+OPTIONS: email:t toc:2 num:nil
 
-**WARNING**: This is ALPHA quality. It is being published right now so I can
-start testing it and hammering at it in my normal work flow. There are definite
-bugs and it will eat your code.
+**WARNING**: This is BETA quality. It is being published right now so I can
+start testing it and hammering at it in my normal work flow. There are probably
+bugs and it may eat your files.
 
 * Description
 
-  CLPM is a package manager for Common Lisp. It supports installing either
-  versioned releases of packages or development releases straight from source
-  control. Additionally, it allows versioned dependencies to be specified for
-  individual projects you are hacking on, allowing you to create project
-  specific contexts.
+  CLPM is a package manager for Common Lisp. It is focused on managing packages
+  for both (user) global contexts and project specific contexts.
 
   It consists of two major pieces. First is a CLI program that is responsible
   for all the heavy lifting of fetching and unpacking releases in the correct
@@ -23,36 +20,40 @@ bugs and it will eat your code.
   the CLI program as necessary to find and install missing systems. This piece
   is generally referred to as the CLPM client.
 
-* Motivation
+* Project Goals
 
   CLPM is far from the only package manager available for Common Lisp[fn:1], but
   it makes very different assumptions and design choices than the other
-  available solutions. We try to point those out in this section.
+  available solutions. We try to describe those choices and our high level goals
+  in this section.
 
-  + Minimize footprint in client image :: CLPM handles most of the heavy work of
-       parsing source lists, downloading packages, installing packages, and
-       finding installed packages in a separate process (CLPM core). This keeps
-       the size of any image using CLPM small and enables many of the other
-       benefits discussed later.
+  + Minimize footprint in client image :: It's unnecessary to load a large
+       amount of code into an image for a task that is only a small part of the
+       coding experience. This drives CLPM's separation into the core and
+       client. Additionally, many Lisps (I'm looking at you, SBCL) have a large
+       memory footprint and this helps keep that size down.
   + Use existing libraries where possible :: Because CLPM core is never loaded
        into a client image, there are no issues with version conflicts or
        incompatibilities between third party libraries used by CLPM and the
        client image. This means that existing libraries can be leveraged where
-       it makes sense and we don't need to reimplement things inside CLPM
-       itself.
-  + Support HTTPS :: There are Lisp packages that support requests over HTTPS
-                     and we can use them without fear of bloating or causing
-                     issues in the client image.
+       it makes sense and we don't need to reinvent the wheel.
+  + Support cleanup on image dump :: There is no need to have a package manager
+       in most programs. CLPM provides an option to remove the client from the
+       image when it is dumped (through UIOP provided functions).
+  + Support multiple workflows and configurations :: We want it to be equally
+       easy to hack on CLPM, to use it for CI, and to use it for development by
+       coders uninterested in hacking on CLPM itself. This means we strive to
+       support both distribution of a (mostly) static program as well as using
+       CLPM directly from source. It also means we strive to provide reasonable
+       defaults that work (most) everywhere.
   + Support installing multiple package versions :: CLPM supports installing
        multiple versions of the same package simultaneously. This is an enabling
        feature for managing project specific dependencies as well as global
        dependencies.
-  + Enable use of implementation specific features :: Because most of the work
-       is in a separate process, the core CLPM executable can be built using a
-       different Common Lisp implementation than the client that uses CLPM. This
-       means that CLPM can support only a small subset of implementations (and
-       use their specific features) without placing adverse constraints on
-       users.
+  + Support multiple package sources :: At first, CLPM will support only
+       Quicklisp-style distributions as a package source/repository. But we
+       envision adding support for new sources, such as Qi and a new work in
+       progress repo geared toward projects that follow versioning guidelines.
 
 * Documentation
 
