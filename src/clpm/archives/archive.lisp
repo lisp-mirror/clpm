@@ -1,26 +1,19 @@
+;;;; Support for extracting archives using the Archive Common Lisp library.
+;;;;
+;;;; This software is part of CLPM. See README.org for more information. See
+;;;; COPYING for license information.
+
 (uiop:define-package #:clpm/archives/archive
     (:use #:cl
           #:alexandria
           #:clpm/archives/defs)
   (:import-from #:babel)
-  (:import-from #:chipz
-                #:make-decompressing-stream
-                #:gzip)
   (:import-from #:flexi-streams
                 #:make-flexi-stream
                 #:make-in-memory-input-stream)
   (:import-from #:archive
-                #:close-archive
-                #:do-archive-entries
-                #:entry-directory-p
-                #:entry-regular-file-p
-                #:entry-stream
-                #:entry-symbolic-link-p
-                #:mtime
-                #:name
                 #:open-archive)
   (:import-from #:sb-posix
-                #:symlink
                 #:utimes))
 
 (in-package #:clpm/archives/archive)

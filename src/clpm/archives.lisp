@@ -1,3 +1,8 @@
+;;;; Support for extracting archives.
+;;;;
+;;;; This software is part of CLPM. See README.org for more information. See
+;;;; COPYING for license information.
+
 (uiop:define-package #:clpm/archives
     (:use #:cl
           #:clpm/archives/defs
