@@ -14,10 +14,10 @@
   "Pathname to the directory designating the root of CLPM's data directory.")
 
 (defun compute-clpm-data-root ()
-  "Compute ~*clpm-data-root*~ using the CLPM_DATA variable or the XDG data
+  "Compute ~*clpm-data-root*~ using the CLPM_DATA_DIR variable or the XDG data
 home."
   (setf *clpm-data-root*
-        (or (uiop:getenv-absolute-directory "CLPM_DATA")
+        (or (uiop:getenv-absolute-directory "CLPM_DATA_DIR")
             (uiop:xdg-data-home "common-lisp" "clpm/"))))
 
 (defun clear-clpm-data-root ()

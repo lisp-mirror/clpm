@@ -14,10 +14,10 @@
   "Pathname to the directory designating the root of CLPM's cache directory.")
 
 (defun compute-clpm-cache-root ()
-  "Compute ~*clpm-cache-root*~ using the CLPM_CACHE variable or the XDG cache
-home."
+  "Compute ~*clpm-cache-root*~ using the CLPM_CACHE_DIR variable or the XDG
+cache home."
   (setf *clpm-cache-root*
-        (or (uiop:getenv-absolute-directory "CLPM_CACHE")
+        (or (uiop:getenv-absolute-directory "CLPM_CACHE_DIR")
             (uiop:xdg-cache-home "common-lisp" "clpm/"))))
 
 (defun clear-clpm-cache-root ()
