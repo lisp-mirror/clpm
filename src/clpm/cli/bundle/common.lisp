@@ -91,11 +91,11 @@
            (setf (gethash "username" new-ht) username
                  (gethash "password" new-ht) password)
            (setf (gethash key ht) new-ht)))
-    (merge-ht-into-config (alist-hash-table
-                           `(("git" . ,(alist-hash-table
-                                        `(("remotes" . ,ht))
-                                        :test 'equal)))
-                           :test 'equal))))
+    (merge-ht-into-config! (alist-hash-table
+                            `(("git" . ,(alist-hash-table
+                                         `(("remotes" . ,ht))
+                                         :test 'equal)))
+                            :test 'equal))))
 
 (defmacro define-bundle-entry (name (synopsis) &body body)
   (let ((fun-name (intern
@@ -116,7 +116,7 @@
                                               (uiop:getcwd))))
            (merge-git-auth-config)
            (when (probe-file local-config)
-             (merge-file-into-config local-config)))
+             (merge-file-into-config! local-config)))
          (unless (progn ,@body)
            (uiop:quit 1)))
        (register-bundle-command ,bundle-name ',fun-name))))
