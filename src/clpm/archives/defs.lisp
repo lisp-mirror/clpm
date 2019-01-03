@@ -77,7 +77,9 @@ Instantiate all registered tar clients, then remove the ones where
       (error "Unable to find a tar client."))
     client))
 
+
 ;; * Tar client API
+
 (defgeneric tar-client-available-p (client)
   (:documentation
    "Returns T iff ~client~ is able to be used to extract tar files."))
@@ -87,6 +89,7 @@ Instantiate all registered tar clients, then remove the ones where
    "Given a tar archive in ~archive-stream~, extract its contents to
 ~destination-pathname~ using ~client~."))
 
+
 ;; * Extracting archives
 
 (defclass tar-archive ()

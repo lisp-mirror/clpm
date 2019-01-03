@@ -1,3 +1,8 @@
+;;;; Support for fetching files over HTTP using a curl executable.
+;;;;
+;;;; This software is part of CLPM. See README.org for more information. See
+;;;; COPYING for license information.
+
 (uiop:define-package #:clpm/http-client/curl
     (:use #:cl
           #:clpm/http-client/defs
@@ -10,14 +15,25 @@
   ((path
     :initarg :path
     :initform "curl"
-    :accessor curl-path)))
+    :accessor curl-path
+    :documentation
+    "The path to the curl program."))
+  (:documentation
+   "Describes an HTTP client that uses a curl executable."))
 
-(defmethod client-available-p ((client curl-client))
+(register-http-client :curl 'curl-client)
+
+(defmethod http-client-available-p ((client curl-client))
+  "Returns T iff the curl program exists at the path specified by the client and
+its version can be successfully queried."
   (ignore-errors
    (zerop (nth-value 2 (uiop:run-program `(,(curl-path client) "--version")
                                          :ignore-error-status t)))))
 
 (defun header-pair-to-string (pair)
+  "Convert a header name/value pair to a string of the form
+
+\"Header-Name: Value\""
   (destructuring-bind (name . value) pair
     (check-type name string)
     (check-type value string)
@@ -54,9 +70,7 @@
                           :ignore-error-status t)
       (declare (ignore out))
       (unless (zerop exit-code)
-        (error 'simple-fetch-error
+        (error 'http-simple-fetch-error
                :format-control "Error from curl:~%~%~A"
                :format-arguments (list err)))
       t)))
-
-(register-http-client :curl 'curl-client)
