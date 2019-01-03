@@ -1,3 +1,8 @@
+;;;; Implementation of execvpe.
+;;;;
+;;;; This software is part of CLPM. See README.org for more information. See
+;;;; COPYING for license information.
+
 (uiop:define-package #:clpm/execvpe
     (:use #:cl
           #:alexandria
@@ -12,6 +17,11 @@
   (envp :pointer))
 
 (defun execvpe (file args env &optional augment-env-p)
+  "Call the execvpe C function. ~file~ must be a string. ~args~ is a list of
+strings to pass as the arguments to the executable. ~env~ is an alist of
+variable name (string), variable value (string) pairs. If ~augment-env-p~ is T,
+the environment variables specified by ~env~ are appended with the current
+environment variables."
   (let* ((env (mapcar (lambda (c)
                         (concatenate 'string (car c) "=" (cdr c)))
                       env))
