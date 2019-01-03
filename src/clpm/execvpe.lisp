@@ -11,7 +11,10 @@
 
 (in-package #:clpm/execvpe)
 
-(defcfun ("execvpe" %execvpe) :int
+(defcfun (#+:os-windows "_execvpe"
+          #-:os-windows "execvpe"
+          %execvpe)
+    :int
   (file :string)
   (args :pointer)
   (envp :pointer))
