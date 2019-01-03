@@ -1,3 +1,8 @@
+;;;; Support for fetching files over HTTP.
+;;;;
+;;;; This software is part of CLPM. See README.org for more information. See
+;;;; COPYING for license information.
+
 (uiop:define-package #:clpm/http-client
     (:use #:cl
           #:clpm/http-client/all
@@ -12,13 +17,18 @@
 
 (in-package #:clpm/http-client)
 
-(defgeneric canonicalize-header-value (header-value))
+(defgeneric canonicalize-header-value (header-value)
+  (:documentation "Given a ~header-value~ from a config file, return a string
+that contains the value of the header that should be sent as part of the HTTP
+request."))
 
 (defmethod canonicalize-header-value ((header-value string))
+  "A string simply returns itself."
   header-value)
 
 #-os-windows
 (defun pathname-executable-p (pathname)
+  "On non-Windows platforms, a file is executable if its execute bit is set."
   (let* ((stat (sb-posix:stat pathname))
          (mode (sb-posix:stat-mode stat)))
     (or (not (zerop (boole boole-and mode sb-posix:s-ixoth)))
@@ -27,37 +37,32 @@
 
 #+os-windows
 (defun pathname-executable-p (pathname)
+  "On windows, a file is executable if its type is exe."
   (equalp "exe" (pathname-type pathname)))
 
 (defmethod canonicalize-header-value ((header-value pathname))
+  "If given a pathname to an executable file, run it and use the value it prints
+to stdout as the value. Otherwise, read the contents of the file and use that."
   (if (pathname-executable-p header-value)
       ;; executable
       (uiop:run-program (namestring header-value) :output '(:string :stripped t))
       ;; not executable
       (uiop:read-file-string header-value)))
 
-(defun host-spec-matches-p (spec hostname scheme)
-  (destructuring-bind (host-string &key secure-only-p)
-      (ensure-list spec)
-    (and (equalp host-string hostname)
-         (or (not secure-only-p)
-             (eql scheme :https)))))
-
 (defun get-additional-headers-for-hostname (hostname scheme)
-  ;; Read the header file if it exists.
-  (let ((header-pathname (clpm-config-pathname '("headers.conf")))
-        (out nil))
-    (when header-pathname
-      (let* ((host-alist (with-safe-io-syntax ()
-                           (read-file-form header-pathname))))
-        (iter
-          (for (host-spec . host-headers) :in host-alist)
-          (when (host-spec-matches-p host-spec hostname scheme)
-            (iter
-              (for (header-name . header-value) :in host-headers)
-              (setf (getf out header-name) (canonicalize-header-value header-value)))))))))
+  "Given a ~hostname~ and ~scheme~ used (~:http~ or ~:https~), return an alist
+mapping header names (as keywords) to values that should be included as part of
+the request."
+  (let ((headers-ht (config-value :http :headers hostname)))
+    (when headers-ht
+      (iter
+        (for (key value) :in-hashtable headers-ht)
+        (unless (or (eql scheme :https)
+                    (not (gethash :secure-only-p value)))
+          (collect (cons key (canonicalize-header-value (gethash :value value)))))))))
 
 (defun fetch-url (url)
+  "Given a URL, return a string with the contents of the file located at ~url~."
   (let ((url (puri:parse-uri url)))
     (with-output-to-string (s)
       (fetch-url-to-stream url s

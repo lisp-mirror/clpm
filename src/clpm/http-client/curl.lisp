@@ -27,7 +27,8 @@
                                  &key headers)
   (flet ((write-headers-to-stream (stream)
            (loop
-             :for (name . value) :in headers
+             :for (key . value) :in headers
+             :for name := (string-capitalize (symbol-name key))
              :do (format stream "~A: ~A~%" name value))
            (close stream)))
     (multiple-value-bind (out err exit-code)
