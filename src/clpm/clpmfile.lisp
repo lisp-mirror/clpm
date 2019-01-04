@@ -1,4 +1,7 @@
 ;;;; Interface functions for clpmfiles and their associated lock files.
+;;;;
+;;;; This software is part of CLPM. See README.org for more information. See
+;;;; LICENSE for license information.
 
 (uiop:define-package #:clpm/clpmfile
     (:use #:cl
@@ -25,6 +28,7 @@
 
 (in-package #:clpm/clpmfile)
 
+
 ;; * Class Definitions
 
 (defclass clpmfile ()
@@ -67,6 +71,8 @@
    "Representation of a clpmfile."))
 
 (defmethod initialize-instance :after ((clpmfile clpmfile) &key pathname &allow-other-keys)
+  "Set the ~clpmfile~'s filesystem source based on the directory where the
+clpmfile is located."
   (setf (clpmfile/fs-source clpmfile)
         (make-instance 'fs-source
                        :root-dir (uiop:pathname-directory-pathname pathname)
@@ -85,9 +91,12 @@
     :initform nil
     :initarg :system-files
     :accessor lockfile/system-files
-    :documentation "The system files that make up the bundle.")))
+    :documentation "The system files that make up the bundle."))
+  (:documentation
+   "Representation of a locked clpmfile."))
 
 (defun make-lockfile (clpmfile system-files)
+  "Make a lockfile from a clpmfile and its fully resolved system files."
   (make-instance 'lockfile
                  :pathname (clpmfile/lockfile-pathname clpmfile)
                  :clpmfile clpmfile
@@ -120,11 +129,14 @@
     (write (clpmfile/user-requirements obj) :stream stream)))
 
 (defun clpmfile/sources (clpmfile)
+  "Return a list of all the sources associated with ~clpmfile~."
   (list* (clpmfile/fs-source clpmfile)
          (append (clpmfile/implicit-sources clpmfile)
                  (clpmfile/user-global-sources clpmfile))))
 
 (defun find-source-or-error (sources source-name)
+  "Given a list of ~sources~, return the source that has is named ~source-name~
+or raise an error if it does not exist."
   (or (find source-name sources
             :key #'source/name
             :test #'string-equal)
@@ -133,6 +145,7 @@
 (defun parse-req-statement (clpmfile name
                             &key (type :project) version source
                               git systems)
+  "Parse a ~:req~ statement from a ~clpmfile~ into a ~requirement~ instance."
   (let ((req nil))
     (if git
         (destructuring-bind (type
@@ -169,6 +182,8 @@
     (push req (clpmfile/user-requirements clpmfile))))
 
 (defun parse-system-statement (clpmfile name &key source)
+  "Parse a ~:system~ statement from a ~clpmfile~ into a ~system-requirement~
+instance."
   (push (make-instance 'system-requirement
                        :name (string-downcase (string name))
                        :source (when source
@@ -178,6 +193,8 @@
 
 (defun parse-gitlab-statement (clpmfile name
                                &key (host "gitlab.com") repo branch commit tag systems)
+  "Parse a ~:gitlab~ statement from a ~clpmfile~ into a
+~git-project-requirement~ instance."
   (let ((source (get-git-source :gitlab host)))
     ;; This may be the first time this source is seen. Record it.
     (pushnew source (clpmfile/implicit-sources clpmfile))
@@ -195,6 +212,8 @@
           (clpmfile/user-requirements clpmfile))))
 
 (defun parse-asd-statement (clpmfile asd-file &key systems)
+  "Parse a ~:asd~ statement from a ~clpmfile~ and register it with the file
+system source."
   (unless (stringp asd-file)
     (error "The argument to :ASD must be a string"))
   (unless (probe-file (merge-pathnames asd-file))
@@ -206,12 +225,17 @@
         (clpmfile/user-asd-files clpmfile)))
 
 (defun parse-source-statement (clpmfile &rest args)
+  "Load a ~:source~ statement from a ~clpmfile~ and add it to the list of
+sources."
   (unless (stringp (first args))
     (error "The first argument to :SOURCE must be a string"))
   (push (load-source-from-form args)
         (clpmfile/user-global-sources clpmfile)))
 
 (defun parse-clpmfile-forms (clpmfile forms)
+  "Given a list of ~forms~, parse them and register them appropriately with
+~clpmfile~ based on the ~:api-version~ which must be specified first in
+~forms~."
   ;; Try reading the first form to get the api version
   (unless (listp (first forms))
     (error "The first form must be a list"))
@@ -251,7 +275,9 @@
   (nreversef (clpmfile/user-requirements clpmfile))
   clpmfile)
 
-(defgeneric parse-system-file-statement (lockfile type &key &allow-other-keys))
+(defgeneric parse-system-file-statement (lockfile type &key &allow-other-keys)
+  (:documentation
+   "Parse a system file statement from a lockfile."))
 
 (defmethod parse-system-file-statement (lockfile (type (eql :project))
                                         &key name source version system-files)
@@ -287,6 +313,9 @@
     lockfile))
 
 (defun parse-lockfile-forms (lockfile forms)
+  "Given a list of ~forms~, parse them and register them appropriately with
+~lockfile~ based on the ~:api-version~ which must be specified first in
+~forms~."
   ;; Try reading the first form to get the api version
   (unless (listp (first forms))
     (error "The first form must be a list"))
@@ -314,7 +343,9 @@
                    (rest x)))
           (cdr all-system-files-form))))
 
-(defgeneric req-to-sexp (req))
+(defgeneric req-to-sexp (req)
+  (:documentation
+   "Return a list representing ~req~ suitable for writing to a file."))
 
 (defmethod req-to-sexp ((req project-requirement))
   `(:req ,(requirement/name req)
@@ -337,6 +368,8 @@
     :git ,(requirement/repo req)))
 
 (defun lockfile-system-file-sexps (lockfile)
+  "Return a list of system file statements from ~lockfile~ suitable for writing
+to a file."
   (let* ((all-system-files (lockfile/system-files lockfile)))
     (iter
       (for system-file := (pop all-system-files))
@@ -377,6 +410,7 @@
                     :system-files ,(mapcar #'system-file/asd-enough-namestring system-files-in-release))))))))
 
 (defun write-lockfile-to-stream (lockfile stream)
+  "Write ~lockfile~ to ~stream~."
   (uiop:with-safe-io-syntax ()
     (let ((*print-case* :downcase)
           (clpmfile (lockfile/clpmfile lockfile)))
@@ -421,6 +455,8 @@
   (read-lockfile (clpmfile/lockfile-pathname clpmfile)))
 
 (defun clpmfile/asd-file-requirements (clpmfile)
+  "Return a list of requirements gathered from the ~:asd~ statements in
+~clpmfile~."
   (let ((fs-source (clpmfile/fs-source clpmfile)))
     (mapcan (lambda (x)
               (destructuring-bind (asd-file &key systems)
@@ -438,11 +474,13 @@
             (clpmfile/user-asd-files clpmfile))))
 
 (defun clpmfile/all-requirements (clpmfile)
+  "Return a list of all requirements specified by ~clpmfile~."
   (append
    (clpmfile/asd-file-requirements clpmfile)
    (clpmfile/user-requirements clpmfile)))
 
 (defun read-clpmfile (pathname)
+  "Read a ~clpmfile~ instance from ~pathname~."
   (let ((forms (uiop:with-safe-io-syntax ()
                  (uiop:read-file-forms pathname)))
         (clpmfile (make-instance 'clpmfile
@@ -451,6 +489,7 @@
     clpmfile))
 
 (defun read-lockfile (pathname)
+  "Read a ~lockfile~ instance from ~pathname~."
   (let* ((forms (uiop:with-safe-io-syntax ()
                   (uiop:read-file-forms pathname)))
          (lockfile (make-instance 'lockfile
