@@ -10,7 +10,8 @@
           #:anaphora
           #:clpm/cache
           #:clpm/config
-          #:clpm/sandbox)
+          #:clpm/sandbox
+          #:clpm/utils)
   (:export #:add-asd-and-retry
            #:grovel-system-info
            #:grovel-systems-in-file
@@ -78,32 +79,29 @@ dependency."))
 debugger, and does not print things unless told. Set ASDF_OUTPUT_TRANSLATIONS
 for process to confine build artifacts to CLPM's cache. Use
 ~sandbox-augment-command~ to run the child in a sandbox."
-  (let ((cache-dir (clpm-cache-pathname '("deps-build")
-                                        :ensure-directory t))
-        (old-output-translations (uiop:getenv "ASDF_OUTPUT_TRANSLATIONS")))
+  (let* ((cache-dir (clpm-cache-pathname '("deps-build")
+                                         :ensure-directory t))
+         (translations
+           (format nil
+                   "(:output-translations :ignore-inherited-configuration (t (\"~A\" :implementation :**/ :*.*.*)))"
+                   cache-dir)))
     (ensure-directories-exist cache-dir)
-    ;; This is kinda hacky, but UIOP's {launch,run}-program don't provide a way
-    ;; to change the environment for the child process.
-    (setf (uiop:getenv "ASDF_OUTPUT_TRANSLATIONS")
-          (format nil "(:output-translations :ignore-inherited-configuration (t (\"~A\" :implementation :**/ :*.*.*)))" cache-dir))
 
-    (unwind-protect
-         (uiop:launch-program
-          (sandbox-augment-command
-           (config-value :grovel :sandbox :method)
-           `("sbcl"
-             "--noinform"
-             "--noprint"
-             "--no-sysinit"
-             "--no-userinit"
-             "--disable-debugger")
-           :read-write-pathnames (list cache-dir))
-          :input :stream
-          :output :stream
-          :error-output :interactive)
-      (setf (uiop:getenv "ASDF_OUTPUT_TRANSLATIONS")
-            (or old-output-translations
-                "")))))
+    (apply
+     #'uiop:launch-program
+     (sandbox-augment-command
+      (config-value :grovel :sandbox :method)
+      `("sbcl"
+        "--noinform"
+        "--noprint"
+        "--no-sysinit"
+        "--no-userinit"
+        "--disable-debugger")
+      :read-write-pathnames (list cache-dir))
+     :input :stream
+     :output :stream
+     :error-output :interactive
+     (run-program-augment-env-args `(("ASDF_OUTPUT_TRANSLATIONS" . ,translations))))))
 
 (defun start-grovel-process ()
   "Start and return a process (using ~launch-sub-lisp~) that contains an
