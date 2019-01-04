@@ -1,3 +1,9 @@
+;;;; Interface for using a groveler to determine .asd file contents and
+;;;; dependencies as well as system dependencies.
+;;;;
+;;;; This software is part of CLPM. See README.org for more information. See
+;;;; LICENSE for license information.
+
 (uiop:define-package #:clpm/deps
     (:use #:cl
           #:alexandria
@@ -16,11 +22,19 @@
 (defvar *running-grovelers* (make-hash-table :test 'equal)
   "Hash table that maps asd pathnames to running groveler processes.")
 
-(defvar *deps-system* nil)
-(defvar *deps-source* nil)
-(defvar *deps-version* nil)
+(defvar *deps-system* nil
+  "A string containing the contents of the groveler's clpm-deps.asd. Populated
+at build time.")
+(defvar *deps-source* nil
+  "A string containing the contents of the groveler's main.lisp. Populated at
+build time.")
+(defvar *deps-version* nil
+  "A string containing the contents of the groveler's version.sexp. Populated at
+build time.")
 
 (defun ensure-deps-system-in-cache! (&optional forcep)
+  "Ensure the groveler source code is present in the cache. If ~forcep~ is
+non-NIL, overwrite."
   (let ((deps-system-pathname (clpm-cache-pathname
                                `("deps-groveler-system" ,*deps-version* "clpm-deps.asd")))
         (deps-source-pathname (clpm-cache-pathname
@@ -45,16 +59,25 @@
     :reader groveler-unknown-error/backtrace))
   (:report (lambda (c s)
              (format s "Unknown error while groveling. Perhaps your asd file is malformed?~%Backtrace: ~A"
-                     (groveler-unknown-error/backtrace c)))))
+                     (groveler-unknown-error/backtrace c))))
+  (:documentation
+   "Condition signaled when the groveler encounters an unknown error."))
 
 (define-condition groveler-dependency-missing ()
   ((system
     :initarg :system
     :reader groveler-dependency-missing/system))
   (:report (lambda (c s)
-             (format s "Missing dependency: ~S" (groveler-dependency-missing/system c)))))
+             (format s "Missing dependency: ~S" (groveler-dependency-missing/system c))))
+  (:documentation
+   "Condition signaled when the groveler cannot continue because of a missing
+dependency."))
 
 (defun launch-sub-lisp ()
+  "Start a SBCL process that does not load config files, has a disabled
+debugger, and does not print things unless told. Set ASDF_OUTPUT_TRANSLATIONS
+for process to confine build artifacts to CLPM's cache. Use
+~sandbox-augment-command~ to run the child in a sandbox."
   (let ((cache-dir (clpm-cache-pathname '("deps-build")
                                         :ensure-directory t))
         (old-output-translations (uiop:getenv "ASDF_OUTPUT_TRANSLATIONS")))
@@ -77,12 +100,14 @@
            :read-write-pathnames (list cache-dir))
           :input :stream
           :output :stream
-          :error-output :stream)
+          :error-output :interactive)
       (setf (uiop:getenv "ASDF_OUTPUT_TRANSLATIONS")
             (or old-output-translations
                 "")))))
 
 (defun start-grovel-process ()
+  "Start and return a process (using ~launch-sub-lisp~) that contains an
+instance of SBCL with the groveling code loaded."
   (ensure-deps-system-in-cache!)
   (let* ((proc-info (launch-sub-lisp))
          (in-stream (uiop:process-info-input proc-info))
@@ -108,6 +133,7 @@
     proc-info))
 
 (defun safe-load-asd-in-process (proc-info asd-pathname)
+  "Load the .asd file at ~asd-pathname~ into the ~proc-info~'s lisp process."
   (let* ((in-stream (uiop:process-info-input proc-info))
          (out-stream (uiop:process-info-output proc-info)))
     (uiop:with-safe-io-syntax ()
@@ -117,6 +143,7 @@
       (values-list (read out-stream)))))
 
 (defun determine-system-deps-in-process (proc-info system-name)
+  "Query and return a list of the dependencies of ~system-name~."
   (let* ((in-stream (uiop:process-info-input proc-info))
          (out-stream (uiop:process-info-output proc-info)))
     (uiop:with-safe-io-syntax ()
@@ -126,6 +153,8 @@
       (read out-stream))))
 
 (defun determine-systems-from-file-in-process (proc-info system-pathname)
+  "Return a list of systems defined in the .asd file located at
+~system-pathname~."
   (let* ((in-stream (uiop:process-info-input proc-info))
          (out-stream (uiop:process-info-output proc-info)))
     (uiop:with-safe-io-syntax ()
@@ -135,7 +164,8 @@
       (read out-stream))))
 
 (defun ensure-process-ready! (proc-info asd-pathname dependency-asd-files)
-  "Ensures that the process has asd-pathname successfully loaded."
+  "Ensures that the process has asd-pathname successfully loaded. Establishes a
+~add-asd-and-retry~ restart."
   (tagbody
    start
      (dolist (file (append dependency-asd-files (list asd-pathname)))
@@ -165,6 +195,7 @@
   (uiop:wait-process proc-info))
 
 (defun kill-groveler-process-for-file! (asd-file)
+  "Kill the groveler process associated with ~asd-file~."
   (when-let ((proc-info (gethash (truename asd-file) *running-grovelers*)))
     (kill-groveler-process! proc-info asd-file)))
 
@@ -175,13 +206,16 @@
                     (ensure-process-ready! it asd-file dependency-asd-files))))
 
 (defun grovel-system-info (asd-file system-name)
+  "Grovel for the dependencies of ~system-name~ in ~asd-file~."
   (determine-system-deps-in-process (get-groveler-process asd-file nil) system-name))
 
 (defun grovel-systems-in-file (asd-file)
+  "Grovel for the systems defined in ~asd-file~."
   (determine-systems-from-file-in-process (get-groveler-process asd-file nil)
                                           (uiop:truename* asd-file)))
 
 (defun exit-hook ()
+  "Terminates all groveler processes."
   (maphash-keys (lambda (k)
                   (kill-groveler-process-for-file! k))
                 *running-grovelers*))
