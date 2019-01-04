@@ -1,7 +1,7 @@
 ;;;; Implementation of execvpe.
 ;;;;
 ;;;; This software is part of CLPM. See README.org for more information. See
-;;;; COPYING for license information.
+;;;; LICENSE for license information.
 
 (uiop:define-package #:clpm/execvpe
     (:use #:cl
