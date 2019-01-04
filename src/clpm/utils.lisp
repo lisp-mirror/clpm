@@ -15,7 +15,7 @@
 #+sbcl
 (defun run-program-augment-env-args (new-env-alist)
   "Given an alist of environment variables, return a list of arguments suitable
-for uiop:{launch/run}-program to set the augmented environment for the child
+for ~uiop:{launch/run}-program~ to set the augmented environment for the child
 process."
   (let* ((inherited-env
            (remove-if (lambda (x)
