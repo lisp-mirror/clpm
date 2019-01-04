@@ -5,22 +5,32 @@
 
 (uiop:define-package #:clpm/utils
     (:use #:cl
-          #:puri)
+          #:puri
+          #:split-sequence)
   (:export #:run-program-augment-env-args
            #:uri-to-string))
 
 (in-package #:clpm/utils)
 
+#+sbcl
 (defun run-program-augment-env-args (new-env-alist)
   "Given an alist of environment variables, return a list of arguments suitable
 for uiop:{launch/run}-program to set the augmented environment for the child
 process."
-  #-sbcl (error "not implemented")
-  (let ((env (append (mapcar (lambda (c)
-                               (concatenate 'string (car c) "=" (cdr c)))
-                             new-env-alist)
-                     (sb-ext:posix-environ))))
+  (let* ((inherited-env
+           (remove-if (lambda (x)
+                        (let ((name (first (split-sequence #\= x))))
+                          (member name new-env-alist :test #'equal :key #'car)))
+                      (sb-ext:posix-environ)))
+         (env (append (mapcar (lambda (c)
+                                (concatenate 'string (car c) "=" (cdr c)))
+                              new-env-alist)
+                      inherited-env)))
     (list :environment env)))
+
+#-sbcl
+(defun run-program-augment-env-args (new-env-alist)
+  (error "not implemented"))
 
 (defun uri-to-string (uri)
   "Convert a puri URI to a string."
