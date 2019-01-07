@@ -2,6 +2,9 @@
 ;;;; repo to be checked out before much can be done with it, so it shares a lot
 ;;;; of code with fs-sources. But it ensures that the repo is checked out before
 ;;;; it falls back to fs methods
+;;;;
+;;;; This software is part of CLPM. See README.org for more information. See
+;;;; LICENSE for license information.
 
 ;; * define package
 

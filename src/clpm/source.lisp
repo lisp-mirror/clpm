@@ -1,3 +1,8 @@
+;;;; Source definitions
+;;;;
+;;;; This software is part of CLPM. See README.org for more information. See
+;;;; LICENSE for license information.
+
 (uiop:define-package #:clpm/source
     (:use #:cl
           #:clpm/cache

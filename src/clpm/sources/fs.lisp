@@ -1,4 +1,7 @@
 ;;;; Sources that are located on the file system.
+;;;;
+;;;; This software is part of CLPM. See README.org for more information. See
+;;;; LICENSE for license information.
 
 ;; * Define package
 (uiop:define-package #:clpm/sources/fs

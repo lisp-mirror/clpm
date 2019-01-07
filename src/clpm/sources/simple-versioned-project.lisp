@@ -1,3 +1,8 @@
+;;;; Simply versioned projects
+;;;;
+;;;; This software is part of CLPM. See README.org for more information. See
+;;;; LICENSE for license information.
+
 (uiop:define-package #:clpm/sources/simple-versioned-project
     (:use #:cl
           #:clpm/sources/defs
