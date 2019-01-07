@@ -1,3 +1,8 @@
+;;;; Logging support
+;;;;
+;;;; This software is part of CLPM. See README.org for more information. See
+;;;; LICENSE for license information.
+
 (uiop:define-package #:clpm/log
     (:use #:cl)
   (:import-from #:log4cl)
@@ -14,6 +19,7 @@ used."
      (log:package-options :category-separator "/")))
 
 (defun configure-logger ()
+  "Configure the root logger."
   (log:config (log:category '(clpm))
               :tricky-console :stream *error-output* :immediate-flush :own :notime
               :warn))
