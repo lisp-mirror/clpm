@@ -1,5 +1,8 @@
 ;;;; CLPM Licenses. This file contains code to load the licenses of CLPM's
 ;;;; dependencies into the image.
+;;;;
+;;;; This software is part of CLPM. See README.org for more information. See
+;;;; LICENSE for license information.
 
 (uiop:define-package #:clpm-licenses
     (:use #:cl)
