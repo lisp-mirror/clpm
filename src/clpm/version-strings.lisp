@@ -1,3 +1,8 @@
+;;;; Support for dealing with version strings
+;;;;
+;;;; This software is part of CLPM. See README.org for more information. See
+;;;; LICENSE for license information.
+
 (uiop:define-package #:clpm/version-strings
     (:use #:cl
           #:alexandria)
