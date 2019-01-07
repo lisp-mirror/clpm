@@ -1,4 +1,7 @@
-;;;; Install CLI
+;;;; clpm install
+;;;;
+;;;; This software is part of CLPM. See README.org for more information. See
+;;;; LICENSE for license information.
 
 (uiop:define-package #:clpm/cli/install
     (:use #:cl

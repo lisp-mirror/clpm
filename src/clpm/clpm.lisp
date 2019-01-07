@@ -1,6 +1,8 @@
 ;;;; Common Lisp Package Manager - CLPM.
+;;;;
+;;;; This software is part of CLPM. See README.org for more information. See
+;;;; LICENSE for license information.
 
-;; * Package Definition
 (uiop:define-package #:clpm/clpm
     (:use #:cl
           #:clpm/cli/bundle

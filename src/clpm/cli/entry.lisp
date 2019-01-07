@@ -1,3 +1,8 @@
+;;;; CLI entry point
+;;;;
+;;;; This software is part of CLPM. See README.org for more information. See
+;;;; LICENSE for license information.
+
 (uiop:define-package #:clpm/cli/entry
     (:use #:cl
           #:alexandria

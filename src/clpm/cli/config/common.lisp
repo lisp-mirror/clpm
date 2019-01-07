@@ -1,3 +1,8 @@
+;;;; Config CLI common functions
+;;;;
+;;;; This software is part of CLPM. See README.org for more information. See
+;;;; LICENSE for license information.
+
 (uiop:define-package #:clpm/cli/config/common
     (:use #:cl
           #:alexandria
