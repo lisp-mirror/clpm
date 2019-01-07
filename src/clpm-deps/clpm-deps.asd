@@ -1,4 +1,7 @@
 ;;;; CLPM Deps System Definition
+;;;;
+;;;; This software is part of CLPM. See README.org for more information. See
+;;;; LICENSE for license information.
 
 (defsystem #:clpm-deps
   :description "A package for CLPM to determine dependencies"

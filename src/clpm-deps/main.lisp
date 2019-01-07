@@ -1,3 +1,8 @@
+;;;; CLPM dependency groveler
+;;;;
+;;;; This software is part of CLPM. See README.org for more information. See
+;;;; LICENSE for license information.
+
 (uiop:define-package #:clpm-deps/main
     (:use #:cl)
   (:import-from #:uiop
