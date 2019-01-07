@@ -1,3 +1,8 @@
+;;;; Basic installation support
+;;;;
+;;;; This software is part of CLPM. See README.org for more information. See
+;;;; LICENSE for license information.
+
 (uiop:define-package #:clpm/install
     (:use #:cl
           #:alexandria
@@ -16,20 +21,25 @@
 (setup-logger)
 
 (defun source-archive-cache (source)
+  "Return a pathname to the directory where ~source~ stores its archives."
   (uiop:resolve-absolute-location
    `(,(source/cache-directory source)
      "distfiles")
    :ensure-directory t))
 
 (defun url-filename (url)
+  "Return the filename of ~url~."
   (file-namestring (puri:uri-path url)))
 
 (defun url-location (url)
+  "Return a list of two elements. First is the ~url~ to fetch the file, the
+second is the filename of the file located at ~url~."
   (if (listp url)
       (values (first url) (second url))
       (values url (url-filename url))))
 
 (defun fetch-release (release)
+  "Ensure that the files needed to install ~release~ have been downloaded."
   (let ((version-url (first (tarball-release/urls release))))
     (multiple-value-bind (url filename)
         (url-location version-url)
@@ -38,7 +48,9 @@
         (ensure-file-fetched archive-pathname url)
         archive-pathname))))
 
-(defgeneric activate-release-globally! (release))
+(defgeneric activate-release-globally! (release)
+  (:documentation
+   "Add ~release~ to the global list of installed and activated releases."))
 
 (defmethod activate-release-globally! ((release tarball-release))
   (let* ((source (release/source release))
@@ -95,7 +107,8 @@
         (write (list* :source-registry-cache source-registry-cache)
                :stream s)))))
 
-(defgeneric install-release (release &key activate-globally))
+(defgeneric install-release (release &key activate-globally)
+  (:documentation "Install a ~release~ and optinally activate it globally."))
 
 (defmethod install-release ((release tarball-release) &key activate-globally)
   (let* ((version-string (release/version release))
@@ -114,10 +127,6 @@
                      archive-stream (uiop:pathname-parent-directory-pathname install-root)))))
     (when activate-globally
       (activate-release-globally! release))))
-
-(defun git-rev-parse (rev)
-  (uiop:run-program `("git" "rev-parse" ,rev)
-                    :output '(:string :stripped t)))
 
 (defmethod install-release ((release git-release) &key activate-globally)
   (declare (ignore activate-globally))
