@@ -1,3 +1,8 @@
+;;;; Support for sandboxing with firejail
+;;;;
+;;;; This software is part of CLPM. See README.org for more information. See
+;;;; LICENSE for license information.
+
 (uiop:define-package #:clpm/sandbox/firejail
     (:use #:cl
           #:clpm/cache
@@ -5,9 +10,31 @@
 
 (in-package #:clpm/sandbox/firejail)
 
-(defmethod sandbox-augment-command ((method (eql :firejail)) command
+(defclass firejail-sandbox ()
+  ((path
+    :initarg :path
+    :initform "firejail"
+    :reader firejail-path
+    :documentation
+    "Path to firejail executable."))
+  (:documentation
+   "A sandbox client that uses firejail."))
+
+(register-sandbox-client :firejail 'firejail-sandbox)
+
+(defmethod sandbox-available-p ((client firejail-sandbox))
+  "Returns T iff the firejail program exists at the path specified by the client
+and its version can be successfully queried."
+  (ignore-errors
+   (zerop
+    (nth-value 2
+               (uiop:run-program (list (firejail-path client)
+                                       "--version")
+                                 :ignore-error-status t)))))
+
+(defmethod %sandbox-augment-command ((client firejail-sandbox) command
                                     &key read-write-pathnames)
-  `("firejail"
+  `(,(firejail-path client)
     "--x11=none"
     "--net=none"
     "--private-tmp"
@@ -31,19 +58,3 @@
     "--shell=none"
     "--"
     ,@command))
-
-(defmethod launch-program-in-sandbox ((sandbox-method (eql :firejail))
-                                      sandbox-args
-                                      command
-                                      &rest args
-                                      &key
-                                      &allow-other-keys)
-  (apply #'uiop:launch-program
-         (apply #'sandbox-augment-command command sandbox-args)
-         args))
-
-(defmethod sandbox-available-p ((sandbox-method (eql :firejail)))
-  (zerop
-   (nth-value 2
-              (uiop:run-program '("firejail" "--version")
-                                :ignore-error-status t))))

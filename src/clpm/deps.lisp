@@ -90,7 +90,6 @@ for process to confine build artifacts to CLPM's cache. Use
     (apply
      #'uiop:launch-program
      (sandbox-augment-command
-      (config-value :grovel :sandbox :method)
       `("sbcl"
         "--noinform"
         "--noprint"

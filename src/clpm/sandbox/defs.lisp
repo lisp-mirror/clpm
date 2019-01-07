@@ -1,53 +1,96 @@
+;;;; Definitions for pluggable sandbox clients.
+;;;;
+;;;; This software is part of CLPM. See README.org for more information. See
+;;;; LICENSE for license information.
+
 (uiop:define-package #:clpm/sandbox/defs
     (:use #:cl
-          #:alexandria)
-  (:export #:*sandbox-methods*
-           #:available-sandboxes
-           #:launch-program-in-sandbox
+          #:alexandria
+          #:anaphora
+          #:clpm/config)
+  (:export #:register-sandbox-client
            #:sandbox-augment-command
+           #:%sandbox-augment-command
            #:sandbox-available-p))
 
 (in-package #:clpm/sandbox/defs)
 
-(defparameter *sandbox-methods*
-  (list :firejail))
+(defvar *all-sandbox-clients* nil
+  "A list of all sandboxing clients loaded into the image. An alist that maps
+a (keyword) name to a class name.")
 
-(defvar *available-sandboxes* nil)
+(defvar *available-sandbox-clients* nil
+  "A list of sandboxing clients that are loaded into the image *and* have all
+their dependencies (such as external programs) met. An alist that maps
+a (keyword) name to a client instance. Computed when necessary by
+~available-sandbox-clients~.")
 
-(defun clear-available-sandboxes ()
-  (setf *available-sandboxes* nil))
+(defun register-sandbox-client (key class)
+  "Register a new ~key~, ~class~ pair in ~*all-sandbox-clients*~."
+  (pushnew (cons key class) *all-sandbox-clients* :test #'equal))
 
-(uiop:register-clear-configuration-hook 'clear-available-sandboxes)
+(defun clear-available-sandbox-clients ()
+  "Clear the list of available sandbox clients."
+  (setf *available-sandbox-clients* nil))
 
-(defgeneric launch-program-in-sandbox (sandbox-method sandbox-args
-                                       command &rest args &key &allow-other-keys))
+;; Make sure the available sandboxing clients are cleared on image dump.
+(uiop:register-clear-configuration-hook 'clear-available-sandbox-clients)
 
-(defgeneric sandbox-available-p (sandbox-method))
+(defun make-sandbox-client (pair)
+  "Given a name/class pair, instantiate the class, using any setting specified
+by the user's config."
+  (destructuring-bind (key . class)
+      pair
+    (apply #'make-instance class
+           (awhen (config-value :sandbox-client key)
+             (hash-table-plist it)))))
 
-(defgeneric sandbox-augment-command (sandbox-method command &key read-write-pathnames))
+(defun compute-available-sandbox-clients ()
+  "Compute an alist suitable for storing in
+~*available-sandbox-clients*~. Instantiate all registered sandbox clients, then
+remove the ones where ~sandbox-client-available-p~ returns NIL."
+  (let ((client-list (mapcar (lambda (x)
+                               (cons (car x) (make-sandbox-client x)))
+                             *all-sandbox-clients*)))
+    (remove-if-not #'sandbox-client-available-p client-list :key #'cdr)))
 
-(defmethod sandbox-augment-command ((sandbox-method string)
-                                    command
-                                    &rest args
-                                    &key &allow-other-keys)
-  (apply #'sandbox-augment-command (make-keyword (uiop:standard-case-symbol-name sandbox-method))
-         command args))
+(defun available-sandbox-clients ()
+  "Return an alist of all available sandbox clients. Caches results in
+~*available-sandbox-clients*~."
+  (unless *available-sandbox-clients*
+    (setf *available-sandbox-clients* (compute-available-sandbox-clients)))
+  *available-sandbox-clients*)
 
-(defmethod sandbox-augment-command ((sandbox-method (eql :none))
-                                    command
-                                    &key &allow-other-keys)
-  command)
+(defun get-preferred-sandbox-client ()
+  "Return the sandbox client instance that is available and most preferred."
+  (let* ((client-key (config-value :grovel :sandbox :method))
+         (available-sandbox-clients (available-sandbox-clients))
+         (client (if (eql :auto client-key)
+                     (cdr (first available-sandbox-clients))
+                     (assoc-value available-sandbox-clients client-key))))
+    client))
 
-(defun available-sandboxes ()
-  (unless *available-sandboxes*
-    (setf *available-sandboxes* (remove-if-not #'sandbox-available-p *sandbox-methods*)))
-  *available-sandboxes*)
+
+;; * Sandbox Client API
 
-(defmethod sandbox-augment-command ((sandbox-method (eql :auto))
-                                    command
-                                    &rest args &key &allow-other-keys)
-  (let ((available-sandboxes (available-sandboxes)))
-    (if available-sandboxes
-        command
-        (apply #'sandbox-augment-command command (first available-sandboxes)
-               args))))
+(defgeneric sandbox-client-available-p (client)
+  (:documentation
+   "Returns T iff ~client~ is able to be used to sandbox."))
+
+(defgeneric %sandbox-augment-command (sandbox-client command &key read-write-pathnames)
+  (:documentation
+   "Given a ~command~ as a list of strings, return a new command list that runs
+the command in a sandbox using ~sandbox-client~."))
+
+
+;; * Sandboxing processes
+
+(defun sandbox-augment-command (command &key read-write-pathnames)
+  "Given a ~command~ as a list of strings, return a new command list that runs
+the command in a sandbox using the preferred sandbox client."
+  (let ((client (get-preferred-sandbox-client)))
+    (if client
+        (%sandbox-augment-command client
+                                  command
+                                  :read-write-pathnames read-write-pathnames)
+        command)))
