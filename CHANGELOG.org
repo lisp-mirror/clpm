@@ -1,5 +1,9 @@
 #+TITLE: CLPM Changelog
 
+* v0.0.6 - 2019-01-09
+  Many documentation improvements.
+
+  Switch to using tar and curl executables by default.
 * v0.0.5 - 2018-12-10
   Allow specifying a port for http.
 * v0.0.4 - 2018-12-10
