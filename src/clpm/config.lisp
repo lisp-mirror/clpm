@@ -228,8 +228,9 @@ config."
 file (clpm.conf) into ~*active*~."
   (setf *config* (parse-config-form *default-config*))
   (let* ((config-file (clpm-config-pathname '("clpm.conf"))))
-    (merge-file-into-config! config-file)
-    *config*))
+    (when config-file
+      (merge-file-into-config! config-file)))
+  *config*)
 
 (defun clear-global-config ()
   "Clear the ~*config*~ variable."
