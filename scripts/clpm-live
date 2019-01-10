@@ -1,4 +1,4 @@
-#!/usr/bin/env -S CL_SOURCE_REGISTRY="" sbcl --noinform --no-sysinit --no-userinit --script
+#!/usr/bin/sbcl --script
 ;;;; Script to load in CLPM and run its main method. -*- mode: common-lisp; -*-
 ;;;;
 ;;;; This software is part of CLPM. See README.org for more information. See
