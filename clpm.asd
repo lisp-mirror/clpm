@@ -1,4 +1,7 @@
 ;;;; CLPM System Definition
+;;;;
+;;;; This software is part of CLPM. See README.org for more information. See
+;;;; LICENSE for license information.
 
 #-:asdf3.1
 (error "Requires ASDF >=3.1")
