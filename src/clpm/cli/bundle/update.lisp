@@ -62,6 +62,7 @@ correct commit."
   (let* ((sources (clpmfile/sources clpmfile))
          (raw-reqs (clpmfile/all-requirements clpmfile))
          reqs)
+    (mapc #'sync-source sources)
     ;; Make sure all git releases are installed and replace their requirements
     ;; with a requirement on the commit.
     (dolist (r raw-reqs)
