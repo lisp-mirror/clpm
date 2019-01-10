@@ -124,6 +124,9 @@
     :documentation "A hash table mapping system names to system objects."))
   (:documentation "A git source"))
 
+(defclass local-git-source (git-source)
+  ())
+
 (defclass github-source (git-source)
   ((host
     :initform "github.com"))
@@ -139,7 +142,9 @@
 hostname or NIL."
   (ecase type
     (:gitlab
-     (values 'gitlab-source "gitlab.com"))))
+     (values 'gitlab-source "gitlab.com"))
+    (:local
+     (values 'local-git-source nil))))
 
 (defgeneric git-source-type-keyword (source))
 
@@ -303,10 +308,18 @@ hostname or NIL."
     (check-type version-string string)
     (ensure-gethash version (vcs-project/releases-by-spec project)
                     (apply #'make-instance
-                           'git-release
+                           'remote-git-release
                            :project project
                            :source (project/source project)
                            version))))
+
+(defmethod project/release ((project git-project) (version (eql :current)))
+  "If the version is ~:current~, make sure the source is a local git source."
+  (check-type (project/source project) local-git-source)
+  (ensure-gethash version (vcs-project/releases-by-spec project)
+                  (make-instance 'local-git-release
+                                 :project project
+                                 :source (project/source project))))
 
 (defmethod project/releases ((project git-project))
   (hash-table-values (vcs-project/releases-by-spec project)))
@@ -315,6 +328,18 @@ hostname or NIL."
 ;; * releases
 
 (defclass git-release (clpm-release)
+  ((system-files-by-namestring
+    :accessor git-release/system-files-by-namestring)
+   (system-files-by-primary-name
+    :accessor git-release/system-files-by-primary-name)
+   (system-releases-by-name
+    :initform (make-hash-table :test 'equal)
+    :accessor git-release/system-releases-by-name)))
+
+(defclass local-git-release (git-release)
+  ())
+
+(defclass remote-git-release (git-release)
   ((tag
     :initarg :tag
     :initform nil
@@ -326,14 +351,7 @@ hostname or NIL."
    (commit
     :initarg :commit
     :initform nil
-    :accessor git-release/commit)
-   (system-files-by-namestring
-    :accessor git-release/system-files-by-namestring)
-   (system-files-by-primary-name
-    :accessor git-release/system-files-by-primary-name)
-   (system-releases-by-name
-    :initform (make-hash-table :test 'equal)
-    :accessor git-release/system-releases-by-name)))
+    :accessor git-release/commit)))
 
 (defun populate-release-system-files! (release)
   (ensure-release-installed! release)
@@ -362,7 +380,7 @@ hostname or NIL."
   (populate-release-system-files! release)
   (git-release/system-files-by-primary-name release))
 
-(defmethod release/version ((release git-release))
+(defmethod release/version ((release remote-git-release))
   (acond
     ((git-release/commit release)
      `(:commit ,it))
@@ -406,7 +424,10 @@ already created."
   (let* ((system-files (release/system-files release)))
     (apply #'append (mapcar #'system-file/system-releases system-files))))
 
-(defmethod release/lib-pathname ((release git-release))
+(defmethod release/lib-pathname ((release local-git-release))
+  (uiop:ensure-directory-pathname (vcs-project/path (release/project release))))
+
+(defmethod release/lib-pathname ((release remote-git-release))
   (assert (git-release/commit release))
   (let ((project (release/project release))
         (commit-string (git-release/commit release)))
@@ -570,7 +591,7 @@ include it."
        :error-output :interactive
        (run-program-augment-env-args env)))))
 
-(defun ensure-release-present-in-cache! (release)
+(defun ensure-remote-release-present-in-cache! (release)
   (let* ((project (release/project release))
          (project-cache (vcs-project/cache-directory project)))
     ;; Make sure we have enough of the repo cloned locally to have the reference
@@ -589,11 +610,16 @@ include it."
        ;; We do not have the specific commit. fetch!
        (fetch-release! release)))))
 
-(defun ensure-release-installed! (release)
+(defgeneric ensure-release-installed! (release))
+
+(defmethod ensure-release-installed! ((release local-git-release))
+  t)
+
+(defmethod ensure-release-installed! ((release remote-git-release))
   (let* ((project (release/project release))
          (project-cache (vcs-project/cache-directory project)))
 
-    (ensure-release-present-in-cache! release)
+    (ensure-remote-release-present-in-cache! release)
 
     ;; Get the commit sha1 for the requested ref.
     (let ((commit-id

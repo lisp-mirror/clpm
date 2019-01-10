@@ -8,6 +8,7 @@
           #:alexandria
           #:anaphora
           #:iterate
+          #:clpm/config
           #:clpm/deps
           #:clpm/requirement
           #:clpm/source)
@@ -304,13 +305,27 @@ sources."
 (defmethod parse-system-file-statement (lockfile (statement-type (eql :git))
                                         &key type host repo commit system-files
                                           name)
-  (let* ((source (get-git-source type host))
-         (project (git-source-register-project! source repo name))
-         (release (project/release project `(:commit ,commit)))
-         (system-files (mapcar (curry #'release/system-file release) system-files)))
-    (setf (lockfile/system-files lockfile)
-          (append system-files (lockfile/system-files lockfile)))
-    lockfile))
+  ;; First, look for a local override.
+  (let ((local (config-value :bundle :local name :path)))
+    (if local
+        ;; A local override exists.
+        (let* ((local-path (uiop:ensure-directory-pathname
+                            (merge-pathnames local
+                                             (uiop:pathname-directory-pathname
+                                              (lockfile/pathname lockfile)))))
+               (source (get-git-source :local))
+               (project (git-source-register-project! source local-path name))
+               (release (project/release project :current))
+               (system-files (mapcar (curry #'release/system-file release) system-files)))
+          (setf (lockfile/system-files lockfile)
+                (append system-files (lockfile/system-files lockfile))))
+        (let* ((source (get-git-source type host))
+               (project (git-source-register-project! source repo name))
+               (release (project/release project `(:commit ,commit)))
+               (system-files (mapcar (curry #'release/system-file release) system-files)))
+          (setf (lockfile/system-files lockfile)
+                (append system-files (lockfile/system-files lockfile))))))
+  lockfile)
 
 (defun parse-lockfile-forms (lockfile forms)
   "Given a list of ~forms~, parse them and register them appropriately with
@@ -388,6 +403,7 @@ to a file."
          (dolist (file system-files-in-release)
            (collect `(:local-asd
                       :path ,(system-file/asd-enough-namestring file)))))
+        ;; TODO: Make this handle local vs remote git repos
         ((typep release 'git-release)
          (let ((version (release/version release))
                (source (release/source release)))
