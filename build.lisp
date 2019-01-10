@@ -59,7 +59,7 @@ process."
                :do
                   (print arg out)))))
     (apply #'run-program
-           (list "/home/etimmons/common-lisp/clpm/scripts/clpm-live")
+           (list (uiop:native-namestring (merge-pathnames "scripts/clpm-live" *build-root-pathname*)))
            :output :interactive
            :error-output :interactive
            :input #'vomit
