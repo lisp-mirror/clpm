@@ -59,7 +59,9 @@ process."
                :do
                   (print arg out)))))
     (apply #'run-program
-           (list (uiop:native-namestring (merge-pathnames "scripts/clpm-live" *root-pathname*)))
+           (list "sbcl"
+                 "--script"
+                 (uiop:native-namestring (merge-pathnames "scripts/clpm-live" *root-pathname*)))
            :output :interactive
            :error-output :interactive
            :input #'vomit
