@@ -488,24 +488,27 @@ version of the distribution to the directory specified by DEST-DIR."
               (push r out-db)))))
     out-db))
 
-
-(defmethod sync-source ((source quicklisp-source))
-  (let* ((known-versions (source/dist-versions source))
-         (latest-versions (latest-all-versions source))
-         (missing-versions (set-difference latest-versions known-versions :key #'car :test #'equal)))
-    (when missing-versions
-      ;; There are versions that we don't have! Need to sync.
-      (setf (getf (source/db source) :versions)
-            latest-versions)
-      (setf (getf (source/db source) :releases)
-            (assemble-release-db (source/cache-directory source)
-                                 (getf (source/db source) :releases)
-                                 missing-versions))
+(defun ensure-version-synced! (source version)
+  (check-type source quicklisp-source)
+  (unless (member (car version) (source/dist-versions source) :key #'car :test #'equal)
+    (log:info "Syncing version ~S~%" version)
+    (push version (getf (source/db source) :versions))
+    (setf (getf (source/db source) :releases)
+          (assemble-release-db (source/cache-directory source)
+                               (getf (source/db source) :releases)
+                               (list version)))
       ;; Build the updated system table
       (setf (getf (source/db source) :systems)
             (assemble-systems-db (getf (source/db source) :releases)))
       (save-db source)
-      t)))
+      t))
+
+(defmethod sync-source ((source quicklisp-source))
+  (let* ((latest-versions (latest-all-versions source))
+         (changed-p nil))
+    (dolist (v latest-versions)
+      (setf changed-p (or (ensure-version-synced! source v) changed-p)))
+    t))
 
 
 
