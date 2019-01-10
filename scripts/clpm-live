@@ -1,0 +1,60 @@
+#!/usr/bin/env -S CL_SOURCE_REGISTRY="" sbcl --noinform --no-sysinit --no-userinit --script
+;;;; Script to load in CLPM and run its main method. -*- mode: common-lisp; -*-
+;;;;
+;;;; This software is part of CLPM. See README.org for more information. See
+;;;; LICENSE for license information.
+
+;;; First, this script does its best to avoid loading user init code and ignores
+;;; CL_SOURCE_REGISTRY. After starting, it loads ASDF and configures it to use
+;;; only the systems found in the CLPM directory. It then loads CLPM and
+;;; executes its main function. Additionally, its behavior can be modified using
+;;; environment variables. Any variable with ~PRIVATE~ in its name is liable to
+;;; have its behavior changed at any time. Effort will be made to keep behavior
+;;; of all other variables the same, but isn't guaranteed.
+;;;
+;;; + CLPM_LIVE_PRIVATE_REPL :: If "true", a REPL is started instead of invoking
+;;;      CLPM's main function.
+;;; + CLPM_LIVE_COMPILATION_VISIBLE :: If "true", all output from compilation is
+;;;      sent to ~*error-output*~, otherwise it is all discarded unless there is
+;;;      an error.
+
+(in-package :cl-user)
+
+;; Load in ASDF.
+(require :asdf)
+
+;; Clear its configuration
+(asdf:clear-configuration)
+
+;; Configure it to only look for files from CLPM.
+(let ((clpm-root (uiop:pathname-parent-directory-pathname *load-truename*)))
+  (asdf:initialize-source-registry
+   `(:source-registry
+     (:tree ,clpm-root)
+     :ignore-inherited-configuration)))
+
+;; Load CLPM
+(flet ((load-clpm ()
+         (let* ((compilation-visible-p (equal (uiop:getenv "CLPM_LIVE_COMPILATION_VISIBLE") "true"))
+                (output-stream (if compilation-visible-p
+                                   *error-output*
+                                   (make-string-output-stream)))
+                (stderr *error-output*)
+                (*error-output* output-stream)
+                (*standard-output* output-stream))
+           (handler-bind
+               ((error (lambda (e)
+                         (unless compilation-visible-p
+                           (write-string (get-output-stream-string output-stream) stderr)
+                           (terpri stderr))
+                         (format stderr "~&Error while compiling CLPM: ~S~%" e)
+                         (uiop:print-condition-backtrace e :stream stderr))))
+             (asdf:load-system :clpm)))))
+  (load-clpm))
+
+;; If a REPL is requested, start 'er up
+(when (equal (uiop:getenv "CLPM_LIVE_PRIVATE_REPL") "true")
+  (sb-impl::toplevel-repl nil))
+
+(let ((clpm-sys (asdf:find-system :clpm)))
+  (uiop:call-function (asdf::component-entry-point clpm-sys)))
