@@ -97,13 +97,6 @@
        ;; (setf (symbol-value (uiop:find-symbol* :*client-contents* :clpm/client))
        ;;       (uiop:read-file-string ,clpm-client-pathname))
 
-       (setf (symbol-value (uiop:find-symbol* :*deps-source* :clpm/deps))
-             (uiop:read-file-string ,(merge-pathnames "main.lisp" clpm-deps-root)))
-       (setf (symbol-value (uiop:find-symbol* :*deps-system* :clpm/deps))
-             (uiop:read-file-string ,(merge-pathnames "clpm-deps.asd" clpm-deps-root)))
-       (setf (symbol-value (uiop:find-symbol* :*deps-version* :clpm/deps))
-             (uiop:read-file-form ,(merge-pathnames "version.sexp" clpm-deps-root)))
-
        (defmethod asdf:perform ((cl-user::o asdf:image-op) (cl-user::c asdf:system))
          (uiop:dump-image (asdf:output-file cl-user::o cl-user::c) :executable (typep cl-user::o 'asdf:program-op) #+:sb-core-compression ,@(list :compression t)))
        ;; (uiop:register-image-restore-hook
