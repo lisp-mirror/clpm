@@ -44,7 +44,9 @@
     (unless missing-pathnames
       (log:debug "asdf pathnames available in new process:~%~A" asdf-pathnames)
       (execvpe (first command) (rest command)
-               `(("CL_SOURCE_REGISTRY" . ,cl-source-registry-value))
+               `(("CL_SOURCE_REGISTRY" . ,cl-source-registry-value)
+                 ("CLPM_BUNDLE_CLPMFILE" . ,(uiop:native-namestring clpmfile-pathname))
+                 ("CLPM_BUNDLE_BIN_PATH" . ,(first (uiop:raw-command-line-arguments))))
                t))
     ;; We got here, there is some .asd file not present. Tell the user!
     (format *error-output* "The following system files are missing! Please run `clpm bundle install` and try again!~%~A" missing-pathnames)
