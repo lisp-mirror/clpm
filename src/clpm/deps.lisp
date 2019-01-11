@@ -41,7 +41,7 @@ image dump.")
   (uiop:read-file-string (asdf:system-relative-pathname :clpm "src/clpm-deps/main.lisp")))
 (defun read-deps-version-string ()
   "Read version.sexp from file as a string."
-  (uiop:read-file-string (asdf:system-relative-pathname :clpm "src/clpm-deps/version.sexp")))
+  (uiop:read-file-form (asdf:system-relative-pathname :clpm "src/clpm-deps/version.sexp")))
 
 (defun cache-files! ()
   "Cache the groveler files in the variables."
