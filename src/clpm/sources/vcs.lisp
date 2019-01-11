@@ -23,7 +23,8 @@
           #:clpm/sources/semantic-versioned-project
           #:clpm/utils
           #:puri)
-  (:export #:ensure-git-release-installed!
+  (:export #:commit-in-repo-p
+           #:ensure-git-release-installed!
            #:get-git-source
            #:git-project/git-uri-string
            #:git-release
@@ -649,3 +650,13 @@ include it."
 
 (defun ensure-git-release-installed! (release)
   (ensure-release-installed! release))
+
+(defun commit-in-repo-p (local-release commit)
+  (check-type local-release local-git-release)
+  (uiop:with-current-directory ((vcs-project/path (release/project local-release)))
+    (zerop (nth-value 2
+                      (uiop:run-program (list "git"
+                                              "cat-file"
+                                              "-e"
+                                              (uiop:strcat commit "^{commit}"))
+                                        :ignore-error-status t)))))
