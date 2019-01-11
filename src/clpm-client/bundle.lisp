@@ -4,10 +4,15 @@
 ;;;; LICENSE for license information.
 
 (uiop:define-package #:clpm-client/bundle
-    (:use #:cl)
+    (:use #:cl
+          #:clpm-client/clpm)
   (:import-from #:uiop
-                #:getenv)
-  (:export #:clpmfile-pathname
+                #:getenv
+                #:pathname-directory-pathname
+                #:with-current-directory)
+  (:export #:bundle-pathnames
+           #:bundle-pathnames-for-asd-config
+           #:clpmfile-pathname
            #:inside-bundle-exec-p))
 
 (in-package #:clpm-client/bundle)
@@ -20,3 +25,18 @@
   "If spawned by a ~clpm bundle exec~ command, return the pathname to the
 clpmfile."
   (pathname (getenv "CLPM_BUNDLE_CLPMFILE")))
+
+(defun clpmfile-directory-pathname ()
+  "The directory pathname containing the clpmfile."
+  (pathname-directory-pathname (clpmfile-pathname)))
+
+(defun bundle-pathnames ()
+  "Return a list of pathnames to ASD files that are part of this bundle."
+  (with-current-directory ((clpmfile-directory-pathname))
+    (uiop:split-string
+     (run-clpm '("bundle" "pathnames")
+               :output '(:string :stripped t))
+     :separator '(#\Newline))))
+
+(defun bundle-pathnames-for-asd-config ()
+  (format nil "~{~A~^:~}" (bundle-pathnames)))

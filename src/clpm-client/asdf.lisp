@@ -5,6 +5,7 @@
 
 (uiop:define-package #:clpm-client/asdf
     (:use #:cl
+          #:clpm-client/bundle
           #:clpm-client/cleanup
           #:clpm-client/clpm)
   (:import-from #:asdf
@@ -50,6 +51,12 @@ system was successfully installed."
   (:documentation "A condition signaled when CLPM is unable to find a system
 locally."))
 
+(defmacro maybe-restart-case (condition form &rest cases)
+  `(if ,condition
+       (restart-case ,form
+         ,@cases)
+       ,form))
+
 (defun clpm-system-search (system-name)
   "A search function for ASDF's *SYSTEM-DEFINITION-SEARCH-FUNCTIONS* list.
 
@@ -59,11 +66,12 @@ signals a condition, and/or installs the system with CLPM-INSTALL-SYSTEM (see:
 *CLPM-SYSTEM-NOT-FOUND-BEHAVIOR*)."
   (unless (string-equal "asdf" system-name)
     (multiple-value-bind (output error-output exit-code)
-        (run-clpm (list "find" "-VV" system-name)
-                  :ignore-error-status t
-                  :input nil
-                  :output '(:string :stripped t)
-                  :error-output '(:string :stripped t))
+        (values nil nil 4)
+      ;; (run-clpm (list "find" "-VV" system-name)
+      ;;             :ignore-error-status t
+      ;;             :input nil
+      ;;             :output '(:string :stripped t)
+      ;;             :error-output '(:string :stripped t))
       (declare (ignore error-output))
       (if (= 0 exit-code)
           (pathname output)
@@ -72,26 +80,34 @@ signals a condition, and/or installs the system with CLPM-INSTALL-SYSTEM (see:
              (when (clpm-install-system system-name)
                (clpm-system-search system-name)))
             (:error
-             (restart-case
-                 ;; The progn is necessary here to prevent RESTART-CASE from
-                 ;; using WITH-CONDITION-RESTARTS to associate the restarts with
-                 ;; only this condition. This becomes an issue for
-                 ;; :DEFSYSTEM-DEPENDS-ON, becuase this error will be signaled
-                 ;; in the middle of an ASDF DEFINE-OP and ASDF will catch it,
-                 ;; wrap it, and signal a new condition. If
-                 ;; WITH-CONDITION-RESTARTS is used in the expansion of this
-                 ;; macro, then these restarts won't be available in the
-                 ;; interactive debugger in this case.
-                 (progn
-                   (error 'clpm-missing-system :system-name system-name))
-               (install-system ()
-                 :report "Attempt to install the system"
-                 (let ((*clpm-system-not-found-behavior* nil))
-                   (when (clpm-install-system system-name)
-                     (clpm-system-search system-name))))
-               (continue ()
-                 :report "Return control to ASDF"
-                 nil)))
+             (maybe-restart-case
+              (inside-bundle-exec-p)
+
+              (restart-case
+                  ;; The progn is necessary here to prevent RESTART-CASE from
+                  ;; using WITH-CONDITION-RESTARTS to associate the restarts with
+                  ;; only this condition. This becomes an issue for
+                  ;; :DEFSYSTEM-DEPENDS-ON, becuase this error will be signaled
+                  ;; in the middle of an ASDF DEFINE-OP and ASDF will catch it,
+                  ;; wrap it, and signal a new condition. If
+                  ;; WITH-CONDITION-RESTARTS is used in the expansion of this
+                  ;; macro, then these restarts won't be available in the
+                  ;; interactive debugger in this case.
+                  (progn
+                    (error 'clpm-missing-system :system-name system-name))
+                (install-system ()
+                  :report "Attempt to install the system"
+                  (let ((*clpm-system-not-found-behavior* nil))
+                    (when (clpm-install-system system-name)
+                      (clpm-system-search system-name))))
+                (continue ()
+                  :report "Return control to ASDF"
+                  nil))
+              (reload-bundle ()
+                :report "Clear ASDF configuration and reload from clpmfile.lock"
+                (asdf:clear-configuration)
+                (asdf:initialize-source-registry 'bundle-pathnames-for-asd-config)
+                (clpm-system-search system-name))))
             ((nil)
              nil))))))
 
