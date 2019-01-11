@@ -60,9 +60,10 @@ correct commit."
 (defun build-lockfile (clpmfile)
   "Given a clpmfile instance, make a lockfile instance for it."
   (let* ((sources (clpmfile/sources clpmfile))
+         (user-global-sources (clpmfile/user-global-sources clpmfile))
          (raw-reqs (clpmfile/all-requirements clpmfile))
          reqs)
-    (mapc #'sync-source sources)
+    (mapc #'sync-source user-global-sources)
     ;; Make sure all git releases are installed and replace their requirements
     ;; with a requirement on the commit.
     (dolist (r raw-reqs)
