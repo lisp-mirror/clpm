@@ -11,7 +11,7 @@
   (:export #:register-sandbox-client
            #:sandbox-augment-command
            #:%sandbox-augment-command
-           #:sandbox-available-p))
+           #:sandbox-client-available-p))
 
 (in-package #:clpm/sandbox/defs)
 

@@ -22,7 +22,7 @@
 
 (register-sandbox-client :firejail 'firejail-sandbox)
 
-(defmethod sandbox-available-p ((client firejail-sandbox))
+(defmethod sandbox-client-available-p ((client firejail-sandbox))
   "Returns T iff the firejail program exists at the path specified by the client
 and its version can be successfully queried."
   (ignore-errors
