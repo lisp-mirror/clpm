@@ -141,6 +141,13 @@ objects to a list of system-releases."))
                     (list (release/system-release release system-name))))
             releases)))
 
+(defmethod resolve-requirement ((req fs-system-file-requirement) sources)
+  (let* ((system-pathname (requirement/name req))
+         (fs-source (requirement/source req))
+         (system-file (fs-source-register-asd fs-source system-pathname)))
+
+    (list (cons (system-file/release system-file) (system-file/system-releases system-file)))))
+
 
 ;; * requirement (un)satisfication
 
