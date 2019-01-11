@@ -85,3 +85,6 @@
 [submodule "ext/local-time"]
 	path = ext/local-time
 	url = https://github.com/dlowe-net/local-time.git
+[submodule "ext/exit-hooks"]
+	path = ext/exit-hooks
+	url = https://github.com/ailisp/exit-hooks.git

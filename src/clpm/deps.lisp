@@ -11,7 +11,8 @@
           #:clpm/cache
           #:clpm/config
           #:clpm/sandbox
-          #:clpm/utils)
+          #:clpm/utils
+          #:exit-hooks)
   (:export #:add-asd-and-retry
            #:grovel-system-info
            #:grovel-systems-in-file
@@ -271,7 +272,7 @@ instance of SBCL with the groveling code loaded."
                   (kill-groveler-process-for-file! k))
                 *running-grovelers*))
 
-(pushnew 'exit-hook sb-ext:*exit-hooks*)
+(add-exit-hook 'exit-hook)
 
 (defun read-asd-path ()
   (format t "Enter a path to an asd file (not evaluated): ")

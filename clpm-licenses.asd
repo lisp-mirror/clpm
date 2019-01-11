@@ -16,6 +16,7 @@
                              (:static-file "cl-fad")
                              (:static-file "cl-ppcre")
                              (:static-file "clon")
+                             (:static-file "exit-hooks")
                              (:static-file "flexi-streams")
                              (:static-file "iterate")
                              (:static-file "log4cl")
