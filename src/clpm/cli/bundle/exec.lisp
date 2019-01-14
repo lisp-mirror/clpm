@@ -39,14 +39,15 @@
          (system-files (lockfile/system-files lockfile))
          (asdf-pathnames (mapcar #'system-file/absolute-asd-pathname system-files))
          (missing-pathnames (remove-if #'probe-file asdf-pathnames))
-         (cl-source-registry-value (format nil "~{~A~^:~}" asdf-pathnames))
+         (cl-source-registry-value (format nil "~{~A~^:~}" (mapcar #'uiop:pathname-directory-pathname asdf-pathnames)))
          (command (remainder)))
     (unless missing-pathnames
       (log:debug "asdf pathnames available in new process:~%~A" asdf-pathnames)
       (execvpe (first command) (rest command)
                `(("CL_SOURCE_REGISTRY" . ,cl-source-registry-value)
+                 ("CLPM_BUNDLE_BIN_PATH" . ,(first (uiop:raw-command-line-arguments)))
                  ("CLPM_BUNDLE_CLPMFILE" . ,(uiop:native-namestring clpmfile-pathname))
-                 ("CLPM_BUNDLE_BIN_PATH" . ,(first (uiop:raw-command-line-arguments))))
+                 ("CLPM_BUNDLE_CLPMFILE_LOCK" . ,(uiop:native-namestring lockfile-pathname)))
                t))
     ;; We got here, there is some .asd file not present. Tell the user!
     (format *error-output* "The following system files are missing! Please run `clpm bundle install` and try again!~%~A" missing-pathnames)
