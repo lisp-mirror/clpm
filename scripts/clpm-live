@@ -1,5 +1,6 @@
-#!/usr/bin/sbcl --script
-;;;; Script to load in CLPM and run its main method. -*- mode: common-lisp; -*-
+#!/bin/sh
+":" ; exec sbcl --script "$0" "$@"           # -*- mode: common-lisp; -*-
+;;;; Script to load in CLPM and run its main method.
 ;;;;
 ;;;; This software is part of CLPM. See README.org for more information. See
 ;;;; LICENSE for license information.
@@ -51,6 +52,9 @@
                          (uiop:print-condition-backtrace e :stream stderr))))
              (asdf:load-system :clpm)))))
   (load-clpm))
+
+;; Record the pathname to this script.
+(setf clpm/utils:*live-script-location* (uiop:native-namestring *load-truename*))
 
 ;; If a REPL is requested, start 'er up
 (when (equal (uiop:getenv "CLPM_LIVE_PRIVATE_REPL") "true")

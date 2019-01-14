@@ -7,10 +7,20 @@
     (:use #:cl
           #:puri
           #:split-sequence)
-  (:export #:run-program-augment-env-args
+  (:export #:*live-script-location*
+           #:run-program-augment-env-args
            #:uri-to-string))
 
 (in-package #:clpm/utils)
+
+(defvar *live-script-location* nil
+  "If loaded from scripts/clpm-live, this is set to the pathname where the
+clpm-live script is located.")
+
+(defun clear-live-script-location ()
+  "On image dump, remove the pathname to the clpm-live script."
+  (setf *live-script-location* nil))
+(uiop:register-image-dump-hook 'clear-live-script-location)
 
 #+sbcl
 (defun run-program-augment-env-args (new-env-alist)

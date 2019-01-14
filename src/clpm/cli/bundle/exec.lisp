@@ -10,7 +10,8 @@
           #:clpm/clpmfile
           #:clpm/execvpe
           #:clpm/log
-          #:clpm/source)
+          #:clpm/source
+          #:clpm/utils)
   (:import-from #:net.didierverna.clon
                 #:defsynopsis
                 #:make-context
@@ -45,7 +46,8 @@
       (log:debug "asdf pathnames available in new process:~%~A" asdf-pathnames)
       (execvpe (first command) (rest command)
                `(("CL_SOURCE_REGISTRY" . ,cl-source-registry-value)
-                 ("CLPM_BUNDLE_BIN_PATH" . ,(first (uiop:raw-command-line-arguments)))
+                 ("CLPM_BUNDLE_BIN_PATH" . ,(or *live-script-location*
+                                                (uiop:argv0)))
                  ("CLPM_BUNDLE_CLPMFILE" . ,(uiop:native-namestring clpmfile-pathname))
                  ("CLPM_BUNDLE_CLPMFILE_LOCK" . ,(uiop:native-namestring lockfile-pathname)))
                t))
