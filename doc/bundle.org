@@ -48,6 +48,7 @@ configuration or helpers needed (other than ASDF, of course).
 
     #+begin_src common-lisp
       (:source "quicklisp"
+       :type :quicklisp
        :url "https://beta.quicklisp.org/dist/quicklisp.txt"
        :force-https t)
     #+end_src
@@ -74,7 +75,7 @@ configuration or helpers needed (other than ASDF, of course).
     + ~:commit~ :: If specified, must be a string naming the commit to use.
     + ~:tag~ :: If specified, must be a string naming the tag to use.
     + ~:systems~ :: A list naming the systems to require in the bundle. If NIL,
-                    all explicitly defined systems are required.
+                    all explicitly defined systems are required.[fn:3]
 *** ~:asd~
 
     This directive states that the specified asd file should be included in the
@@ -99,6 +100,14 @@ configuration or helpers needed (other than ASDF, of course).
    source control is assumed to satisfy any requirements placed on it. No formal
    commitment to syntax for this file is guaranteed yet.
 
+
+* Configuration
+
+  Every bundle command reads the file =.clpm/bundle.conf= (if it exists) and
+  merges the configuration defined in that file into CLPM's config. Currently,
+  all configuration sections are merged, in a future version a whitelist of
+  configuration options will be defined.
+
 * Commands
 ** =clpm bundle install=
 
@@ -112,12 +121,24 @@ configuration or helpers needed (other than ASDF, of course).
    will have access to all systems included in the bundle with no extra
    configuration. Requires the lock file to exist.
 
+   All environment variables are passed on to the new process, additionally the
+   following environment variables are set:
+
+   + =CL_SOURCE_REGISTRY= :: Set to contain the parent folders of every .asd
+        file in the bundle.
+   + =CLPM_BUNDLE_BIN_PATH= :: Set to the path to the clpm executable.
+   + =CLPM_BUNDLE_CLPMFILE= :: Set to the path to the clpmfile that defines the
+        bundle.
+   + =CLPM_BUNDLE_CLPMFILE_LOCK= :: Set to the path to the clpmfile.lock that
+        defines the bundle.
+
 * Comparisons
 
   In the Common Lisp world, CLPM's bundle is most similar to [[https://github.com/fukamachi/qlot][Qlot]]. Unlike Qlot,
   however, CLPM has the following features:
 
-  + Has no dependency on roswell.
+  + Does not use the Quicklisp client under the hood.
+  + Has no dependency on roswell for its command line executable.
   + Is distributed both as source and an executable.
   + Works harder to determine dependencies of systems fetched from git.
   + Allows for more complex version specifications in the clpmfile.

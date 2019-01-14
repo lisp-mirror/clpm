@@ -3,7 +3,7 @@
 #+EMAIL: etimmons@mit.edu
 #+OPTIONS: email:t toc:2 num:nil
 
-**WARNING**: This is BETA quality. It is being published right now so I can
+**WARNING**: This is ALPHA quality. It is being published right now so I can
 start testing it and hammering at it in my normal work flow. There are probably
 bugs and it may eat your files.
 
@@ -19,6 +19,10 @@ bugs and it may eat your files.
   library written in portable Common Lisp that interfaces with ASDF and calls
   the CLI program as necessary to find and install missing systems. This piece
   is generally referred to as the CLPM client.
+
+  Currently, the project specific context management is the most mature. Version
+  0.1.0 will be released when both the global and project specific features are
+  usable.
 
 * Project Goals
 
@@ -53,7 +57,8 @@ bugs and it may eat your files.
   + Support multiple package sources :: At first, CLPM will support only
        Quicklisp-style distributions as a package source/repository. But we
        envision adding support for new sources, such as Qi and a new work in
-       progress repo geared toward projects that follow versioning guidelines.
+       progress repository geared toward projects that follow versioning
+       guidelines.
 
 * Documentation
 

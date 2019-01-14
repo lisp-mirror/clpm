@@ -2,12 +2,6 @@
 #+AUTHOR: Eric Timmons
 #+EMAIL: etimmons@mit.edu
 
-* Terminology
-
-  This section defines the various terms used throughout CLPM.
-
-  + Source :: A repository of Common Lisp projects.
-
-  + Distribution :: A software repository. Called a source in CLPM
-                    terminology.
-  + Distribution Version ::
++ [[file:config.org][config.org]]
++ [[file:sources.org][sources.org]]
++ [[file:bundle.org][bundle.org]]

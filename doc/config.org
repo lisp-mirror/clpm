@@ -1,55 +1,92 @@
 #+TITLE: CLPM Configuration
 
-CLPM is configured using toml configuration files.
+CLPM is configured using a file named =clpm.conf=. CLPM constructs a list of
+directories to search for this file and the first instance found wins. The
+default order of directories searched is first the =common-lisp/clpm= folder of
+the user's XDG config directory (typically =$HOME/.confg/=), then in the system
+config folder (typically =/etc/=). The order can be changed with the
+=CLPM_CONFIG_DIRS= environment variable. If specified, it must be a list of
+directories separated by your OS's conventional directory separator. The default
+search locations will be spliced into the list if any entry in the list is
+empty.
 
-* Configuration Values
-** git
-*** remotes
-    This table contains options for connecting to remote git servers. Each key
-    in the table must be the hostname of the remote server (in all
-    lowercase). The value of each key is a table containing the following
-    values:
+The contents of this file must be a single list that starts with ~clpm-config~
+and the rest must be a plist. Each key in the plist names either a value or a
+section. If it names a section, the value must be another plist. If it names a
+value, the value is read according to the rules for that value.
 
-    | key      | Type   | value                                                                            |
-    |----------+--------+----------------------------------------------------------------------------------|
-    | type     | String | The type of the remote server                                                    |
-    | method   | String | The preferred method for fetching code. Can be one of "https" (default) or "ssh" |
-    | username | String | The username to use when fetching over https.                                    |
-    | password | String | The password to use when fetching over https.                                    |
+The following describe the configuration options for clpm.
 
-** http
-*** headers
-    This table provides a mechanism to specify headers to send to servers when
-    downloading files over HTTP(S). This does *not* work when fetching git repos
-    over HTTP(S), see [[*remotes]] instead.
+* ~:archives~
 
-    Each key in this table is the hostname of a server (in all lowercase) and
-    the values are tables, where each table maps a header name to either a
-    string or another table. If the header name is mapped to a string, that
-    string is sent as the value of the header. If the header name is mapped to
-    another table, the following keys are recognized. Behavior is undefined if
-    both =value= and =exec= are provided.
+  + ~:tar-method~ :: A keyword specifying which tar implementation to
+                     use. Defaults to =:auto=.
 
-    | key         | type    | value                                                                        |
-    |-------------+---------+------------------------------------------------------------------------------|
-    | secure-only | Boolean | If true, this header is sent only over HTTPS connections. Defaults to false. |
-    | value       | String  | This value is used as the value of the header.                               |
-    | exec        | String  | Must point to an executable that prints out the value to use to its stdout.  |
+** ~:tar~
 
-    For example, you can use the following to access release tarballs from
-    private projects on gitlab.com using a Personal Access Token.
+   Settings for the tar method that uses an external tar program.
 
-    #+begin_src conf-toml
-      [http.headers."gitlab.com"]
-      private-token = { exec = "command-that-prints-my-pat" , secure-only = true}
-    #+end_src
+   + ~:path~ :: Path to the =tar= executable. Defaults to ="tar"=.
 
-** grovel
-*** sandbox
-    This table lets you configure the sandboxing mechanism used when locally
-    determining (groveling for) the dependencies of some ASDF system. Currently
-    accepts the following keys:
+* ~:bundle~
+** ~:local~
+*** ~"PROJECT-NAME"~
+    When using the bundle commands, instead of using the upstream git repository
+    for PROJECT-NAME, use a local checkout instead.
 
-    | key    | type   | value                                         |
-    |--------+--------+-----------------------------------------------|
-    | method | string | The sandbox method to use. Defaults to "auto" |
+    + ~:path~ :: Path to the folder containing the checkout of the git
+                 repository to use.
+
+* ~:git~
+** ~:remotes~
+*** ~"HOSTNAME"~
+    Provide configuration for interacting with HOSTNAME to fetch git repos.
+
+    + ~:username~ :: A string containing the username to use when connecting to
+                     the server.
+    + ~:password~ :: A string containing the password to use when connecting to
+                     the server.
+    + ~:method~ :: A keyword describing how to connect to the server. Can be one
+                   of:
+      + ~:https~ :: Connect using HTTPS.
+      + ~:http~ :: Connect using HTTP.
+      + ~:ssh~ :: Connect using SSH.
+    + ~:port~ :: Port to connect on.
+* ~:http~
+** ~:headers~
+*** ~"HOSTNAME~
+**** ~"HEADER-NAME"~
+     When performing a non-git HTTP request to HOSTNAME, provide a header with
+     the name HEADER-NAME.
+
+     + ~:secure-only-p~ :: If non-NIL, send this header only on secure
+          connections.
+     + ~:value~ :: The value to send for the header. If a string, the contents
+                   of the string are used literally. If a pathname naming an
+                   executable file, that file is executed and whatever it prints
+                   to its standard output is used as the value. If a pathname
+                   naming a non-executable file, the contents of the file are
+                   sent.
+
+* ~:http-client~
+  + ~:method~ :: The default method to use to as an HTTP client. Defaults to
+                 =:auto=.
+** ~:curl~
+   Settings for the curl method that uses an external curl program.
+
+   + ~:path~ :: Path to the =curl= executable. Defaults to ="curl"=.
+
+* ~:grovel~
+** ~:sandbox~
+   Options for configuring the sandbox used to isolate processes that grovel for
+   dependencies from .asd files.
+
+   + ~:method~ :: The default method to use as the sandbox. Defaults to =:auto=.
+
+* ~:sources~
+** ~"SOURCE-NAME~
+   Options to configure the source with the name SOURCE-NAME. See [[file:sources.org][sources.org]]
+   for more information on the available sources and their configuration
+   options.
+
+   Must contain a value for ~:type~ that names the type of source this is.

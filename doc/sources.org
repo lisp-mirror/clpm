@@ -3,7 +3,7 @@
 A repository of Common Lisp projects is called a "source". The source you are
 most likely familiar with is Quicklisp, but CLPM is designed to use multiple
 sources and source types. This allows you to easily use CLPM for things such as
-internal projects that can't be release to private repositories.
+internal projects that can't be released to public repositories.
 
 Currently, the only type of source that CLPM publicly supports is a Quicklisp
 style source. The author is currently working on and testing a new source type
@@ -11,9 +11,7 @@ that improves upon Quicklisp, though (such as tracking of individual system
 versions). If you are interested in trying out that source type, feel free to
 reach out.
 
-The type of every source can be specified. If not specified, CLPM will attempt
-to guess the source type based on the file located at the specified URL. It is
-recommended that the type be specified, however.
+The type of every source must can be specified with a keyword.
 
 * Quicklisp
 
@@ -24,7 +22,7 @@ recommended that the type be specified, however.
   https://beta.quicklisp.org/dist/quicklisp-versions.txt) that points to the
   dist file for every version of the distribution.
 
-  The type designator for a Quicklisp like source is "quicklisp". A quicklisp
+  The type designator for a Quicklisp like source is =:quicklisp=. A quicklisp
   distribution can be configured with the following options:
 
   + =url= :: The URL to the subscription metadata file.
@@ -37,9 +35,11 @@ recommended that the type be specified, however.
   The following table can be added to your CLPM config file to use the primary
   Quicklisp distribution.
 
-  #+begin_src conf-toml
-    [sources.quicklisp]
-    type = "quicklisp"
-    url = "http://beta.quicklisp.org/dist/quicklisp.txt"
-    force-https = true
+  #+begin_src common-lisp
+    (clpm-config
+     :sources
+     ("quicklisp"
+      (:type :quicklisp
+       :url "https://beta.quicklisp.org/dist/quicklisp.txt"
+       :force-https t)))
   #+end_src
