@@ -24,6 +24,21 @@ bugs and it may eat your files.
   0.1.0 will be released when both the global and project specific features are
   usable.
 
+* Installing
+
+  CLPM requires the following programs to be installed:
+
+  + curl :: Needed for fetching files.
+  + git :: Needed to check out git repositories in bundles.
+  + tar :: Needed to unpack tar files.
+
+  The easiest way to install CLPM is to download an executable
+  image. Instructions on that will be forthcoming once I have hosting of those
+  images figured out.
+
+  The next easiest way to install CLPM is to install SBCL, download the CLPM
+  sources (including the git submodules!), and execute the [[file:scripts/clpm-live][clpm-live]] script.
+
 * Project Goals
 
   CLPM is far from the only package manager available for Common Lisp[fn:1], but
