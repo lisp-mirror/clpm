@@ -255,8 +255,8 @@ hostname or NIL."
       (gitlab-source
        (let* ((remote-config (find-remote-config (source/host source)))
               (method (if remote-config
-                          (gethash :method remote-config "https")
-                          "https"))
+                          (gethash :method remote-config :https)
+                          :https))
               (port (when remote-config
                       (gethash :port remote-config nil)))
               (path (vcs-project/path project))
