@@ -9,6 +9,7 @@
           #:alexandria
           #:clpm/config
           #:iterate)
+  (:import-from #:flexi-streams)
   (:import-from #:uiop
                 #:read-file-form
                 #:with-safe-io-syntax)
@@ -64,10 +65,11 @@ the request."
 (defun fetch-url (url)
   "Given a URL, return a string with the contents of the file located at ~url~."
   (let ((url (puri:parse-uri url)))
-    (with-output-to-string (s)
-      (fetch-url-to-stream url s
-                           :headers (get-additional-headers-for-hostname (puri:uri-host url)
-                                                                         (puri:uri-scheme url))))))
+    (babel:octets-to-string
+     (flexi-streams:with-output-to-sequence (s :element-type '(unsigned-byte 8))
+       (fetch-url-to-stream url s
+                            :headers (get-additional-headers-for-hostname (puri:uri-host url)
+                                                                          (puri:uri-scheme url)))))))
 
 (defun ensure-file-fetched (pathname url &key refresh-time)
   "Given a pathname, make sure it exists. If it does not exist, fetch it from

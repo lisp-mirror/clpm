@@ -32,8 +32,7 @@
   (multiple-value-bind (http-stream status-code)
       (http-request url :want-stream t
                         :verify :required
-                        :decode-content t
                         :additional-headers headers)
     (assert (= 200 status-code))
-    (copy-stream http-stream out-stream :element-type 'character :buffer-size 8192)
+    (copy-stream http-stream out-stream :element-type '(unsigned-byte 8) :buffer-size 8192)
     (close http-stream)))
