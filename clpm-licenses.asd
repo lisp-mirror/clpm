@@ -26,6 +26,7 @@
                              (:static-file "log4cl")
                              (:static-file "log4cl.NOTICE")
                              (:static-file "named-readtables")
+                             (:static-file "openssl")
                              (:static-file "puri")
                              (:static-file "sbcl")
                              (:static-file "split-sequence")
