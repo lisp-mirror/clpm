@@ -5,14 +5,9 @@
 ;;;; This software is part of CLPM. See README.org for more information. See
 ;;;; LICENSE for license information.
 
+(in-package #:cl-user)
+
 (require :asdf)
-
-(defpackage #:clpm-build
-  (:use #:cl)
-  (:import-from #:uiop)
-  (:export #:build))
-
-(in-package #:clpm-build)
 
 (defvar *setup-file-pathname* *load-truename*
   "The pathname to this file.")
@@ -26,23 +21,51 @@
   "The pathname to the root of the build directory. Defaults to build/ inside
 *ROOT-PATHNAME*")
 
-(defun build (&key
-                (root-pathname *root-pathname*)
-                (build-root-pathname *build-root-pathname*))
-  (let* ((*root-pathname* (uiop:ensure-directory-pathname root-pathname))
-         (*build-root-pathname* (uiop:ensure-directory-pathname build-root-pathname))
-         (build-cache (merge-pathnames "cl-cache/" *build-root-pathname*)))
-    (format uiop:*stderr*
-            "I will build CLPM from sources located at ~A~%The build files will be located at ~A~%~%~%"
-            *root-pathname*
-            *build-root-pathname*)
+(defun setup-asdf ()
+  (let ((build-cache (merge-pathnames "cl-cache/" *build-root-pathname*)))
     (asdf:clear-configuration)
     (asdf:initialize-source-registry `(:source-registry
                                        :ignore-inherited-configuration
-                                       (:tree ,*root-pathname*)))
-    (asdf:initialize-output-translations `(:output-translations
-                                           :ignore-inherited-configuration
-                                           (:root (,build-cache :implementation :**/ :*.*.*))))
-    (asdf:make :clpm)))
+                                       (:tree ,*root-pathname*)))))
+
+(setup-asdf)
+
+(asdf:load-system :unix-opts)
+
+(opts:define-opts
+  (:name :help
+   :description "print this help text"
+   :short #\h
+   :long "help")
+  (:name :cache
+   :description "Cache CLPM FASLs here"
+   :long "cache"
+   :arg-parser #'pathname
+   :meta-var "pathname"))
+
+(defun build ()
+  (multiple-value-bind (opts free-args)
+      (opts:get-opts)
+    (when (getf opts :help)
+      (opts:describe)
+      (format t "~S~%" opts)
+      (uiop:quit))
+    (let ((raw-build-cache (or (getf opts :cache)
+                               (uiop:getenv "CLPM_BUILD_CACHE_DIR")))
+          build-cache)
+      (when raw-build-cache
+        (setf build-cache (uiop:ensure-directory-pathname raw-build-cache)))
+      (when (and raw-build-cache
+                 (not (uiop:absolute-pathname-p build-cache)))
+        (setf build-cache (uiop:resolve-absolute-location (list (uiop:getcwd) build-cache))))
+      (format uiop:*stderr*
+              "I will build CLPM from sources located at ~A~%The built files will be located at ~Abin/~%~%~%"
+              *root-pathname*
+              *build-root-pathname*)
+      (when build-cache
+        (asdf:initialize-output-translations `(:output-translations
+                                               :ignore-inherited-configuration
+                                               (:root (,build-cache :implementation :**/ :*.*.*)))))
+      (asdf:make :clpm))))
 
 (build)
