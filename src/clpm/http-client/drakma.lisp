@@ -6,6 +6,7 @@
 (uiop:define-package #:clpm/http-client/drakma
     (:use #:cl
           #:alexandria
+          #:clpm/http-client/cl-plus-ssl
           #:clpm/http-client/defs
           #:clpm/utils
           #:drakma)
@@ -24,7 +25,7 @@
 (register-http-client :drakma 'drakma-client)
 
 (defmethod http-client-available-p ((client drakma-client))
-  t)
+  *openssl-available-p*)
 
 (defmethod %fetch-url-to-stream ((client drakma-client) url out-stream
                                  &key headers)

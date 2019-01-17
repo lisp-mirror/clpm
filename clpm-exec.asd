@@ -30,6 +30,17 @@
               :executable (typep o 'program-op)
               #+:sb-core-compression :compression #+:sb-core-compression t))
 
+(defmethod cffi-toolchain:static-image-new-features
+    (o (s (eql (find-system "clpm-exec/dynamic-libs"))))
+  "Prevent cl-ssl from loading the foreign libraries at build time."
+  (list :cl+ssl-foreign-libs-already-loaded))
+
+(defmethod cffi-toolchain:static-image-remove-features-on-dump
+    (o (s (eql (find-system "clpm-exec/dynamic-libs"))))
+  "The libraries are not truly loaded, we just tricked cl+ssl, so remove that
+feature on dump."
+  (list :cl+ssl-foreign-libs-already-loaded))
+
 (defsystem #:clpm-exec/static-libs
   :license "BSD-2-Clause"
   :defsystem-depends-on (#:cffi-toolchain)
