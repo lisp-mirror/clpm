@@ -27,4 +27,4 @@
    (ensure-initialized)
    (setf *openssl-available-p* t)))
 
-(uiop:register-image-restore-hook 'maybe-load-openssl)
+(uiop:register-image-restore-hook 'maybe-load-openssl nil)
