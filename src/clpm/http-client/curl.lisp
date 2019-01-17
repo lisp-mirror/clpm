@@ -11,7 +11,7 @@
 
 (in-package #:clpm/http-client/curl)
 
-(defclass curl-client ()
+(defclass curl-client (http-client)
   ((path
     :initarg :path
     :initform "curl"
@@ -19,7 +19,9 @@
     :documentation
     "The path to the curl program."))
   (:documentation
-   "Describes an HTTP client that uses a curl executable."))
+   "Describes an HTTP client that uses a curl executable.")
+  (:default-initargs
+   :priority 10))
 
 (register-http-client :curl 'curl-client)
 

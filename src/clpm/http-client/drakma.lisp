@@ -9,14 +9,17 @@
           #:clpm/http-client/defs
           #:clpm/utils
           #:drakma)
-  (:export #:curl-client))
+  (:export #:drakma-client))
 
 (in-package #:clpm/http-client/drakma)
 
-(defclass drakma-client ()
+(defclass drakma-client (http-client)
   ()
   (:documentation
-   "Describes an HTTP client that uses drakma."))
+   "Describes an HTTP client that uses drakma.")
+  (:default-initargs
+   ;; we like lisp, so if drakma is available, prefer to use it
+   :priority 0))
 
 (register-http-client :drakma 'drakma-client)
 

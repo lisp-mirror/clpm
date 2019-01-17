@@ -7,15 +7,22 @@
     (:use #:cl
           #:alexandria
           #:anaphora
-          #:clpm/config)
+          #:clpm/config
+          #:iterate)
   (:export #:fetch-url-to-stream
            #:%fetch-url-to-stream
+           #:http-client
            #:http-client-available-p
            #:http-fetch-error
            #:http-simple-fetch-error
            #:register-http-client))
 
 (in-package #:clpm/http-client/defs)
+
+(defclass http-client ()
+  ((priority
+    :initarg :priority
+    :reader http-client-priority)))
 
 (defvar *all-http-clients* nil
   "A list of all HTTP clients loaded into the image. An alist that maps
@@ -68,7 +75,9 @@ the ones where ~http-client-available-p~ returns NIL."
   (let* ((client-key (config-value :http-client :method))
          (available-http-clients (available-http-clients))
          (client (if (eql :auto client-key)
-                     (cdr (first available-http-clients))
+                     (iter
+                       (for client :in (mapcar #'cdr available-http-clients))
+                       (finding client :minimizing (http-client-priority client)))
                      (assoc-value available-http-clients client-key))))
     (unless client
       (error "Unable to find an HTTP client."))
