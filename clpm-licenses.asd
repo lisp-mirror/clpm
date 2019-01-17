@@ -32,5 +32,6 @@
                              (:static-file "trivial-features")
                              (:static-file "trivial-garbage")
                              (:static-file "trivial-gray-streams")
+                             (:static-file "unix-opts")
                              (:static-file "usocket")))
                (:file "src/clpm-licenses/main")))
