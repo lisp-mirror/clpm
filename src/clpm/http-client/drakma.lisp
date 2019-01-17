@@ -1,3 +1,8 @@
+;;;; Support for fetching files over HTTP using a drakma
+;;;;
+;;;; This software is part of CLPM. See README.org for more information. See
+;;;; LICENSE for license information.
+
 (uiop:define-package #:clpm/http-client/drakma
     (:use #:cl
           #:alexandria
