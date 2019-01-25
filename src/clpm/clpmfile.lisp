@@ -285,8 +285,7 @@ sources."
   (let* ((source (find source (clpmfile/user-global-sources (lockfile/clpmfile lockfile))
                        :key #'source/name
                        :test #'equal))
-         (project (source/project source name))
-         (release (project/release project version)))
+         (release (source/project-release source name version)))
     (dolist (system-file-name system-files)
       (push (release/system-file release system-file-name) (lockfile/system-files lockfile)))
     lockfile))

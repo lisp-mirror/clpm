@@ -86,13 +86,13 @@ correct commit."
          (sources (clpmfile/user-global-sources clpmfile))
          lockfile)
     (log:info "clpmfile located at ~S" clpmfile-pathname)
-    (log:info "syncing sources")
-    (mapc #'sync-source sources)
     ;; Get the lock file
     (if (probe-file lockfile-pathname)
         (setf lockfile (read-lockfile lockfile-pathname))
         (progn
           ;; The lock file doesn't exist. Create it!
+          (log:info "syncing sources")
+          (mapc #'sync-source sources)
           (log:info "Creating lockfile")
           (setf lockfile (build-lockfile clpmfile))
           (with-open-file (s lockfile-pathname

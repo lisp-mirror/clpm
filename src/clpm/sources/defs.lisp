@@ -42,6 +42,7 @@
            #:source/lib-directory
            #:source/name
            #:source/project
+           #:source/project-release
            #:source/projects
            #:source/system
            #:source/systems
@@ -140,6 +141,9 @@ initargs and a :type as a keyword."))
 (defgeneric source/project (source project-name)
   (:documentation "Return an instance of CLPM-PROJECT or NIL if the project is
 not located in the source."))
+
+(defgeneric source/project-release (source project-name version-string)
+  (:documentation "Return a release object for the specified project and version."))
 
 (defgeneric source/system (source system-name)
   (:documentation "Return an instance of CLPM-SYSTEM or NIL if the system is not

@@ -37,6 +37,8 @@
     :accessor ql-curation-p)
    (versions-url
     :accessor source/versions-url)
+   (all-versions
+    :accessor source/all-versions)
    (projects
     :initform nil
     :accessor source/raw-projects)
@@ -87,6 +89,9 @@
                                         path))
                       (source/url source)))))
 
+(defmethod slot-unbound (class (source quicklisp-source) (slot-name (eql 'all-versions)))
+  (setf (source/all-versions source) (latest-all-versions source)))
+
 (defmethod source-type-keyword ((source quicklisp-source))
   :quicklisp)
 
@@ -120,6 +125,10 @@
       (setf (assoc-value (source/raw-projects source) project-name :test #'equal)
             project))
     project))
+
+(defmethod source/project-release ((source quicklisp-source) project-name version-string)
+  (ensure-version-synced! source version-string)
+  (project/release (source/project source project-name) version-string))
 
 (defun ensure-systems (source)
   (mapc (curry #'source/system source) (source/system-names source)))
@@ -490,24 +499,25 @@ version of the distribution to the directory specified by DEST-DIR."
 
 (defun ensure-version-synced! (source version)
   (check-type source quicklisp-source)
-  (unless (member (car version) (source/dist-versions source) :key #'car :test #'equal)
+  (unless (member version (source/dist-versions source) :key #'car :test #'equal)
     (log:info "Syncing version ~S~%" version)
-    (push version (getf (source/db source) :versions))
-    (setf (getf (source/db source) :releases)
-          (assemble-release-db (source/cache-directory source)
-                               (getf (source/db source) :releases)
-                               (list version)))
+    (let ((version (assoc version (source/all-versions source) :test #'equal)))
+      (push version (getf (source/db source) :versions))
+      (setf (getf (source/db source) :releases)
+            (assemble-release-db (source/cache-directory source)
+                                 (getf (source/db source) :releases)
+                                 (list version)))
       ;; Build the updated system table
       (setf (getf (source/db source) :systems)
             (assemble-systems-db (getf (source/db source) :releases)))
       (save-db source)
-      t))
+      t)))
 
 (defmethod sync-source ((source quicklisp-source))
-  (let* ((latest-versions (latest-all-versions source))
+  (let* ((latest-versions (source/all-versions source))
          (changed-p nil))
     (dolist (v latest-versions)
-      (setf changed-p (or (ensure-version-synced! source v) changed-p)))
+      (setf changed-p (or (ensure-version-synced! source (car v)) changed-p)))
     t))
 
 
