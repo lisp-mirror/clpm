@@ -1,0 +1,73 @@
+;;;; -*- mode: common-lisp; -*-
+;;;; CLPM Lakefile (like make, but in Lisp!)
+;;;;
+;;;; This software is part of CLPM. See README.org for more information. See
+;;;; LICENSE for license information.
+
+(in-package :cl-user)
+(defpackage :clpm/lake
+  (:use :cl :lake :cl-syntax)
+  (:shadowing-import-from :lake
+                          :directory))
+(in-package :clpm/lake)
+
+(defvar *lakefile-truename* *load-truename*)
+
+(use-syntax :interpol)
+
+(defun clpm-version ()
+  (asdf:component-version (asdf:find-system :clpm)))
+
+(namespace "docker-build"
+  (task "all" ("glibc" "musl"))
+
+  (task "glibc-builder" ()
+    (sh "docker build -f docker/Dockerfile.build-debian -t clpm/clpm-build:debian docker"))
+
+  (task "musl-builder" ()
+    (sh "docker build -f docker/Dockerfile.build-alpine -t clpm/clpm-build:alpine docker"))
+
+  (task "glibc" ("glibc-builder")
+    (sh #?"docker run -i -t --rm -v ${(uiop:pathname-directory-pathname *lakefile-truename*)}:/clpm:ro -v ${(uiop:pathname-directory-pathname *lakefile-truename*)}/build/docker/debian:/clpm/build clpm/clpm-build:debian")
+    (sh "cp build/docker/debian/bin/dynamic/clpm build/bin/clpm-x86_64-linux-gnu-dynamic")
+    (sh "cp build/docker/debian/bin/static/clpm build/bin/clpm-x86_64-linux-gnu-static"))
+
+  (task "musl" ("musl-builder")
+    (sh #?"docker run -i -t --rm -v ${(uiop:pathname-directory-pathname *lakefile-truename*)}:/clpm:ro -v ${(uiop:pathname-directory-pathname *lakefile-truename*)}/build/docker/alpine:/clpm/build clpm/clpm-build:alpine")
+    (sh "cp build/docker/alpine/bin/dynamic/clpm build/bin/clpm-x86_64-linux-musl-dynamic")
+    (sh "cp build/docker/alpine/bin/static/clpm build/bin/clpm-x86_64-linux-musl-static")))
+
+(namespace "release"
+  (task "all" ("files")
+    (echo (clpm-version)))
+
+  (task "dir" ()
+    (ensure-directories-exist (merge-pathnames #?"build/releases/${(clpm-version)}/"
+                                               (uiop:getcwd))))
+
+  (task "files" (":docker-build" "dir")
+    (uiop:delete-file-if-exists #?"build/releases/${(clpm-version)}/clpm-${(clpm-version)}.DIGESTS")
+    (with-open-file (s #?"build/releases/${(clpm-version)}/clpm-${(clpm-version)}.DIGESTS"
+                       :direction :output)
+      (write-line "The SHA512 checksums of the following files are:" s)
+      (terpri s))
+    (flet ((insert-version (s)
+             (concatenate 'string "clpm-" (clpm-version) (subseq s 4))))
+      (dolist (f '("clpm-x86_64-linux-gnu-dynamic" "clpm-x86_64-linux-gnu-static"
+                   "clpm-x86_64-linux-musl-dynamic" "clpm-x86_64-linux-musl-static"))
+        (sh #?"cp build/bin/${f} build/releases/${(clpm-version)}/${(insert-version f)}")
+        (uiop:with-current-directory (#?"build/releases/${(clpm-version)}/")
+          (sh #?"sha512sum ${(insert-version f)} >> clpm-${(clpm-version)}.DIGESTS"))))))
+
+(task ("release" version) ("release:all"))
+
+(task "docker-build" ("docker-build:all"))
+
+(task "build" ()
+  (sh "scripts/clpm-build")
+  (sh "cp build/bin/dynamic/clpm build/bin/clpm-dynamic")
+  (sh "cp build/bin/static/clpm build/bin/clpm-static"))
+
+(task "all" ("build" "docker-build"))
+
+(task "default" ("all"))

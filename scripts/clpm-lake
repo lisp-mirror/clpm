@@ -1,0 +1,77 @@
+#!/bin/sh
+":" ; exec sbcl --script "$0" "$@"           # -*- mode: common-lisp; -*-
+;;;; Script to run lake using CLPM's submodules
+;;;;
+;;;; This software is part of CLPM. See README.org for more information. See
+;;;; LICENSE for license information.
+
+(in-package #:cl-user)
+
+(require :asdf)
+
+(defvar *setup-file-pathname* *load-truename*
+  "The pathname to this file.")
+
+(defvar *root-pathname* (uiop:pathname-parent-directory-pathname
+                         (uiop:pathname-directory-pathname *setup-file-pathname*))
+  "The pathname to the root directory of the CLPM release being built.")
+
+(defvar *build-root-pathname* (merge-pathnames "build/"
+                                               *root-pathname*)
+  "The pathname to the root of the build directory. Defaults to build/ inside
+*ROOT-PATHNAME*")
+
+(defun setup-asdf ()
+  (let ((build-cache (merge-pathnames "cl-cache/" *build-root-pathname*)))
+    (asdf:clear-configuration)
+    (asdf:initialize-source-registry `(:source-registry
+                                       :ignore-inherited-configuration
+                                       (:tree ,*root-pathname*)))))
+
+(setup-asdf)
+
+(let ((*standard-output* (make-broadcast-stream))
+      (*error-output* (make-broadcast-stream)))
+  (asdf:load-system :unix-opts)
+  (asdf:load-system :lake))
+
+(opts:define-opts
+  (:name :help
+   :description "Print this help text and exit"
+   :short #\h
+   :long "help")
+  (:name :file
+   :description "Use FILE as a Lakefile"
+   :short #\f
+   :metavar "FILE"
+   :arg-parser #'identity)
+  (:name :parallel
+   :description "Run N tasks in parallel"
+   :short #\j
+   :metavar "N"
+   :arg-parser #'parse-integer)
+  (:name :verbose-p
+   :description "Verbose mode"
+   :short #\v))
+
+
+(defun main ()
+  (multiple-value-bind (opts free-args)
+      (opts:get-opts)
+    (when (getf opts :help)
+      (write-line "Usage: clpm-lake [options] [target] ...")
+      (opts:describe)
+      (uiop:quit))
+    (let* ((lakefile (getf opts :file))
+           (jobs (getf opts :parallel 1))
+           (params `(:verbose ,(getf opts :verbose-p)
+                              ,@(when :jobs
+                                  `(:jobs ,jobs))
+                              ,@(when lakefile
+                                  `(:pathname ,lakefile)))))
+      (if free-args
+          (dolist (target free-args)
+            (apply #'lake:lake :target target params))
+          (apply #'lake:lake params)))))
+
+(main)
