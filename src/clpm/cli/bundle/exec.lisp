@@ -40,7 +40,10 @@
          (system-files (lockfile/system-files lockfile))
          (asdf-pathnames (mapcar #'system-file/absolute-asd-pathname system-files))
          (missing-pathnames (remove-if #'probe-file asdf-pathnames))
-         (cl-source-registry-value (format nil "~{~A~^:~}" (mapcar #'uiop:pathname-directory-pathname asdf-pathnames)))
+         (extra-source-registry (uiop:getenv "CLPM_BUNDLE_EXTRA_SOURCE_REGISTRY"))
+         (cl-source-registry-value (format nil "~{~A~^:~}~@[:~A~]"
+                                           (mapcar #'uiop:pathname-directory-pathname asdf-pathnames)
+                                           extra-source-registry))
          (command (remainder)))
     (unless missing-pathnames
       (log:debug "asdf pathnames available in new process:~%~A" asdf-pathnames)
