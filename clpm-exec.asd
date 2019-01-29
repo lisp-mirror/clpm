@@ -3,8 +3,8 @@
 ;;;; This software is part of CLPM. See README.org for more information. See
 ;;;; LICENSE for license information.
 
-#-:asdf3.1
-(error "Requires ASDF >=3.1")
+#-:asdf3.2
+(error "Requires ASDF >=3.2")
 
 ;; Not necessary, but easier to have when using SLIME.
 (in-package :asdf-user)

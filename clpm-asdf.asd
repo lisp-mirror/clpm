@@ -3,8 +3,8 @@
 ;;;; This software is part of CLPM. See README.org for more information. See
 ;;;; LICENSE for license information.
 
-#-:asdf3.1
-(error "Requires ASDF >=3.1")
+#-:asdf3.2
+(error "Requires ASDF >=3.2")
 
 (defsystem #:clpm-asdf
   :version "0.0.1"
@@ -12,7 +12,4 @@
   :license "BSD-2-Clause"
   :pathname "src/clpm-asdf/"
   :class :package-inferred-system
-  :depends-on (#:clpm-asdf/clpm-asdf)
-  ;; :components
-  ;; ((:file "clpm-client"))
-  )
+  :depends-on (#:clpm-asdf/clpm-asdf))
