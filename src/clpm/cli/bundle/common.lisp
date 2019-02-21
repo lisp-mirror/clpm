@@ -93,13 +93,13 @@
       :for new-ht := (make-hash-table :test 'equal)
       :do
          (destructuring-bind (username password) split-value
-           (setf (gethash "username" new-ht) username
-                 (gethash "password" new-ht) password)
+           (setf (gethash :username new-ht) username
+                 (gethash :password new-ht) password)
            (setf (gethash key ht) new-ht)))
     (merge-ht-into-config! (alist-hash-table
-                            `(("git" . ,(alist-hash-table
-                                         `(("remotes" . ,ht))
-                                         :test 'equal)))
+                            `((:git . ,(alist-hash-table
+                                        `((:remotes . ,ht))
+                                        :test 'equal)))
                             :test 'equal))))
 
 (defmacro define-bundle-entry (name (synopsis) &body body)
@@ -119,9 +119,9 @@
          (process-common-arguments)
          (let ((local-config (merge-pathnames ".clpm/bundle.conf"
                                               (uiop:getcwd))))
-           (merge-git-auth-config)
            (when (probe-file local-config)
-             (merge-file-into-config! local-config)))
+             (merge-file-into-config! local-config))
+           (merge-git-auth-config))
          (unless (progn ,@body)
            (uiop:quit 1)))
        (register-bundle-command ,bundle-name ',fun-name))))
