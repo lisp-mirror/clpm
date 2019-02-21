@@ -1,5 +1,7 @@
 #+TITLE: CLPM Changelog
 
+* v0.0.7 - 2019-01-28
+  Bug fixes, add ability to statically link against libssl, improved helper scripts
 * v0.0.6 - 2019-01-09
   Many documentation improvements.
 
