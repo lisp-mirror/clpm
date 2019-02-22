@@ -607,7 +607,7 @@ include it."
     (cond
       ((not (uiop:probe-file* project-cache))
        ;; The repo does not exist locally. We need to clone it.
-       (with-retries (:max 3 :sleep 1)
+       (with-retries (:max 5 :sleep 2)
          (clone-release! release)))
       ((not (git-release/commit release))
        ;; We do not have a specific commit requested. Need to fetch from origin
