@@ -65,7 +65,8 @@ process."
                (incf num-tries)
                (format *error-output* "Sleeping and retrying~%")
                (sleep sleep)
-               (go top))))))))
+               (go top))
+             (error e)))))))
 
 (defmacro with-retries ((&key (max 3) (sleep 1)) &body body)
   `(call-with-retries (lambda () ,@body) :max ,max :sleep ,sleep))
