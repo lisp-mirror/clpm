@@ -69,10 +69,10 @@
 	url = https://gitlab.common-lisp.net/iterate/iterate.git
 [submodule "ext/cl-base64"]
 	path = ext/cl-base64
-	url = http://git.kpe.io/cl-base64.git
+	url = https://gitlab.common-lisp.net/clpm/cl-base64.git
 [submodule "ext/puri"]
 	path = ext/puri
-	url = http://git.kpe.io/puri.git
+	url = https://gitlab.common-lisp.net/clpm/puri.git
 [submodule "ext/cl-toml"]
 	path = ext/cl-toml
 	url = https://github.com/cxxxr/cl-toml.git
