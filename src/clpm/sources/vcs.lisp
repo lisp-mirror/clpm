@@ -580,17 +580,24 @@ include it."
     (log:info "Cloning ~A to ~A" uri-string project-cache)
     (multiple-value-bind (prefix env)
         (authenticated-git-command-list (git-project/git-credentials project))
-      (apply
-       #'uiop:run-program
-       `(,@prefix "clone"
-                  "--bare"
-                  "--mirror"
-                  ,uri-string
-                  ,(namestring project-cache))
-       :input :interactive
-       :output :interactive
-       :error-output :interactive
-       (run-program-augment-env-args env)))))
+      (multiple-value-bind (output error-output exit-code)
+          (apply
+           #'uiop:run-program
+           `(,@prefix "clone"
+                      "--bare"
+                      "--verbose"
+                      "--mirror"
+                      ,uri-string
+                      ,(namestring project-cache))
+           :input :interactive
+           :output '(:string :stripped t)
+           :error-output '(:string :stripped t)
+           :ignore-error-status t
+           (run-program-augment-env-args env))
+        (unless (zerop exit-code)
+          (format *error-output* "~&git exited with code ~S~%stdout: ~S~%stderr: ~S~%"
+                  exit-code output error-output)
+          (error 'retriable-error))))))
 
 (defun ensure-remote-release-present-in-cache! (release)
   (let* ((project (release/project release))
@@ -600,7 +607,8 @@ include it."
     (cond
       ((not (uiop:probe-file* project-cache))
        ;; The repo does not exist locally. We need to clone it.
-       (clone-release! release))
+       (with-retries (:max 3 :sleep 1)
+         (clone-release! release)))
       ((not (git-release/commit release))
        ;; We do not have a specific commit requested. Need to fetch from origin
        ;; to make sure we have the latest branches and tags.

@@ -8,8 +8,10 @@
           #:puri
           #:split-sequence)
   (:export #:*live-script-location*
+           #:retriable-error
            #:run-program-augment-env-args
-           #:uri-to-string))
+           #:uri-to-string
+           #:with-retries))
 
 (in-package #:clpm/utils)
 
@@ -46,3 +48,24 @@ process."
   "Convert a puri URI to a string."
   (with-output-to-string (s)
     (render-uri uri s)))
+
+(define-condition retriable-error (error)
+  ())
+
+(defun call-with-retries (thunk &key (max 3) (sleep 1))
+  (let ((num-tries 1))
+    (block nil
+      (tagbody
+       top
+         (handler-case
+             (return (funcall thunk))
+           (retriable-error (e)
+             (format *error-output* "~&Get error ~S~%" e)
+             (when (< num-tries max)
+               (incf num-tries)
+               (format *error-output* "Sleeping and retrying~%")
+               (sleep sleep)
+               (go top))))))))
+
+(defmacro with-retries ((&key (max 3) (sleep 1)) &body body)
+  `(call-with-retries (lambda () ,@body) :max ,max :sleep ,sleep))
