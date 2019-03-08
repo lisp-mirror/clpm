@@ -558,6 +558,11 @@ include it."
   (uiop:run-program `("git" "rev-parse" ,rev)
                     :output '(:string :stripped t)))
 
+(defun git-cat-file (commit &key ignore-error-status)
+  (uiop:run-program `("git" "cat-file" "-e" ,(uiop:strcat commit "^{commit}"))
+                    :output '(:string :stripped t)
+                    :ignore-error-status ignore-error-status))
+
 (defun fetch-release! (release)
   (let* ((project (release/project release))
          (project-cache (vcs-project/cache-directory project))
@@ -613,9 +618,9 @@ include it."
        ;; We do not have a specific commit requested. Need to fetch from origin
        ;; to make sure we have the latest branches and tags.
        (fetch-release! release))
-      ((not (ignore-errors
-             (uiop:with-current-directory (project-cache)
-               (git-rev-parse (git-release/commit release)))))
+      ((not (uiop:with-current-directory (project-cache)
+              (zerop (nth-value 2 (git-cat-file (git-release/commit release)
+                                                :ignore-error-status t)))))
        ;; We do not have the specific commit. fetch!
        (fetch-release! release)))))
 
