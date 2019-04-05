@@ -14,7 +14,7 @@
 
 ;; NOTE: If this form changes position in this file you *must* update clpm.asd as
 ;; well.
-(defparameter *version* "0.0.7"
+(defparameter *version* "0.0.8"
   "The version number of CLPM.")
 
 (defparameter *git-version* nil
