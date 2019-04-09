@@ -8,6 +8,7 @@
           #:clpm/http-client/all
           #:alexandria
           #:clpm/config
+          #:clpm/log
           #:iterate)
   (:import-from #:flexi-streams)
   (:import-from #:uiop
@@ -17,6 +18,8 @@
            #:fetch-url))
 
 (in-package #:clpm/http-client)
+
+(setup-logger)
 
 (defgeneric canonicalize-header-value (header-value)
   (:documentation "Given a ~header-value~ from a config file, return a string
@@ -65,6 +68,7 @@ the request."
 (defun fetch-url (url)
   "Given a URL, return a string with the contents of the file located at ~url~."
   (let ((url (puri:parse-uri url)))
+    (log:debug "Fetching ~A" url)
     (babel:octets-to-string
      (flexi-streams:with-output-to-sequence (s :element-type '(unsigned-byte 8))
        (fetch-url-to-stream url s
@@ -78,6 +82,7 @@ URL (string or puri URI).
 If refresh-time is non-NIL, fetches the file if it already exists and it is
 older than refresh-time in seconds."
   (setf url (puri:parse-uri url))
+  (log:debug "Fetching ~A" url)
   (when (or (not (probe-file pathname))
             (and refresh-time
                  (> (- (get-universal-time) (file-write-date pathname))
