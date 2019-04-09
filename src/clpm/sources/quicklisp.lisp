@@ -52,7 +52,12 @@
                                        &key &allow-other-keys)
   (declare (ignore initargs))
   (when (ql-force-https source)
-    (ensure-uri-scheme-https! (source/url source))))
+    (ensure-uri-scheme-https! (source/url source)))
+  ;; If the uri is given as https, assume the user wants to fetch everything
+  ;; from this source over https.
+  (when (and (not (ql-force-https source))
+             (eql (uri-scheme (source/url source)) :https))
+    (setf (ql-force-https source) t)))
 
 (defmethod source/cache-directory ((source quicklisp-source))
   (clpm-cache-pathname
