@@ -34,7 +34,7 @@ extract the contents of ~archive-stream~ to ~destination-pathname~."
   (ensure-directories-exist destination-pathname)
   (uiop:run-program `(,(tar-path client)
                       "-C" ,(uiop:native-namestring destination-pathname)
-                      "-x")
+                      "-x" "-f" "-")
                     :input archive-stream
                     :output :interactive
                     :error-output :interactive))
