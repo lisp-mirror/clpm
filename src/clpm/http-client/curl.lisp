@@ -52,6 +52,11 @@ its version can be successfully queried."
              :for (key . value) :in headers
              :for name := (string-capitalize (symbol-name key))
              :do (format stream "~A: ~A~%" name value))
+           (unless headers
+             ;; Curl on Windows seems to get rather upset if the stream is just
+             ;; closed without anything being written to it, so just send a
+             ;; blank line to make it happy.
+             (format stream "~%"))
            (close stream)))
     (multiple-value-bind (out err exit-code)
         (uiop:run-program `(,(curl-path client)
@@ -71,12 +76,12 @@ its version can be successfully queried."
                             "--show-error"
                             ,(uri-to-string url))
                           :input #'write-headers-to-stream
-                          :output out-stream
+                          :output `(,out-stream :element-type (unsigned-byte 8))
                           :error-output '(:string :stripped t)
                           :ignore-error-status t)
       (declare (ignore out))
       (unless (zerop exit-code)
         (error 'http-simple-fetch-error
-               :format-control "Error from curl:~%~%~A"
-               :format-arguments (list err)))
+               :format-control "Exit code ~S from curl.~%Stderr:~%~%~A"
+               :format-arguments (list exit-code err)))
       t)))
