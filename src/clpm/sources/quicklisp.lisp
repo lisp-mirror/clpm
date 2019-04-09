@@ -48,6 +48,12 @@
    (db
     :accessor source/db)))
 
+(defmethod initialize-instance :after ((source quicklisp-source) &rest initargs
+                                       &key &allow-other-keys)
+  (declare (ignore initargs))
+  (when (ql-force-https source)
+    (ensure-uri-scheme-https! (source/url source))))
+
 (defmethod source/cache-directory ((source quicklisp-source))
   (clpm-cache-pathname
    `("sources"
@@ -383,10 +389,14 @@ strings to distinfo.txt urls."
   (let* ((versions-string (fetch-url (source/versions-url source)))
          (versions-lines (split-sequence #\Newline versions-string :remove-empty-subseqs t)))
     (mapcar (lambda (l)
-              (apply #'cons (split-sequence #\Space l)))
+              (destructuring-bind (version url)
+                  (split-sequence #\Space l)
+                (when (ql-force-https source)
+                  (setf url (ensure-uri-scheme-https! url)))
+                (cons version url)))
             versions-lines)))
 
-(defun fetch-distribution-version (dest-dir distinfo-url)
+(defun fetch-distribution-version (source dest-dir distinfo-url)
   "Given the URL to a distinfo.txt file, save it and all related files for this
 version of the distribution to the directory specified by DEST-DIR."
   ;; Fetch the distinfo.txt file.
@@ -401,6 +411,9 @@ version of the distribution to the directory specified by DEST-DIR."
           distinfo-plist
         (assert system-index-url)
         (assert release-index-url)
+        (when (ql-force-https source)
+          (setf system-index-url (ensure-uri-scheme-https! system-index-url))
+          (setf release-index-url (ensure-uri-scheme-https! release-index-url)))
         ;; Fetch the system and release index files.
         (let ((system-index-pathname (merge-pathnames "systems.txt"
                                                       dest-dir))
@@ -410,7 +423,7 @@ version of the distribution to the directory specified by DEST-DIR."
           (ensure-file-fetched release-index-pathname release-index-url)
           (values))))))
 
-(defun make-db-for-dist-version (cache-dir version distinfo-url)
+(defun make-db-for-dist-version (source cache-dir version distinfo-url)
   (let* ((version-cache-dir (uiop:resolve-location `(,cache-dir
                                                      "versions"
                                                      ,version)
@@ -418,7 +431,8 @@ version of the distribution to the directory specified by DEST-DIR."
          (system-index (merge-pathnames "systems.txt"
                                          version-cache-dir))
          (release-index (merge-pathnames "releases.txt" version-cache-dir)))
-    (fetch-distribution-version version-cache-dir
+    (fetch-distribution-version source
+                                version-cache-dir
                                 distinfo-url)
     (let ((systems (parse-systems (read-file-into-string system-index)))
           (releases (parse-releases (read-file-into-string release-index)))
@@ -448,12 +462,12 @@ version of the distribution to the directory specified by DEST-DIR."
                                           (cdr p))))))
       (nreverse out))))
 
-(defun assemble-release-db (cache-dir orig-db missing-versions)
+(defun assemble-release-db (source cache-dir orig-db missing-versions)
   (let ((new-db (copy-tree orig-db)))
     (dolist (missing-version missing-versions)
       (destructuring-bind (version-string . distinfo-url)
           missing-version
-        (let ((version-db (make-db-for-dist-version cache-dir version-string distinfo-url)))
+        (let ((version-db (make-db-for-dist-version source cache-dir version-string distinfo-url)))
           (setf new-db (merge-dist-dbs new-db version-db)))))
     (sort new-db #'string< :key #'car)))
 
@@ -504,7 +518,8 @@ version of the distribution to the directory specified by DEST-DIR."
     (let ((version (assoc version (source/all-versions source) :test #'equal)))
       (push version (getf (source/db source) :versions))
       (setf (getf (source/db source) :releases)
-            (assemble-release-db (source/cache-directory source)
+            (assemble-release-db source
+                                 (source/cache-directory source)
                                  (getf (source/db source) :releases)
                                  (list version)))
       ;; Build the updated system table

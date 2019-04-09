@@ -8,6 +8,7 @@
           #:puri
           #:split-sequence)
   (:export #:*live-script-location*
+           #:ensure-uri-scheme-https!
            #:retriable-error
            #:run-program-augment-env-args
            #:uri-to-string
@@ -48,6 +49,20 @@ process."
   "Convert a puri URI to a string."
   (with-output-to-string (s)
     (render-uri uri s)))
+
+(defgeneric ensure-uri-scheme-https! (uri)
+  (:documentation
+   "Given a URI, make sure the scheme is ~:https~. Errors if input is anything
+other than ~:https~ or ~:http~."))
+
+(defmethod ensure-uri-scheme-https! ((uri string))
+  (uri-to-string (ensure-uri-scheme-https! (parse-uri uri))))
+
+(defmethod ensure-uri-scheme-https! ((uri uri))
+  (unless (member (uri-scheme uri) '(:http :https))
+    (error "Refusing to change scheme ~S to HTTPS" (uri-scheme uri)))
+  (setf (uri-scheme uri) :https)
+  uri)
 
 (define-condition retriable-error (error)
   ())
