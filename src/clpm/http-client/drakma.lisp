@@ -6,6 +6,7 @@
 (uiop:define-package #:clpm/http-client/drakma
     (:use #:cl
           #:alexandria
+          #-:drakma-no-ssl
           #:clpm/http-client/cl-plus-ssl
           #:clpm/http-client/defs
           #:clpm/utils
@@ -25,13 +26,15 @@
 (register-http-client :drakma 'drakma-client)
 
 (defmethod http-client-available-p ((client drakma-client))
-  *openssl-available-p*)
+  (if (uiop:featurep :drakma-no-ssl)
+      t
+      *openssl-available-p*))
 
 (defmethod %fetch-url-to-stream ((client drakma-client) url out-stream
                                  &key headers)
   (multiple-value-bind (http-stream status-code)
       (http-request url :want-stream t
-                        :verify :required
+                        :verify #+:drakma-no-ssl nil #-:drakma-no-ssl :required
                         :additional-headers headers)
     (assert (= 200 status-code))
     (copy-stream http-stream out-stream :element-type '(unsigned-byte 8) :buffer-size 8192)
