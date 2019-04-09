@@ -35,6 +35,6 @@ extract the contents of ~archive-stream~ to ~destination-pathname~."
   (uiop:run-program `(,(tar-path client)
                       "-C" ,(uiop:native-namestring destination-pathname)
                       "-x" "-f" "-")
-                    :input archive-stream
+                    :input `(,archive-stream :element-type (unsigned-byte 8))
                     :output :interactive
                     :error-output :interactive))
