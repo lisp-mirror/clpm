@@ -32,6 +32,10 @@ its version can be successfully queried."
    (zerop (nth-value 2 (uiop:run-program `(,(curl-path client) "--version")
                                          :ignore-error-status t)))))
 
+(defmethod http-client-can-handle-url-p ((client curl-client) url)
+  "Can handle every URL."
+  t)
+
 (defun header-pair-to-string (pair)
   "Convert a header name/value pair to a string of the form
 

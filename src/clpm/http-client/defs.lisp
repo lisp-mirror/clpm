@@ -13,6 +13,7 @@
            #:%fetch-url-to-stream
            #:http-client
            #:http-client-available-p
+           #:http-client-can-handle-url-p
            #:http-fetch-error
            #:http-simple-fetch-error
            #:register-http-client))
@@ -70,13 +71,15 @@ the ones where ~http-client-available-p~ returns NIL."
     (setf *available-http-clients* (compute-available-http-clients)))
   *available-http-clients*)
 
-(defun get-preferred-http-client ()
+(defun get-preferred-http-client (url)
   "Return the HTTP client instance that is available and most preferred."
   (let* ((client-key (config-value :http-client :method))
          (available-http-clients (available-http-clients))
          (client (if (eql :auto client-key)
                      (iter
                        (for client :in (mapcar #'cdr available-http-clients))
+                       (unless (http-client-can-handle-url-p client url)
+                         (next-iteration))
                        (finding client :minimizing (http-client-priority client)))
                      (assoc-value available-http-clients client-key))))
     (unless client
@@ -89,6 +92,10 @@ the ones where ~http-client-available-p~ returns NIL."
 (defgeneric http-client-available-p (client)
   (:documentation
    "Returns T iff ~client~ is able to be used to fetch resources over HTTP."))
+
+(defgeneric http-client-can-handle-url-p (client url)
+  (:documentation
+   "Returns T iff the client is able to fetch the resource located at ~url~."))
 
 (define-condition http-fetch-error (error)
   ()
@@ -109,4 +116,4 @@ with the request."))
 (defun fetch-url-to-stream (url stream &key headers)
   "Given a ~url~, GET it and put its contents into ~stream~. ~headers~ is an
 alist of header name (keyword)/value pairs to send with the request."
-  (%fetch-url-to-stream (get-preferred-http-client) url stream :headers headers))
+  (%fetch-url-to-stream (get-preferred-http-client url) url stream :headers headers))

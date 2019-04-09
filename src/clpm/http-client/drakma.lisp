@@ -10,7 +10,8 @@
           #:clpm/http-client/cl-plus-ssl
           #:clpm/http-client/defs
           #:clpm/utils
-          #:drakma)
+          #:drakma
+          #:puri)
   (:export #:drakma-client))
 
 (in-package #:clpm/http-client/drakma)
@@ -29,6 +30,12 @@
   (if (uiop:featurep :drakma-no-ssl)
       t
       *openssl-available-p*))
+
+(defmethod http-client-can-handle-url-p ((client drakma-client) url)
+  "If SSL support is loaded, we can handle every URL. Otherwise can only handle
+  :http protocol."
+  (or (not (featurep :drakma-no-ssl))
+      (eql (uri-scheme url) :http)))
 
 (defmethod %fetch-url-to-stream ((client drakma-client) url out-stream
                                  &key headers)
