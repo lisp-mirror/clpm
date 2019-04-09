@@ -10,46 +10,230 @@
           #:clpm/cache
           #:clpm/data
           #:clpm/http-client
-          #:clpm/requirement
+          #:clpm/log
           #:clpm/sources/defs
           #:clpm/sources/simple-versioned-project
           #:clpm/utils
-          #:clpm/version-strings
           #:puri
-          #:split-sequence)
+          #:split-sequence
+          #:sxql)
+  (:import-from #:babel
+                #:string-to-octets
+                #:octets-to-string)
+  (:import-from #:dbd.sqlite3)
+  (:import-from #:dbi
+                #:with-transaction)
+  (:import-from #:mito.core
+                #:*connection*
+                #:create-dao
+                #:dao-table-class
+                #:dao-table-mixin
+                #:object-id
+                #:save-dao)
+  (:import-from #:trivial-garbage
+                #:finalize
+                #:make-weak-hash-table)
   (:export #:quicklisp-source))
 
 (in-package #:clpm/sources/quicklisp)
 
-;;; Quicklisp's
+(setup-logger)
+
+;;; This package allows CLPM to natively interact with Quicklisp
+;;; distributions. It is tested primarily on the main Quicklisp distribution
+;;; (quicklisp), but should nearly work on other distributions as well, such as
+;;; ultralisp or cl21.
+;;;
+;;; Interacting with Quicklisp distributions is a little painful because of the
+;;; different design focuses of each project. CLPM needs to be able to determine
+;;; information on all the previous releases of a system (preferably quickly!)
+;;; whereas Quicklisp distributions are designed to make data easily accessible
+;;; for only a single version of a distribution. As such, CLPM needs to crawl
+;;; all distribution versions and index their data locally.
+;;;
+;;; In the future, I would like the CLPM project to grow and host metadata for
+;;; the most popular Quicklisp derived distributions in a format that is easy
+;;; for CLPM to fetch and incorporate. But there will always be a place for this
+;;; package, as I would like to continue supporting private Quicklisp
+;;; distributions that can't be indexed by the CLPM project or just random
+;;; public ones that may pop up.
+;;;
+;;; The data for Quicklisp distributions is stored in a sqlite database.
 
 
-;;; A quicklisp based source
+;;; * Mito utilities
+;;;
+;;; We use mito as an ORM on top of a sqlite database.
+
+(defclass ql-table-mixin ()
+  ((source
+    :initarg :source
+    :accessor ql-object-source
+    :ghost t
+    :documentation
+    "The source this object is part of. Automatically populated on load from the
+    database."))
+  (:metaclass dao-table-mixin)
+  (:documentation
+   "A mixin used to add a reference to the toplevel quicklisp source an object
+   belongs to. If an object of this type is retrieved from the database, the
+   source is automatically populated based on the source the connection belongs
+   to."))
+
+(defvar *current-source* nil
+  "Bound to the ~quicklisp-source~ object in use by the ORM layer (i.e., the
+  source used to compute which database to connect to.")
+
+(defvar *dao-cache* (make-weak-hash-table :test 'equal :weakness :value)
+  "Some other pieces of CLPM require that two objects representing the same thing
+  (i.e., a specific release) be EQ to each other. To facilitate that, this
+  caches all results returned from the ORM layer. It is a weak cache so as to
+  not prevent GC.")
+
+(defparameter *tables*
+  '(ql-dist-version ql-project ql-release
+    ql-release-meta ql-system ql-system-release ql-source-meta)
+  "A list of table names used in the Quicklisp database. Used for seeding an
+  empty DB.")
+
+(defparameter *indices*
+  '((:key_ql-release-meta_project-name_url
+     :ql_release_meta :project_name :url)
+    (:key_ql-release_meta-id_dist-version-id
+     :ql_release :meta_id :dist_version_id)
+    (:key_ql-release_project-name_dist-version-id
+     :ql_release :project_name :dist_version_id)
+    (:key_ql-system-release_release-id_system-name
+     :ql_system_release :release_id :system_name))
+  "Currently, Mito ignores keys when operating on a sqlite DB. So we manually
+  create the indices we're interested in. Used for seeding an empty DB.")
+
+(defun clear-dao-cache ()
+  "Make sure the cache is cleared on image dump."
+  (setf *dao-cache* (make-weak-hash-table :test 'equal :weakness :value)))
+
+(uiop:register-image-dump-hook 'clear-dao-cache)
+
+(defun find-dao (class &rest fields-and-values)
+  "A wrapper around ~mito:find-dao~ that uses the ~*dao-cache*~ and populates the
+  ~source~ slot on ~ql-table-mixin~ objects."
+  (let ((result (apply #'mito.core:find-dao class fields-and-values)))
+    (when result
+      (let ((id (object-id result)))
+        (multiple-value-bind (out exists-p)
+            (ensure-gethash (list *current-source* class id) *dao-cache* result)
+          (when (and (not exists-p)
+                     (typep out 'ql-table-mixin))
+            (setf (ql-object-source out) *current-source*))
+          out)))))
+
+(defun retrieve-dao (class &rest fields-and-values)
+  "A wrapper around ~mito:retrieve-dao~ that uses the ~*dao-cache*~ and populates
+  the ~source~ slot on ~ql-table-mixin~ objects."
+  (let ((results (apply #'mito.core:retrieve-dao class fields-and-values)))
+    (loop
+      :for result :in results
+      :for id := (object-id result)
+      :for (actual-result exists-p) := (multiple-value-list
+                                        (ensure-gethash (list *current-source* class id) *dao-cache* result))
+      :collect actual-result
+      :when (and (not exists-p) (typep actual-result 'ql-table-mixin))
+        :do (setf (ql-object-source actual-result) *current-source*))))
+
+(defun seed-empty-db (conn)
+  "Given a connection to an empty database, seed it."
+  (let ((*connection* conn))
+    ;; Create the tables
+    (dolist (table *tables*)
+      (mito.core:ensure-table-exists table))
+    ;; Create the indices
+    (dolist (index *indices*)
+      (destructuring-bind (name . on)
+          index
+        (mito.core:execute-sql (create-index name :on on))))
+    ;; Create the metadata table.
+    (create-dao 'ql-source-meta)))
+
+(defun check-schema-or-error (conn)
+  "Make sure the database connected to has a compatible schema. Error if it does
+not."
+  (let* ((*connection* conn)
+         ;; Use the underlying ~find-dao~ to bypass our cache.
+         (meta (mito.core:find-dao 'ql-source-meta :id 0)))
+    (unless (= 1 (ql-source-meta-db-version meta))
+      (error "Unknown DB Schema!"))))
+
+(defclass ql-source-meta ()
+  ((id
+    :initform 0
+    :accessor ql-source-meta-id
+    :primary-key t
+    :reader object-id
+    :col-type :integer
+    :documentation
+    "To make the single row easy to query, give it a constant ID of 0.")
+   (db-version
+    :initform 1
+    :accessor ql-source-meta-db-version
+    :col-type (:smallint () :unsigned)
+    :documentation
+    "The version of the database schema in use."))
+  (:metaclass dao-table-class)
+  (:documentation
+   "A table in the database used to store metadata about the source and the
+   database itself in a single row."))
+
+(defun call-with-source-connection (source thunk)
+  "Call ~thunk~ with ~*connection*~ and ~*current-source*~ bound to ~source~'s
+  connection and ~source~ respectively."
+  (let ((db (ql-db source)))
+    (if db
+        ;; We already have an open connection, use it.
+        (let ((*connection* db)
+              (*current-source* source))
+          (funcall thunk))
+        ;; We need to open a new connection and ensure it is closed when we're
+        ;; finished.
+        (unwind-protect
+             (progn
+               (setf db (ql-db-connection source))
+               (setf (ql-db source) db)
+               (let ((*connection* db)
+                     (*current-source* source))
+                 (funcall thunk)))
+          (when db (dbi:disconnect db))
+          (setf (ql-db source) nil)))))
+
+(defmacro with-source-connection ((source) &body body)
+  `(call-with-source-connection ,source (lambda () ,@body)))
+
+
+;;; * Quicklisp backed source
 
 (defclass quicklisp-source (clpm-known-source)
   ((force-https
     :initarg :force-https
     :initform nil
-    :accessor ql-force-https)
-   (curation-p
-    :initarg :curation-p
-    :initform nil
-    :accessor ql-curation-p)
+    :accessor ql-force-https
+    :documentation
+    "~T~ iff this source should download everything over HTTPS.")
    (versions-url
-    :accessor source/versions-url)
-   (all-versions
-    :accessor source/all-versions)
-   (projects
-    :initform nil
-    :accessor source/raw-projects)
-   (systems
-    :initform nil
-    :accessor source/raw-systems)
+    :accessor ql-versions-url
+    :documentation
+    "Holds the URL to the .txt file that stores all versions of this source.")
    (db
-    :accessor source/db)))
+    :initform nil
+    :accessor ql-db
+    :documentation
+    "Holds a reference to the DB connection for this source, if active."))
+  (:documentation
+   "A CLPM source backed by a quicklisp-style repository."))
 
 (defmethod initialize-instance :after ((source quicklisp-source) &rest initargs
                                        &key &allow-other-keys)
+  "If the source is being forced to HTTPS, update the base URL accordingly. If
+  the base URL is HTTPS, ensure the force-https flag is set (presumably that is
+  what the user intends). Last, computes the versions URL."
   (declare (ignore initargs))
   (when (ql-force-https source)
     (ensure-uri-scheme-https! (source/url source)))
@@ -57,9 +241,35 @@
   ;; from this source over https.
   (when (and (not (ql-force-https source))
              (eql (uri-scheme (source/url source)) :https))
-    (setf (ql-force-https source) t)))
+    (setf (ql-force-https source) t))
+  ;; Compute the versions url. Example:
+  ;; http://beta.quicklisp.org/dist/quicklisp.txt ->
+  ;; http://beta.quicklisp.org/dist/quicklisp-versions.txt
+  (let* ((path (puri:uri-path (source/url source)))
+         (file-name (pathname-name path)))
+    (setf (ql-versions-url source)
+          (merge-uris (namestring
+                       (merge-pathnames (concatenate 'string file-name "-versions")
+                                        path))
+                      (source/url source)))))
+
+(defun ql-db-connection (source)
+  "Returns a new connection to ~source~'s database. If the database does not
+  exist, it is populated with the correct tables and indices. Errors if the
+  database schema is incorrect."
+  (let* ((db-pathname (merge-pathnames "ql.db"
+                                       (source/lib-directory source)))
+         (db-exists-p (probe-file db-pathname)))
+    (assert (uiop:absolute-pathname-p db-pathname))
+    (let ((connection (dbi:connect :sqlite3
+                                   :database-name db-pathname)))
+      (unless db-exists-p
+        (seed-empty-db connection))
+      (check-schema-or-error connection)
+      connection)))
 
 (defmethod source/cache-directory ((source quicklisp-source))
+  "Compute the cache location for this source, based on its canonical url."
   (clpm-cache-pathname
    `("sources"
      "quicklisp"
@@ -69,6 +279,7 @@
    :ensure-directory t))
 
 (defmethod source/lib-directory ((source quicklisp-source))
+  "Compute the data location for this source, based on its canonical url."
   (clpm-data-pathname
    `("sources"
      "quicklisp"
@@ -77,31 +288,15 @@
      ,@(split-sequence #\/ (uri-path (source/url source)) :remove-empty-subseqs t))
    :ensure-directory t))
 
-(defun save-db (source)
-  (let ((db-file (merge-pathnames "db.sexp" (source/cache-directory source))))
-    (with-open-file (s db-file :direction :output :if-exists :supersede)
-      (uiop:with-safe-io-syntax ()
-        (print (source/db source) s)))))
+(defmethod source/project-release ((source quicklisp-source) project-name version-string)
+  (with-source-connection (source)
+    (find-dao 'ql-release
+              :project-name project-name
+              :dist-version-id version-string)))
 
-(defmethod slot-unbound (class (source quicklisp-source) (slot-name (eql 'db)))
-  "Lazily read the DB from file."
-  (let ((db-file (merge-pathnames "db.sexp" (source/cache-directory source))))
-    (when (probe-file db-file)
-      (setf (source/db source)
-            (uiop:with-safe-io-syntax ()
-              (uiop:read-file-form db-file))))))
-
-(defmethod slot-unbound (class (source quicklisp-source) (slot-name (eql 'versions-url)))
-  (let* ((path (puri:uri-path (source/url source)))
-         (file-name (pathname-name path)))
-    (setf (source/versions-url source)
-          (merge-uris (namestring
-                       (merge-pathnames (concatenate 'string file-name "-versions")
-                                        path))
-                      (source/url source)))))
-
-(defmethod slot-unbound (class (source quicklisp-source) (slot-name (eql 'all-versions)))
-  (setf (source/all-versions source) (latest-all-versions source)))
+(defmethod source/project ((source quicklisp-source) project-name)
+  (with-source-connection (source)
+    (find-dao 'ql-project :name project-name)))
 
 (defmethod source-type-keyword ((source quicklisp-source))
   :quicklisp)
@@ -112,256 +307,72 @@
         :type :quicklisp
         :force-https (ql-force-https source)))
 
-(defun source/dist-versions (source)
-  (let ((db (source/db source)))
-    (getf db :versions)))
-
-(defun ensure-projects (source)
-  (mapc (curry #'source/project source) (source/project-names source)))
-
-(defun source/project-names (source)
-  (mapcar #'car (getf (source/db source) :releases)))
-
-(defmethod source/projects ((source quicklisp-source))
-  (ensure-projects source)
-  (mapcar #'cdr (source/raw-projects source)))
-
-(defmethod source/project ((source quicklisp-source) project-name)
-  (let ((project (assoc-value (source/raw-projects source) project-name :test #'equal)))
-    (when (and (not project)
-               (member project-name (source/project-names source)
-                       :test #'equal))
-      (setf project
-            (make-instance 'quicklisp-project :source source :name project-name))
-      (setf (assoc-value (source/raw-projects source) project-name :test #'equal)
-            project))
-    project))
-
-(defmethod source/project-release ((source quicklisp-source) project-name version-string)
-  (ensure-version-synced! source version-string)
-  (project/release (source/project source project-name) version-string))
-
-(defun ensure-systems (source)
-  (mapc (curry #'source/system source) (source/system-names source)))
-
-(defun source/system-names (source)
-  (mapcar #'car (getf (source/db source) :systems)))
-
-(defmethod source/systems ((source quicklisp-source))
-  (ensure-systems source)
-  (mapcar #'cdr (source/raw-systems source)))
-
-(defmethod source/system ((source quicklisp-source) system-name)
-  (let ((system (assoc-value (source/raw-systems source) system-name :test #'equal)))
-    ;; (when (not system)
-    ;;   (break "~S" system))
-    (when (and (not system)
-               (member system-name (source/system-names source)
-                       :test #'equal))
-      (setf system
-            (make-instance 'quicklisp-system :source source :name system-name))
-      (setf (assoc-value (source/raw-systems source) system-name :test #'equal)
-            system))
-    system))
+(defun ql-source-local-versions (source)
+  "Return all ~ql-dist-version~ objects. These represent all versions of the
+  source we know about (but not all of them may be synced!)."
+  (with-source-connection (source)
+    (retrieve-dao 'ql-dist-version)))
 
 
-;;; A system provided by quicklisp
+;;; * Version of a quicklisp distribution
 
-(defclass quicklisp-system (clpm-system)
-  ())
-
-(defun system-data (system)
-  (assoc-value (getf (source/db (system/source system)) :systems)
-               (system/name system)
-               :test #'equal))
-
-(defmethod system/releases ((system quicklisp-system))
-  (mapcar (lambda (pair)
-            (destructuring-bind (project-name . project-version)
-                pair
-              (project/release (source/project (system/source system) project-name)
-                               project-version)))
-          (system-data system)))
-
-(defmethod system/system-releases ((system quicklisp-system))
-  (loop
-    :for r :in (system/releases system)
-    :collecting (release/system-release r (system/name system))))
-
-
-;;; A project provided by quicklisp
-
-(defclass quicklisp-project (clpm-project)
-  ((repo
-    :initform nil)
-   (raw-releases
+(defclass ql-dist-version (ql-table-mixin)
+  ((id
+    :initarg :id
+    :accessor ql-dist-version-id
+    :col-type :text
+    :primary-key t
+    :reader object-id
+    :documentation
+    "A string naming this version. Typically time based.")
+   (synced-int
+    :initarg :synced-int
+    :initform 0
+    :accessor ql-dist-version-synced-int
+    :col-type (:tinyint () :unsigned)
+    :documentation
+    "1 if this version has been synced (all releases and systems incorporated
+    into the db), 0 otherwise.")
+   (canonical-distinfo-url
+    :initarg :canonical-distinfo-url
     :initform nil
-    :accessor project/raw-releases)))
+    :accessor ql-dist-version-canonical-distinfo-url
+    :col-type :text
+    :documentation
+    "The canonical URL for this version's =distinfo.txt= file.")
+   (system-index-url
+    :initarg :system-index-url
+    :initform nil
+    :accessor ql-dist-version-system-index-url
+    :col-type (or :text :null)
+    :documentation
+    "The URL for this version's =systems.txt= file.")
+   (release-index-url
+    :initarg :release-index-url
+    :initform nil
+    :accessor ql-dist-version-release-index-url
+    :col-type (or :text :null)
+    :documentation
+    "The URL for this version's =releases.txt= file."))
+  (:metaclass dao-table-class)
+  (:record-timestamps nil)
+  (:documentation
+   "Table representing a version of a quicklisp source."))
 
-(defun project-data (project)
-  (assoc-value (getf (source/db (project/source project)) :releases)
-               (project/name project)
-               :test #'equal))
+(defun ql-source-unsynced-dist-versions (source)
+  "Returns a list of the unsynced versions of the ~source~ distribution."
+  (with-source-connection (source)
+    (retrieve-dao 'ql-dist-version :synced-int 0)))
 
-(defun ensure-releases (project)
-  (mapc (curry #'project/release project) (project/version-strings project)))
+(defun ql-dist-version-synced-p (dist-version)
+  "Returns ~T~ iff ~dist-version~ is synced."
+  (not (zerop (ql-dist-version-synced-int dist-version))))
 
-(defmethod project/release ((project quicklisp-project) version-string)
-  (let ((release (assoc-value (project/raw-releases project) version-string :test #'equal)))
-    (unless release
-      (setf release
-            (make-instance 'quicklisp-release :source (project/source project)
-                                              :project project
-                                              :version version-string))
-      (setf (assoc-value (project/raw-releases project) version-string :test #'equal)
-            release))
-    release))
-
-(defmethod project/releases ((project quicklisp-project))
-  (ensure-releases project)
-  (mapcar #'cdr (project/raw-releases project)))
-
-(defun project/version-strings (project)
-  (sort (loop
-          :for version-alist :in (getf (project-data project) :versions)
-          :appending (car version-alist))
-        #'string>))
-
-
-;;; Releases
-
-(defclass quicklisp-release (tarball-release simple-versioned-release)
-  ((system-files-ht
-    :accessor quicklisp-release/system-files-ht
-    :documentation "Hash table that maps system file names to system-file objects.")))
-
-(defmethod slot-unbound (class (release quicklisp-release) (slot-name (eql 'urls)))
-  (let ((release-data (release-data release)))
-    (setf (tarball-release/urls release)
-          (list (aprog1
-                    (parse-uri (getf release-data :url))
-                  (when (ql-force-https (release/source release))
-                    (setf (uri-scheme it) :https)))))))
-
-(defmethod slot-unbound (class (release quicklisp-release) (slot-name (eql 'system-files-ht)))
-  (let* ((ht (make-hash-table :test 'equalp))
-         (release-data (release-data release))
-         (system-file-strings (getf release-data :system-files)))
-    (dolist (system-file-string system-file-strings)
-      (setf (gethash system-file-string ht) (make-instance 'quicklisp-system-file
-                                                           :release release
-                                                           :source (release/source release)
-                                                           :enough-pathname system-file-string)))
-    (setf (quicklisp-release/system-files-ht release) ht))
-  (quicklisp-release/system-files-ht release))
-
-(defun release-data (release)
-  (cdr (find-if (lambda (x)
-                  (member (release/version release) (car x)
-                          :test #'string-equal))
-                (getf (project-data (release/project release)) :versions))))
-
-(defun release-prefix (release)
-  (let ((release-data (release-data release)))
-    (getf release-data :prefix)))
-
-(defmethod release/systems ((release quicklisp-release))
-  (let* ((source (release/source release))
-         (release-data (release-data release))
-         (system-names (mapcar #'car (getf release-data :systems))))
-    (mapcar (curry #'source/system source) system-names)))
-
-(defmethod release/system-file ((release quicklisp-release) system-file-namestring)
-  (gethash system-file-namestring (quicklisp-release/system-files-ht release)))
-
-(defmethod release/system-files ((release quicklisp-release))
-  (hash-table-values (quicklisp-release/system-files-ht release)))
-
-(defmethod release/system-release ((r quicklisp-release) system-name)
-  (make-instance 'quicklisp-system-release
-                 :source (release/source r)
-                 :release r
-                 :system (source/system (release/source r) system-name)))
-
-(defmethod release/lib-pathname ((r quicklisp-release))
-  (uiop:resolve-absolute-location
-     (list (source/lib-directory (release/source r))
-           "projects"
-           (project/name (release/project r))
-           (release-prefix r))
-     :ensure-directory t))
-
-
-;;; System files
-(defclass quicklisp-system-file (clpm-system-file)
-  ((enough-pathname
-    :initarg :enough-pathname
-    :accessor system-file/asd-enough-namestring)))
-
-(defmethod system-file/absolute-asd-pathname ((system-file quicklisp-system-file))
-  (let* ((release (system-file/release system-file))
-         (system-release (release/system-release release
-                                                 (pathname-name
-                                                  (system-file/asd-enough-namestring system-file)))))
-    (system-release/absolute-asd-pathname system-release)))
-
-
-;;; Release systems
-
-(defclass quicklisp-system-release (clpm-system-release)
-  ())
-
-(defmethod system-release-satisfies-version-spec-p ((system-release quicklisp-system-release)
-                                                    version-spec)
-  "There is currently no way to get reasonably get the system version from
-quicklisp metadata. So say everything is satisfied."
-  t)
-
-(defmethod system-release/asd-pathname ((system-release quicklisp-system-release))
-  (let* ((release (system-release/release system-release))
-         (release-data (release-data release))
-         (system-files (getf release-data :system-files))
-         (system (assoc-value (getf release-data :systems)
-                              (system/name (system-release/system system-release))
-                              :test #'string-equal)))
-    (find (getf system :system-file) system-files
-          :key #'pathname-name
-          :test #'string-equal)))
-
-(defmethod system-release/requirements ((system-release quicklisp-system-release))
-  (let* ((source (system-release/source system-release))
-         (release (system-release/release system-release))
-         (release-data (release-data release))
-         (system-release-plist (assoc-value (getf release-data :systems)
-                                            (system/name (system-release/system system-release))
-                                            :test #'string-equal))
-         (deps (remove-if (rcurry #'member (list "asdf" "uiop") :test #'string-equal)
-                          (getf system-release-plist :deps))))
-    (mapcar (lambda (dep-name)
-              (if (ql-curation-p source)
-                  (let* ((dep-system (source/system source dep-name))
-                         (dep-releases (system/releases dep-system))
-                         (dep-release (find (release/version release)
-                                            dep-releases
-                                            :key #'release/version
-                                            :test #'string-equal)))
-
-                    (make-instance 'project-requirement
-                                   :name (project/name (release/project dep-release))
-                                   :version-spec `(= . ,(release/version release))))
-                  (make-instance 'system-requirement
-                                 :name dep-name)))
-            deps)))
-
-(defmethod system-release/system-file ((system-release quicklisp-system-release))
-  (gethash (system-release/asd-pathname system-release)
-           (quicklisp-release/system-files-ht (system-release/release system-release))))
-
-(defmethod system-release-> ((sr-1 quicklisp-system-release) (sr-2 quicklisp-system-release))
-  (release-> (system-release/release sr-1) (system-release/release sr-2)))
-
-
-;;; Syncing the source
+(define-condition ql-dist-version-missing ()
+  ((source
+    :initarg :source)
+   (version-id
+    :initarg :version-id)))
 
 (defun parse-distinfo-line (line)
   "Parse a single line of a distinfo.txt file."
@@ -376,172 +387,340 @@ quicklisp metadata. So say everything is satisfied."
   (let* ((lines (split-sequence #\Newline distinfo :remove-empty-subseqs t)))
     (mapcan #'parse-distinfo-line lines)))
 
-(defun parse-releases (releases)
-  (let* ((lines (rest (split-sequence #\Newline releases :remove-empty-subseqs t))))
-    (mapcar (lambda (l)
-              (split-sequence #\Space l :remove-empty-subseqs t))
-            lines)))
+(defun ql-source-dist-version (source version-id)
+  "Return a ~ql-dist-version~ object or raise an error."
+  (with-source-connection (source)
+    (let ((dist-version (find-dao 'ql-dist-version :id version-id)))
+      (unless dist-version
+        (error 'ql-dist-version-missing
+               :source source
+               :version-id version-id))
+      dist-version)))
 
-(defun parse-systems (systems)
-  (let* ((lines (rest (split-sequence #\Newline systems :remove-empty-subseqs t))))
-    (mapcar (lambda (l)
-              (split-sequence #\Space l :remove-empty-subseqs t))
-            lines)))
+
+;;; * Projects
 
-(defun latest-all-versions (source)
+(defclass ql-project (ql-table-mixin)
+  ((name
+    :initarg :name
+    :accessor ql-project-name
+    :reader project/name
+    :col-type :text
+    :primary-key t
+    :reader object-id
+    :documentation
+    "The name of the project."))
+  (:metaclass dao-table-class)
+  (:record-timestamps nil)
+  (:documentation
+   "Represents a project in a quicklisp distribution."))
+
+
+;;; * Releases
+
+(defclass ql-release (ql-table-mixin tarball-release)
+  ((meta-id
+    :initarg :meta-id
+    :accessor ql-release-meta-id
+    :col-type :integer
+    :documentation
+    "The ID of the corresponding ~ql-release-meta~ object.")
+   (project-name
+    :initarg :project-name
+    :accessor ql-release-project-name
+    :col-type :text
+    :documentation
+    "The name of the project this to which this release corresponds.")
+   (dist-version-id
+    :reader release/version
+    :initarg :dist-version-id
+    :col-type :text
+    :documentation
+    "The distribution version to which this release belongs. Also the version of
+    this release."))
+  (:metaclass dao-table-class)
+  (:record-timestamps nil)
+  (:documentation
+   "Represents a release in a quicklisp distribution. Many releases may share the
+   same properties, so those are abstracted out into the ~ql-release-meta~
+   class."))
+
+(defmethod slot-unbound (class (release ql-release) (slot-name (eql 'urls)))
+  (with-source-connection ((release/source release))
+    (let ((meta (find-dao 'ql-release-meta
+                          :id (ql-release-meta-id release))))
+      (assert meta)
+      (setf (tarball-release/urls release)
+            (list (aprog1
+                      (parse-uri (ql-release-meta-url meta))
+                    (when (ql-force-https (release/source release))
+                      (ensure-uri-scheme-https! it))))))))
+
+(defmethod release/source ((r ql-release))
+  (ql-object-source r))
+
+(defmethod release/system-file ((release ql-release) system-file-namestring)
+  (make-instance 'ql-system-file
+                 :namestring system-file-namestring
+                 :release release))
+
+(defmethod release/project ((release ql-release))
+  (source/project (release/source release) (ql-release-project-name release)))
+
+(defmethod release/lib-pathname ((r ql-release))
+  (with-source-connection ((release/source r))
+    (let ((meta (find-dao 'ql-release-meta
+                          :id (ql-release-meta-id r))))
+      (uiop:resolve-absolute-location
+       (list (source/lib-directory (release/source r))
+             "projects"
+             (project/name (release/project r))
+             (ql-release-meta-prefix meta))
+       :ensure-directory t))))
+
+
+;;; * Release metadata
+
+(defclass ql-release-meta ()
+  ((project-name
+    :initarg :project-name
+    :accessor ql-release-meta-project-name
+    :col-type :text
+    :documentation
+    "The name of the project this belongs to.")
+   (url
+    :initarg :url
+    :accessor ql-release-meta-url
+    :col-type :text
+    :documentation
+    "The URL where the tarball for this release is located.")
+   (size
+    :initarg :size
+    :accessor ql-release-meta-size
+    :col-type :integer
+    :documentation
+    "The size of the tarball.")
+   (file-md5
+    :initarg :file-md5
+    :accessor ql-release-meta-file-md5
+    :col-type :text
+    :documentation
+    "The md5sum of the tarball.")
+   (content-sha1
+    :initarg :content-sha1
+    :accessor ql-release-meta-content-sha1
+    :col-type :text
+    :documentation
+    "The sha1sum of the tarball contents.")
+   (prefix
+    :initarg :prefix
+    :accessor ql-release-meta-prefix
+    :col-type :text
+    :documentation
+    "The prefix on every file in the tarball.")
+   (system-files
+    :initarg :system-files
+    :accessor ql-release-meta-system-files
+    :col-type :text
+    :deflate (lambda (x)
+               (with-standard-io-syntax
+                 (prin1-to-string x)))
+    :inflate (lambda (x)
+               (with-standard-io-syntax
+                 (read-from-string x)))
+    :documentation
+    "A list of system files contained in the release."))
+  (:metaclass dao-table-class)
+  (:record-timestamps nil)
+  (:documentation
+   "Quicklisp distributions version based on distribution release date. A single
+   release of a project may appear as a release in many distributions. This
+   object represents the metadata for a single release of a project and is
+   referenced by one or more ~ql-release~ objects."))
+
+
+;;; * Systems
+
+(defclass ql-system (ql-table-mixin)
+  ((name
+    :initarg :name
+    :accessor ql-system-name
+    :col-type :text
+    :primary-key t
+    :reader object-id
+    :documentation
+    "The name of the system."))
+  (:metaclass dao-table-class)
+  (:record-timestamps nil)
+  (:documentation
+   "An ASD system contained in a quicklisp distribution."))
+
+
+;;; * System releases
+
+(defclass ql-system-release ()
+  ((release-id
+    :initarg :release-id
+    :accessor ql-system-release-release-id
+    :col-type :integer
+    :documentation
+    "The ID of the release to which this system release belongs.")
+   (system-name
+    :initarg :system-name
+    :accessor ql-system-release-system-name
+    :col-type :text
+    :documentation
+    "The name of the system.")
+   (system-file
+    :initarg :system-file
+    :accessor ql-system-release-system-file
+    :col-type :text
+    :documentation
+    "The asd file in which this system is located.")
+   (dependencies
+    :initarg :dependencies
+    :access ql-system-release-dependencies
+    :col-type :text
+    :deflate (lambda (x)
+               (with-standard-io-syntax
+                 (prin1-to-string x)))
+    :inflate (lambda (x)
+               (with-standard-io-syntax
+                 (read-from-string x)))
+    :documentation
+    "A list of dependencies this system has in this release."))
+  (:metaclass dao-table-class)
+  (:record-timestamps nil)
+  (:documentation
+   "A release of a system. Ties together an ASD system, a point in time (the
+   release), and the state of the asd system at that time (what file it was
+   located in and its dependencies)."))
+
+
+;;; * System files
+
+(defclass ql-system-file ()
+  ((namestring
+    :initarg :namestring
+    :documentation
+    "The namestring for the file.")
+   (release
+    :initarg :release
+    :reader system-file/release
+    :documentation
+    "The release to which this system-file belongs."))
+  (:documentation
+   "A system file. Belongs to a specific release."))
+
+(defmethod system-file/source ((system-file ql-system-file))
+  (release/source (system-file/release system-file)))
+
+
+;;; * Syncing!
+
+(defun latest-version-map (source)
   "Fetch the latest versions for a source. Returns an alist mapping version
 strings to distinfo.txt urls."
-  (let* ((versions-string (fetch-url (source/versions-url source)))
+  (let* ((versions-string (fetch-url (ql-versions-url source)))
          (versions-lines (split-sequence #\Newline versions-string :remove-empty-subseqs t)))
     (mapcar (lambda (l)
               (destructuring-bind (version url)
                   (split-sequence #\Space l)
-                (when (ql-force-https source)
-                  (setf url (ensure-uri-scheme-https! url)))
                 (cons version url)))
             versions-lines)))
 
-(defun fetch-distribution-version (source dest-dir distinfo-url)
-  "Given the URL to a distinfo.txt file, save it and all related files for this
-version of the distribution to the directory specified by DEST-DIR."
-  ;; Fetch the distinfo.txt file.
-  (let ((distinfo-pathname (merge-pathnames "distinfo.txt"
-                                            dest-dir)))
-    (ensure-file-fetched distinfo-pathname
-                         distinfo-url)
-    (let ((distinfo-plist (parse-distinfo (read-file-into-string distinfo-pathname))))
-      (destructuring-bind (&key system-index-url
-                             release-index-url
-                             &allow-other-keys)
-          distinfo-plist
-        (assert system-index-url)
-        (assert release-index-url)
-        (when (ql-force-https source)
-          (setf system-index-url (ensure-uri-scheme-https! system-index-url))
-          (setf release-index-url (ensure-uri-scheme-https! release-index-url)))
-        ;; Fetch the system and release index files.
-        (let ((system-index-pathname (merge-pathnames "systems.txt"
-                                                      dest-dir))
-              (release-index-pathname (merge-pathnames "releases.txt"
-                                                       dest-dir)))
-          (ensure-file-fetched system-index-pathname system-index-url)
-          (ensure-file-fetched release-index-pathname release-index-url)
-          (values))))))
+(defun sync-version-list! (source)
+  "Given a ~source~, sync the known versions of this distribution."
+  (let ((all-versions (latest-version-map source)))
+    (with-source-connection (source)
+      (with-transaction *connection*
+        (dolist (pair all-versions)
+          (unless (find-dao 'ql-dist-version :id (car pair))
+            (create-dao 'ql-dist-version
+                        :source source
+                        :id (car pair)
+                        :canonical-distinfo-url (cdr pair))))))))
 
-(defun make-db-for-dist-version (source cache-dir version distinfo-url)
-  (let* ((version-cache-dir (uiop:resolve-location `(,cache-dir
-                                                     "versions"
-                                                     ,version)
-                                                   :ensure-directory t))
-         (system-index (merge-pathnames "systems.txt"
-                                         version-cache-dir))
-         (release-index (merge-pathnames "releases.txt" version-cache-dir)))
-    (fetch-distribution-version source
-                                version-cache-dir
-                                distinfo-url)
-    (let ((systems (parse-systems (read-file-into-string system-index)))
-          (releases (parse-releases (read-file-into-string release-index)))
-          (out nil))
-      (dolist (r releases)
-        (destructuring-bind (project-name url size file-md5 content-sha1 prefix &rest system-files)
-            r
-          (push (cons project-name
-                      (list :url url
-                            :size (parse-integer size)
-                            :file-md5 file-md5
-                            :content-sha1 content-sha1
-                            :prefix prefix
-                            :system-files system-files))
-                out)))
-      (dolist (s systems)
-        (destructuring-bind (project-name system-file system-name &rest deps)
-            s
-          (let ((project-pair (assoc project-name out :test #'string-equal)))
-            (push (cons system-name
-                        (list :system-file system-file
-                              :deps deps))
-                  (getf (cdr project-pair) :systems)))))
-      (dolist (p out)
-        (setf (cdr p)
-              (list :versions (list (cons (list version)
-                                          (cdr p))))))
-      (nreverse out))))
+(defun sync-version-projects! (dist-version)
+  "Given a ~ql-dist-version~, download its release data and merge it into the
+local database."
+  (let* ((release-index-url (ql-dist-version-release-index-url dist-version))
+         (release-index-contents (fetch-url release-index-url))
+         (dist-version-id (ql-dist-version-id dist-version)))
+    (dolist (line (split-sequence #\Newline release-index-contents :remove-empty-subseqs t))
+      (destructuring-bind (project url size file-md5 content-sha1 prefix &rest system-files)
+          (split-sequence #\Space line)
+        (unless (find-dao 'ql-project :name project)
+          (create-dao 'ql-project :name project))
+        (let* ((release-meta (or (find-dao 'ql-release-meta
+                                           :project-name project
+                                           :url url)
+                                 (create-dao 'ql-release-meta
+                                             :project-name project
+                                             :url url
+                                             :size size
+                                             :file-md5 file-md5
+                                             :content-sha1 content-sha1
+                                             :prefix prefix
+                                             :system-files system-files)))
+               (meta-id (object-id release-meta)))
+          (unless (find-dao 'ql-release
+                            :meta-id meta-id
+                            :dist-version-id dist-version-id)
+            (create-dao 'ql-release
+                        :meta-id meta-id
+                        :project-name project
+                        :dist-version-id dist-version-id)))))))
 
-(defun assemble-release-db (source cache-dir orig-db missing-versions)
-  (let ((new-db (copy-tree orig-db)))
-    (dolist (missing-version missing-versions)
-      (destructuring-bind (version-string . distinfo-url)
-          missing-version
-        (let ((version-db (make-db-for-dist-version source cache-dir version-string distinfo-url)))
-          (setf new-db (merge-dist-dbs new-db version-db)))))
-    (sort new-db #'string< :key #'car)))
+(defun sync-version-systems! (dist-version)
+  "Given a ~ql-dist-version~, download its system data and merge it into the
+local database."
+  (let* ((system-index-url (ql-dist-version-system-index-url dist-version))
+         (system-index-contents (fetch-url system-index-url))
+         (dist-version-id (ql-dist-version-id dist-version)))
+    (dolist (line (split-sequence #\Newline system-index-contents :remove-empty-subseqs t))
+      (destructuring-bind (project system-file system-name &rest dependencies)
+          (split-sequence #\Space line)
+        (unless (find-dao 'ql-system :name system-name)
+          (create-dao 'ql-system :name system-name))
+        (let ((release (find-dao 'ql-release
+                                 :project-name project
+                                 :dist-version-id dist-version-id)))
+          (assert release)
+          (unless (find-dao 'ql-system-release
+                            :release-id (object-id release)
+                            :system-name system-name)
+            (create-dao 'ql-system-release
+                        :release-id (object-id release)
+                        :system-file system-file
+                        :system-name system-name
+                        :dependencies dependencies)))))))
 
-(defun assemble-systems-db (releases-db)
-  (let ((out nil))
-    (dolist (r releases-db)
-      (destructuring-bind (release-name &key versions)
-          r
-        (dolist (v versions)
-          (destructuring-bind (version-strings &key systems &allow-other-keys)
-              v
-            (dolist (s systems)
-              (destructuring-bind (system-name &key &allow-other-keys)
-                  s
-                (dolist (vs version-strings)
-                  (push (cons release-name vs) ;;(list :release release-name :release-version vs)
-                        (assoc-value out system-name :test 'string-equal)))))))))
-    (sort out #'string< :key #'car)))
-
-(defun equal-version-descriptions-p (d1 d2)
-  (let ((url-1 (getf d1 :url))
-        (url-2 (getf d2 :url)))
-    (string-equal url-1 url-2)))
-
-(defun merge-dist-dbs (orig-db new-db)
-  (let ((out-db (copy-tree orig-db)))
-    (dolist (r new-db)
-      (destructuring-bind (release-name &key versions)
-          r
-        (let ((orig-release (assoc release-name out-db :test #'string-equal)))
-          (if orig-release
-              (dolist (v versions)
-                (destructuring-bind (version-strings &rest version-description)
-                    v
-                  (let ((matching-version (rassoc version-description (getf (cdr orig-release) :versions)
-                                                  :test #'equal-version-descriptions-p)))
-                    (if matching-version
-                        (setf (car matching-version)
-                              (union (car matching-version) version-strings :test #'string-equal))
-                        (push v (getf (cdr orig-release) :versions))))))
-              (push r out-db)))))
-    out-db))
-
-(defun ensure-version-synced! (source version)
-  (check-type source quicklisp-source)
-  (unless (member version (source/dist-versions source) :key #'car :test #'equal)
-    (log:info "Syncing version ~S~%" version)
-    (let ((version (assoc version (source/all-versions source) :test #'equal)))
-      (push version (getf (source/db source) :versions))
-      (setf (getf (source/db source) :releases)
-            (assemble-release-db source
-                                 (source/cache-directory source)
-                                 (getf (source/db source) :releases)
-                                 (list version)))
-      ;; Build the updated system table
-      (setf (getf (source/db source) :systems)
-            (assemble-systems-db (getf (source/db source) :releases)))
-      (save-db source)
-      t)))
+(defun sync-version! (dist-version)
+  "Given a ~ql-dist-version~ object, sync its data to the local database."
+  (when (ql-dist-version-synced-p dist-version)
+    (error "Already synced!"))
+  (let* ((source (ql-object-source dist-version))
+         (distinfo-url (ql-dist-version-canonical-distinfo-url dist-version))
+         (distinfo-contents (fetch-url distinfo-url))
+         (distinfo-plist (parse-distinfo distinfo-contents)))
+    (destructuring-bind (&key
+                           release-index-url system-index-url
+                           canonical-distinfo-url
+                         &allow-other-keys)
+        distinfo-plist
+      (setf (ql-dist-version-canonical-distinfo-url dist-version) canonical-distinfo-url
+            (ql-dist-version-system-index-url dist-version) system-index-url
+            (ql-dist-version-release-index-url dist-version) release-index-url
+            (ql-dist-version-synced-int dist-version) 1)
+      (with-source-connection (source)
+        (with-transaction *connection*
+          (sync-version-projects! dist-version)
+          (sync-version-systems! dist-version)
+          (save-dao dist-version))))))
 
 (defmethod sync-source ((source quicklisp-source))
-  (let* ((latest-versions (source/all-versions source))
-         (changed-p nil))
-    (dolist (v latest-versions)
-      (setf changed-p (or (ensure-version-synced! source (car v)) changed-p)))
-    t))
-
-
-
-
-(defmethod init-source-cache ((source quicklisp-source))
-  (ensure-directories-exist (source/cache-directory source)))
+  "Sync the version list and then sync all unsynced dist versions."
+  (sync-version-list! source)
+  (mapc 'sync-version! (ql-source-unsynced-dist-versions source))
+  (values))

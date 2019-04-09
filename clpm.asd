@@ -21,3 +21,6 @@
   :in-order-to ((build-op (build-op :clpm-exec/dynamic-libs)
                           (build-op :clpm-exec/static-libs)))
   :depends-on (#:clpm/clpm))
+
+(asdf:register-system-packages :mito-core '(:mito.core))
+(asdf:register-system-packages :dbd-sqlite3 '(:dbd.sqlite3))

@@ -73,15 +73,9 @@
 [submodule "ext/puri"]
 	path = ext/puri
 	url = https://gitlab.common-lisp.net/clpm/puri.git
-[submodule "ext/cl-toml"]
-	path = ext/cl-toml
-	url = https://github.com/cxxxr/cl-toml.git
 [submodule "ext/trivial-types"]
 	path = ext/trivial-types
 	url = https://github.com/m2ym/trivial-types.git
-[submodule "ext/esrap"]
-	path = ext/esrap
-	url = https://github.com/scymtym/esrap.git
 [submodule "ext/local-time"]
 	path = ext/local-time
 	url = https://github.com/dlowe-net/local-time.git
@@ -106,3 +100,42 @@
 [submodule "ext/lparallel"]
 	path = ext/lparallel
 	url = https://github.com/lmj/lparallel.git
+[submodule "ext/cl-sqlite"]
+	path = ext/cl-sqlite
+	url = https://github.com/daewok/cl-sqlite.git
+[submodule "ext/sxql"]
+	path = ext/sxql
+	url = https://github.com/fukamachi/sxql.git
+[submodule "ext/optima"]
+	path = ext/optima
+	url = https://github.com/m2ym/optima.git
+[submodule "ext/closer-mop"]
+	path = ext/closer-mop
+	url = https://github.com/pcostanza/closer-mop.git
+[submodule "ext/cl-annot"]
+	path = ext/cl-annot
+	url = https://github.com/m2ym/cl-annot.git
+[submodule "ext/mito"]
+	path = ext/mito
+	url = https://github.com/daewok/mito.git
+[submodule "ext/cl-dbi"]
+	path = ext/cl-dbi
+	url = https://github.com/fukamachi/cl-dbi.git
+[submodule "ext/dissect"]
+	path = ext/dissect
+	url = https://github.com/Shinmera/dissect.git
+[submodule "ext/cl-reexport"]
+	path = ext/cl-reexport
+	url = https://github.com/takagi/cl-reexport.git
+[submodule "ext/uuid"]
+	path = ext/uuid
+	url = https://github.com/dardoria/uuid.git
+[submodule "ext/ironclad"]
+	path = ext/ironclad
+	url = https://github.com/sharplispers/ironclad.git
+[submodule "ext/nibbles"]
+	path = ext/nibbles
+	url = https://github.com/sharplispers/nibbles.git
+[submodule "ext/trivial-utf-8"]
+	path = ext/trivial-utf-8
+	url = https://gitlab.common-lisp.net/trivial-utf-8/trivial-utf-8.git

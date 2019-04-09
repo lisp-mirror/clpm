@@ -37,6 +37,7 @@
            #:release-installed-p
            #:release-satisfies-version-spec-p
            #:repo
+           #:source
            #:source/args
            #:source/cache-directory
            #:source/lib-directory
