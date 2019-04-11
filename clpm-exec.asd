@@ -66,8 +66,8 @@ feature on dump."
   (cffi-toolchain:link-lisp-executable
    (output-file o s)
    (loop
-     :for lib :in (list (first (input-files o s)) "-l:libcrypto.a" "-l:libssl.a")
+     :for lib :in (list (first (input-files o s)) "-l:libcrypto.a" "-l:libssl.a" "-l:libsqlite3.a")
      :appending (cffi-toolchain::link-all-library lib))))
 
 (defmethod cffi-toolchain:static-image-new-features (o (s (eql (find-system "clpm-exec/static-libs"))))
-  (list :cl+ssl-foreign-libs-already-loaded))
+  (list :cl+ssl-foreign-libs-already-loaded :cl-sqlite-foreign-libs-already-loaded))
