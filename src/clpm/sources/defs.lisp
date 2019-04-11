@@ -73,10 +73,7 @@
            #:system-release/system-version
            #:system-release->
            #:system-release-satisfies-version-spec-p
-           #:system-version
-           #:tarball-release
-           #:tarball-release/urls
-           #:urls))
+           #:system-version))
 
 (in-package #:clpm/sources/defs)
 
@@ -227,16 +224,6 @@ versioned snapshot of a project. A release provides systems."))
     (format stream "project: ~A, version: ~A"
             (project/name (release/project r))
             (release/version r))))
-
-(defclass tarball-release (clpm-release)
-  ((urls
-    :initarg :urls
-    :accessor tarball-release/urls
-    :documentation "A list of URLs where the release is hosted. Each element of
-the list is either a puri URL or a list with a puri URL as the first element and
-a string as the second element that provides a name to save the file as locally."))
-  (:documentation "A release that is provided via a tarball that is hosted at
-any number of URLs."))
 
 (defgeneric release-satisfies-version-spec-p (release version-spec)
   (:documentation "Returns T if the release satisfies the VERSION-SPEC."))

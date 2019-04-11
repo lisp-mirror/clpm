@@ -13,6 +13,7 @@
           #:clpm/log
           #:clpm/sources/defs
           #:clpm/sources/simple-versioned-project
+          #:clpm/sources/tarball-release
           #:clpm/utils
           #:puri
           #:split-sequence
@@ -418,7 +419,9 @@ not."
 
 ;;; * Releases
 
-(defclass ql-release (ql-table-mixin tarball-release)
+(defclass ql-release (ql-table-mixin
+                      tarball-release-with-md5
+                      tarball-release-with-size)
   ((meta-id
     :initarg :meta-id
     :accessor ql-release-meta-id
@@ -445,17 +448,6 @@ not."
    same properties, so those are abstracted out into the ~ql-release-meta~
    class."))
 
-(defmethod slot-unbound (class (release ql-release) (slot-name (eql 'urls)))
-  (with-source-connection ((release/source release))
-    (let ((meta (find-dao 'ql-release-meta
-                          :id (ql-release-meta-id release))))
-      (assert meta)
-      (setf (tarball-release/urls release)
-            (list (aprog1
-                      (parse-uri (ql-release-meta-url meta))
-                    (when (ql-force-https (release/source release))
-                      (ensure-uri-scheme-https! it))))))))
-
 (defmethod release/source ((r ql-release))
   (ql-object-source r))
 
@@ -477,6 +469,30 @@ not."
              (project/name (release/project r))
              (ql-release-meta-prefix meta))
        :ensure-directory t))))
+
+(defmethod tarball-release/url ((release ql-release))
+  (with-source-connection ((release/source release))
+    (let ((meta (find-dao 'ql-release-meta
+                          :id (ql-release-meta-id release))))
+      (assert meta)
+      (aprog1
+          (parse-uri (ql-release-meta-url meta))
+        (when (ql-force-https (release/source release))
+          (ensure-uri-scheme-https! it))))))
+
+(defmethod tarball-release/desired-md5 ((release ql-release))
+  (with-source-connection ((release/source release))
+    (let ((meta (find-dao 'ql-release-meta
+                          :id (ql-release-meta-id release))))
+      (assert meta)
+      (ql-release-meta-file-md5 meta))))
+
+(defmethod tarball-release/desired-size ((release ql-release))
+  (with-source-connection ((release/source release))
+    (let ((meta (find-dao 'ql-release-meta
+                          :id (ql-release-meta-id release))))
+      (assert meta)
+      (ql-release-meta-size meta))))
 
 
 ;;; * Release metadata
