@@ -10,7 +10,7 @@ build-glibc:
   stage: build
   script:
     - apt-get update
-    - apt-get install -y libssl1.0-dev
+    - apt-get install -y libssl1.0-dev libsqlite3-dev
     - echo "(lambda (list) (pushnew :sb-core-compression list) (pushnew :sb-dynamic-core list) (pushnew :sb-linkable-runtime list) list)" > /usr/local/src/sbcl-${SBCL_VERSION}/customize-target-features.lisp
     - rebuild-sbcl
     - sbcl --script scripts/clpm-build
@@ -21,7 +21,7 @@ build-musl:
     entrypoint: [""]
   stage: build
   script:
-    - apk add openssl-dev
+    - apk add openssl-dev sqlite-static sqlite-dev
     - echo "(lambda (list) (pushnew :sb-core-compression list) (pushnew :sb-dynamic-core list) (pushnew :sb-linkable-runtime list) list)" > /usr/local/src/sbcl-${SBCL_VERSION}/customize-target-features.lisp
     - rebuild-sbcl
     - sbcl --script scripts/clpm-build
