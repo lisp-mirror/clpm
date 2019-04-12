@@ -7,8 +7,10 @@
     (:nicknames #:clpm-asdf)
   (:use #:cl
         #:clpm-asdf/concatenate-package-inferred-system-source-op
-        #:clpm-asdf/concatenate-source-deliver-asd-op)
+        #:clpm-asdf/concatenate-source-deliver-asd-op
+        #:clpm-asdf/concatenate-source-deliver-asd-tarball-op)
   (:reexport #:clpm-asdf/concatenate-package-inferred-system-source-op
-             #:clpm-asdf/concatenate-source-deliver-asd-op))
+             #:clpm-asdf/concatenate-source-deliver-asd-op
+             #:clpm-asdf/concatenate-source-deliver-asd-tarball-op))
 
 (in-package #:clpm-asdf/clpm-asdf)

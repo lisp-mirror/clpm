@@ -38,6 +38,7 @@
                              (:static-file "openssl")
                              (:static-file "optima")
                              (:static-file "puri")
+                             (:static-file "salza2")
                              (:static-file "sbcl")
                              (:static-file "split-sequence")
                              (:static-file "sxql")

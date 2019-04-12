@@ -7,4 +7,5 @@
     (:use #:cl)
   (:export #:*version*))
 
+;; If the location of this changes, the asd file must be updated!
 (defvar *version* "0.0.1")
