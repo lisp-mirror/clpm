@@ -21,5 +21,6 @@
     *common-arguments*))
 
 (define-cli-entry client (*synopsis*)
-  (format *standard-output* "~A~%" (clpm-client-string))
+  (ensure-client-written)
+  (format *standard-output* "Client located at:~%~A~%" (clpm-client-lib-location))
   t)
