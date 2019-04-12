@@ -4,7 +4,10 @@
 ;;;; LICENSE for license information.
 
 (uiop:define-package #:clpm-client/cleanup
-    (:use #:cl)
+    (:use #:cl
+          ;; Everything must depend on header so that it comes first in the
+          ;; concatenated file.
+          #:clpm-client/header)
   (:export #:*clpm-cleanup-on-dump-p*
            #:cleanup-clpm!
            #:register-clpm-cleanup-hook))

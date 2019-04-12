@@ -5,6 +5,9 @@
 
 (uiop:define-package #:clpm-client/asdf
     (:use #:cl
+          ;; Everything must depend on header so that it comes first in the
+          ;; concatenated file.
+          #:clpm-client/header
           #:clpm-client/bundle
           #:clpm-client/cleanup
           #:clpm-client/clpm)
@@ -64,7 +67,8 @@ Given a system name, it tries to find it using the CLPM executable (see:
 *CLPM-EXECUTABLE*). If the system cannot be found, it either does nothing,
 signals a condition, and/or installs the system with CLPM-INSTALL-SYSTEM (see:
 *CLPM-SYSTEM-NOT-FOUND-BEHAVIOR*)."
-  (unless (string-equal "asdf" system-name)
+  (unless (or (string-equal "asdf" system-name)
+              (string-equal "uiop" system-name))
     (multiple-value-bind (output error-output exit-code)
         (values nil nil 4)
       ;; (run-clpm (list "find" "-VV" system-name)

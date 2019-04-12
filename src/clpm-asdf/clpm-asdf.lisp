@@ -6,7 +6,9 @@
 (uiop:define-package #:clpm-asdf/clpm-asdf
     (:nicknames #:clpm-asdf)
   (:use #:cl
-        #:clpm-asdf/concatenate-package-inferred-system-source-op)
-  (:reexport #:clpm-asdf/concatenate-package-inferred-system-source-op))
+        #:clpm-asdf/concatenate-package-inferred-system-source-op
+        #:clpm-asdf/concatenate-source-deliver-asd-op)
+  (:reexport #:clpm-asdf/concatenate-package-inferred-system-source-op
+             #:clpm-asdf/concatenate-source-deliver-asd-op))
 
 (in-package #:clpm-asdf/clpm-asdf)

@@ -4,7 +4,10 @@
 ;;;; LICENSE for license information.
 
 (uiop:define-package #:clpm-client/clpm
-    (:use #:cl)
+    (:use #:cl
+          ;; Everything must depend on header so that it comes first in the
+          ;; concatenated file.
+          #:clpm-client/header)
   (:import-from #:uiop
                 #:run-program)
   (:export #:*clpm-executable*

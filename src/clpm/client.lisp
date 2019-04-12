@@ -12,8 +12,7 @@ together and stored in this variable.")
 (defun read-client-contents ()
   "Compile the client (concatenate the source) and read it in. Returns it as a
 string."
-  (asdf:operate 'concatenate-package-inferred-system-source-op :clpm-client)
-  (uiop:read-file-string (asdf:output-file 'concatenate-package-inferred-system-source-op :clpm-client)))
+  (uiop:read-file-string (second (asdf:output-files 'concatenate-source-deliver-asd-op :clpm-client))))
 
 (defun cache-client-contents ()
   (setf *client-contents* (read-client-contents)))

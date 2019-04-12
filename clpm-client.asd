@@ -12,4 +12,7 @@
   :license "BSD-2-Clause"
   :pathname "src/clpm-client/"
   :class :package-inferred-system
+  :defsystem-depends-on (:clpm-asdf)
+  :build-operation "clpm-asdf:concatenate-source-deliver-asd-op"
+  :build-pathname "../../build/client/clpm-client"
   :depends-on (#:clpm-client/clpm-client))
