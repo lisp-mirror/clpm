@@ -61,6 +61,12 @@
 ;;;
 ;;; The data for Quicklisp distributions is stored in a sqlite database.
 
+(defun maybe-load-sqlite-lib ()
+  (unless (member :cl-sqlite-foreign-libs-already-loaded *features*)
+    (sqlite-ffi:load-library)))
+
+(uiop:register-image-restore-hook 'maybe-load-sqlite-lib nil)
+
 
 ;;; * Mito utilities
 ;;;
