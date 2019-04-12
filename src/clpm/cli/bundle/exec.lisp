@@ -7,6 +7,7 @@
     (:use #:cl
           #:clpm/cli/bundle/common
           #:clpm/cli/entry
+          #:clpm/client
           #:clpm/clpmfile
           #:clpm/execvpe
           #:clpm/log
@@ -28,6 +29,8 @@
   (defsynopsis (:make-default nil
                 :postfix "command")
     (text :contents "bundle exec")
+    (flag :long-name "with-client"
+          :description "Include the CLPM client in the source registry.")
     *bundle-arguments*
     *common-arguments*))
 
@@ -40,10 +43,14 @@
          (system-files (lockfile/system-files lockfile))
          (asdf-pathnames (mapcar #'system-file/absolute-asd-pathname system-files))
          (missing-pathnames (remove-if #'probe-file asdf-pathnames))
+         (client-location (when (getopt :long-name "with-client")
+                            (ensure-client-written)
+                            (clpm-client-lib-location)))
          (extra-source-registry (uiop:getenv "CLPM_BUNDLE_EXTRA_SOURCE_REGISTRY"))
          (cl-source-registry-value (format nil
-                                           #-os-windows "~{~A~^:~}~@[:~A~]"
-                                           #+os-windows "~{~A~^;~}~@[;~A~]"
+                                           #-os-windows "~@[~A:~]~{~A~^:~}~@[:~A~]"
+                                           #+os-windows "~@[~A;~]~{~A~^;~}~@[;~A~]"
+                                           client-location
                                            (mapcar #'uiop:pathname-directory-pathname asdf-pathnames)
                                            extra-source-registry))
          (command (remainder)))
