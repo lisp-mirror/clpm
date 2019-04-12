@@ -20,7 +20,9 @@
   :depends-on (#:clpm))
 
 (defmethod output-files ((o cffi-toolchain:static-program-op) (c (eql (find-system "clpm-exec/dynamic-libs"))))
-  (values (list (merge-pathnames "build/bin/dynamic/clpm"
+  (values (list (merge-pathnames (if (uiop:os-windows-p)
+                                     "build/bin/dynamic/clpm.exe"
+                                     "build/bin/dynamic/clpm")
                                  (pathname-directory-pathname (system-source-file "clpm-exec/dynamic-libs"))))
           t))
 
@@ -33,13 +35,16 @@
 (defmethod cffi-toolchain:static-image-new-features
     (o (s (eql (find-system "clpm-exec/dynamic-libs"))))
   "Prevent cl-ssl from loading the foreign libraries at build time."
-  (list :cl+ssl-foreign-libs-already-loaded))
+  `(:cl+ssl-foreign-libs-already-loaded
+    :cl-sqlite-foreign-libs-already-loaded
+    ,@(when (uiop:os-windows-p)
+        `(:drakma-no-ssl))))
 
 (defmethod cffi-toolchain:static-image-remove-features-on-dump
     (o (s (eql (find-system "clpm-exec/dynamic-libs"))))
   "The libraries are not truly loaded, we just tricked cl+ssl, so remove that
 feature on dump."
-  (list :cl+ssl-foreign-libs-already-loaded))
+  (list :cl+ssl-foreign-libs-already-loaded :cl-sqlite-foreign-libs-already-loaded))
 
 (defsystem #:clpm-exec/static-libs
   :license "BSD-2-Clause"
@@ -49,7 +54,9 @@ feature on dump."
   :depends-on (#:clpm))
 
 (defmethod output-files ((o cffi-toolchain:static-program-op) (c (eql (find-system "clpm-exec/static-libs"))))
-  (values (list (merge-pathnames "build/bin/static/clpm"
+  (values (list (merge-pathnames (if (uiop:os-windows-p)
+                                     "build/bin/static/clpm.exe"
+                                     "build/bin/static/clpm")
                                  (pathname-directory-pathname (system-source-file "clpm-exec/static-libs"))))
           t))
 
@@ -66,8 +73,15 @@ feature on dump."
   (cffi-toolchain:link-lisp-executable
    (output-file o s)
    (loop
-     :for lib :in (list (first (input-files o s)) "-l:libcrypto.a" "-l:libssl.a" "-l:libsqlite3.a")
+     :for lib :in `(,(first (input-files o s))
+                    ,@(unless (uiop:os-windows-p)
+                        '("-l:libcrypto.a"
+                          "-l:libssl.a"))
+                    "-l:libsqlite3.a")
      :appending (cffi-toolchain::link-all-library lib))))
 
 (defmethod cffi-toolchain:static-image-new-features (o (s (eql (find-system "clpm-exec/static-libs"))))
-  (list :cl+ssl-foreign-libs-already-loaded :cl-sqlite-foreign-libs-already-loaded))
+  `(:cl+ssl-foreign-libs-already-loaded
+    :cl-sqlite-foreign-libs-already-loaded
+    ,@(when (uiop:os-windows-p)
+        '(:drakma-no-ssl))))

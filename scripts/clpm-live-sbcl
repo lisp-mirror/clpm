@@ -1,0 +1,24 @@
+#!/bin/sh
+":" ; exec sbcl --script "$0" "$@"           # -*- mode: common-lisp; -*-
+;;;; Script to load in CLPM and run its main method.
+;;;;
+;;;; This software is part of CLPM. See README.org for more information. See
+;;;; LICENSE for license information.
+
+;;; First, this script does its best to avoid loading user init code and ignores
+;;; CL_SOURCE_REGISTRY. After starting, it loads ASDF and configures it to use
+;;; only the systems found in the CLPM directory. It then loads CLPM and
+;;; executes its main function. Additionally, its behavior can be modified using
+;;; environment variables. Any variable with ~PRIVATE~ in its name is liable to
+;;; have its behavior changed at any time. Effort will be made to keep behavior
+;;; of all other variables the same, but isn't guaranteed.
+;;;
+;;; + CLPM_LIVE_PRIVATE_REPL :: If "true", a REPL is started instead of invoking
+;;;      CLPM's main function.
+;;; + CLPM_LIVE_COMPILATION_VISIBLE :: If "true", all output from compilation is
+;;;      sent to ~*error-output*~, otherwise it is all discarded unless there is
+;;;      an error.
+
+(in-package :cl-user)
+
+(load (merge-pathnames "live.lisp" *load-truename*))

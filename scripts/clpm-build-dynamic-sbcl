@@ -1,0 +1,10 @@
+#!/bin/sh
+":" ; exec sbcl --script "$0" "$@"           # -*- mode: common-lisp; -*-
+;;;; Script to build CLPM with dynamic libraries
+;;;;
+;;;; This software is part of CLPM. See README.org for more information. See
+;;;; LICENSE for license information.
+
+(in-package :cl-user)
+
+(load (merge-pathnames "build-dynamic.lisp" *load-truename*))

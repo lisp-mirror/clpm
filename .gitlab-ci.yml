@@ -13,7 +13,10 @@ build-glibc:
     - apt-get install -y libssl1.0-dev libsqlite3-dev
     - echo "(lambda (list) (pushnew :sb-core-compression list) (pushnew :sb-dynamic-core list) (pushnew :sb-linkable-runtime list) list)" > /usr/local/src/sbcl-${SBCL_VERSION}/customize-target-features.lisp
     - rebuild-sbcl
-    - sbcl --script scripts/clpm-build
+    - sbcl --script scripts/build-static.lisp
+    - sbcl --script scripts/build-dynamic.lisp
+    - rm -rf build/cl-cache
+    - mv build build-glibc
 
 build-musl:
   image:
@@ -24,7 +27,9 @@ build-musl:
     - apk add openssl-dev sqlite-static sqlite-dev
     - echo "(lambda (list) (pushnew :sb-core-compression list) (pushnew :sb-dynamic-core list) (pushnew :sb-linkable-runtime list) list)" > /usr/local/src/sbcl-${SBCL_VERSION}/customize-target-features.lisp
     - rebuild-sbcl
-    - sbcl --script scripts/clpm-build
+    - sbcl --script scripts/build-static.lisp
+    - sbcl --script scripts/build-dynamic.lisp
+    - rm -rf build/cl-cache
     - mv build build-musl
 
 # release-glibc:

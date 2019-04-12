@@ -17,9 +17,6 @@
   :class :package-inferred-system
   :defsystem-depends-on (#:cffi-toolchain)
   :entry-point "clpm/cli/entry:main"
-  :build-operation :load-op
-  :in-order-to ((build-op (build-op :clpm-exec/dynamic-libs)
-                          (build-op :clpm-exec/static-libs)))
   :depends-on (#:clpm/clpm))
 
 (asdf:register-system-packages :mito-core '(:mito.core))
