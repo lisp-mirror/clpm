@@ -624,6 +624,7 @@ not."
 (defclass ql-system-file ()
   ((namestring
     :initarg :namestring
+    :reader system-file/asd-enough-namestring
     :documentation
     "The namestring for the file.")
    (release
@@ -636,6 +637,11 @@ not."
 
 (defmethod system-file/source ((system-file ql-system-file))
   (release/source (system-file/release system-file)))
+
+(defmethod system-file/absolute-asd-pathname ((system-file ql-system-file))
+  (let* ((release (system-file/release system-file)))
+    (merge-pathnames (system-file/asd-enough-namestring system-file)
+                     (release/lib-pathname release))))
 
 
 ;;; * Syncing!
