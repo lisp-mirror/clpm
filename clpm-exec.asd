@@ -17,14 +17,8 @@
   :defsystem-depends-on (#:cffi-toolchain)
   :entry-point "clpm/cli/entry:main"
   :build-operation :static-program-op
+  :build-pathname "build/bin/dynamic/clpm"
   :depends-on (#:clpm))
-
-(defmethod output-files ((o cffi-toolchain:static-program-op) (c (eql (find-system "clpm-exec/dynamic-libs"))))
-  (values (list (merge-pathnames (if (uiop:os-windows-p)
-                                     "build/bin/dynamic/clpm.exe"
-                                     "build/bin/dynamic/clpm")
-                                 (pathname-directory-pathname (system-source-file "clpm-exec/dynamic-libs"))))
-          t))
 
 (defmethod perform ((o image-op) (c (eql (find-system "clpm-exec/dynamic-libs"))))
   "Turn on compression for clpm images."
@@ -51,14 +45,8 @@ feature on dump."
   :defsystem-depends-on (#:cffi-toolchain)
   :entry-point "clpm/cli/entry:main"
   :build-operation :static-program-op
+  :build-pathname "build/bin/static/clpm"
   :depends-on (#:clpm))
-
-(defmethod output-files ((o cffi-toolchain:static-program-op) (c (eql (find-system "clpm-exec/static-libs"))))
-  (values (list (merge-pathnames (if (uiop:os-windows-p)
-                                     "build/bin/static/clpm.exe"
-                                     "build/bin/static/clpm")
-                                 (pathname-directory-pathname (system-source-file "clpm-exec/static-libs"))))
-          t))
 
 (defmethod perform ((o image-op) (c (eql (find-system "clpm-exec/static-libs"))))
   "Turn on compression for clpm images."
