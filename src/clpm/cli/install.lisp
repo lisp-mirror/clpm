@@ -49,7 +49,7 @@
          (package-name (first remainder))
          (install-system-p (getopt :short-name "s"))
          (no-deps-p (getopt :short-name "n")))
-    (log:info "Installing version ~S of package ~S" version-string package-name)
+    (log:debug "Installing version ~S of ~:[project~;system~] ~S" version-string install-system-p package-name)
     (let* ((sources (load-sources))
            (version-spec (parse-version-specifier version-string))
            (reqs (mapcar (lambda (vs)
@@ -60,9 +60,11 @@
                                           :name package-name))
                          version-spec))
            (releases-to-install (resolve-requirements reqs sources :no-deps no-deps-p)))
-
-      (log:info "Installing version ~S of package ~S" version-spec package-name)
-      (log:info "Reqs: ~S" reqs)
-      (log:info "releases: ~S" releases-to-install)
-      (mapc (rcurry #'install-release :activate-globally t) releases-to-install))
+      (log:debug "Reqs: ~S" reqs)
+      (log:debug "releases: ~S" releases-to-install)
+      (mapc (rcurry #'install-release :activate-globally t) releases-to-install)
+      (when install-system-p
+        (let ((release (last-elt releases-to-install)))
+          (format t "~A~%"
+                  (system-release/absolute-asd-pathname (release/system-release release package-name))))))
     t))

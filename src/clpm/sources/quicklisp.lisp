@@ -468,6 +468,10 @@ not."
                  :namestring system-file-namestring
                  :release release))
 
+(defmethod release/system-release ((release ql-release) system-name)
+  (with-source-connection ((release/source release))
+    (find-dao 'ql-system-release :system-name system-name :release-id (object-id release))))
+
 (defmethod release/project ((release ql-release))
   (source/project (release/source release) (ql-release-project-name release)))
 
@@ -636,6 +640,10 @@ not."
   (with-source-connection ((system-release/source system-release))
     (find-dao 'ql-system :name (ql-system-release-system-name system-release))))
 
+(defmethod system-release/absolute-asd-pathname ((system-release ql-system-release))
+  (system-file/absolute-asd-pathname (release/system-file (system-release/release system-release)
+                                                          (ql-system-release-system-file system-release))))
+
 (defmethod system-release/source ((system-release ql-system-release))
   (ql-object-source system-release))
 
@@ -667,7 +675,7 @@ not."
     :initarg :namestring
     :reader system-file/asd-enough-namestring
     :documentation
-    "The namestring for the file.")
+    "The namestring for the file. Missing .asd at the end!")
    (release
     :initarg :release
     :reader system-file/release
@@ -681,7 +689,9 @@ not."
 
 (defmethod system-file/absolute-asd-pathname ((system-file ql-system-file))
   (let* ((release (system-file/release system-file)))
-    (merge-pathnames (system-file/asd-enough-namestring system-file)
+    (merge-pathnames (concatenate 'string
+                                  (system-file/asd-enough-namestring system-file)
+                                  ".asd")
                      (release/lib-pathname release))))
 
 
