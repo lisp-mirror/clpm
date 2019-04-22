@@ -17,10 +17,19 @@
 
 (defparameter *synopsis*
   (defsynopsis (:make-default nil)
-    (text :contents "Print the client library")
+    (text :contents "Install the client library")
     *common-arguments*))
 
 (define-cli-entry client (*synopsis*)
   (ensure-client-written)
-  (format *standard-output* "Client located at:~%~A~%" (clpm-client-lib-location))
+  (format *standard-output* "Client library located at:~%~A~%" (clpm-client-lib-location))
+
+  (let* ((contents (clpm-client-source-registry-conf.d-file-contents))
+         (pathname (clpm-client-source-registry-conf.d-file-name))
+         (write-p (yes-or-no-p "Would you like me to configure ASDF to find the client automatically?~%~%I will write the following to ~A:~%~%~A~%~%" pathname contents)))
+    (when write-p
+      (ensure-directories-exist pathname)
+      (with-open-file (s pathname :direction :output
+                                  :if-exists :supersede)
+        (write-string contents s))))
   t)
