@@ -292,23 +292,25 @@ list of system-releases. If NO-DEPS is non-NIL, don't resolve dependencies."
   ;; or :req (with VCS options enabled) directives in clpmfiles) instead of
   ;; relying on metadata, especially when such systems have the
   ;; :defsystem-depends-on option specified.
-  (declare (ignore no-deps))
   (let* ((root-node (make-instance 'search-node
                                    :sources sources
                                    :unresolved-reqs reqs)))
-    (iter
-      (with tree := (list root-node))
-      (for node-to-expand := (first tree))
-      (for (values next-child valid-p) := (next-child node-to-expand))
-      (unless next-child
-        (pop tree)
-        (when tree
-          (next-iteration))
-        (error "Unable to resolve requirements."))
-      (when valid-p
-        (push next-child tree)
-        (when (search-done-p next-child)
-          (return (values (remove-duplicates
-                           (mapcar #'system-release/release
-                                   (search-node/activated-system-releases next-child)))
-                          (search-node/activated-system-releases next-child))))))))
+    (if no-deps
+        (mapcar #'system-release/release
+                (search-node/activated-system-releases (next-child root-node)))
+        (iter
+          (with tree := (list root-node))
+          (for node-to-expand := (first tree))
+          (for (values next-child valid-p) := (next-child node-to-expand))
+          (unless next-child
+            (pop tree)
+            (when tree
+              (next-iteration))
+            (error "Unable to resolve requirements."))
+          (when valid-p
+            (push next-child tree)
+            (when (search-done-p next-child)
+              (return (values (remove-duplicates
+                               (mapcar #'system-release/release
+                                       (search-node/activated-system-releases next-child)))
+                              (search-node/activated-system-releases next-child)))))))))
