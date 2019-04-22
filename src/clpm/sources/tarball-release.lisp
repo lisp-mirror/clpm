@@ -152,8 +152,13 @@ second is the filename of the file located at ~url~."
         (ensure-file-fetched archive-pathname url)
         archive-pathname))))
 
+(defmethod activate-release-globally! ((release tarball-release))
+  (let* ((project (release/project release))
+         (project-name (project/name project))
+         (install-root (release/lib-pathname release)))
+    (register-project-path-globally! project-name install-root)))
+
 (defmethod install-release ((release tarball-release) &key activate-globally)
-  (declare (ignore activate-globally))
   (let* ((version-string (release/version release))
          (project (release/project release))
          (project-name (project/name project))
@@ -168,4 +173,6 @@ second is the filename of the file located at ~url~."
                                         :direction :input
                                         :element-type '(unsigned-byte 8))
           (unarchive 'gzipped-tar-archive
-                     archive-stream (uiop:pathname-parent-directory-pathname install-root)))))))
+                     archive-stream (uiop:pathname-parent-directory-pathname install-root))))
+      (when activate-globally
+        (activate-release-globally! release)))))

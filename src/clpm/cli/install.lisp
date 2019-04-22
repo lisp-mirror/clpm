@@ -64,5 +64,5 @@
       (log:info "Installing version ~S of package ~S" version-spec package-name)
       (log:info "Reqs: ~S" reqs)
       (log:info "releases: ~S" releases-to-install)
-      (mapc (rcurry #'install-release :activate-globally nil) releases-to-install))
+      (mapc (rcurry #'install-release :activate-globally t) releases-to-install))
     t))
