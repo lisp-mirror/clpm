@@ -11,6 +11,7 @@
           #:clpm/data
           #:clpm/http-client
           #:clpm/log
+          #:clpm/requirement
           #:clpm/sources/defs
           #:clpm/sources/simple-versioned-project
           #:clpm/sources/tarball-release
@@ -305,6 +306,10 @@ not."
   (with-source-connection (source)
     (find-dao 'ql-project :name project-name)))
 
+(defmethod source/system ((source quicklisp-source) system-name)
+  (with-source-connection (source)
+    (find-dao 'ql-system :name system-name)))
+
 (defmethod source-type-keyword ((source quicklisp-source))
   :quicklisp)
 
@@ -427,7 +432,8 @@ not."
 
 (defclass ql-release (ql-table-mixin
                       tarball-release-with-md5
-                      tarball-release-with-size)
+                      tarball-release-with-size
+                      simple-versioned-release)
   ((meta-id
     :initarg :meta-id
     :accessor ql-release-meta-id
@@ -567,6 +573,7 @@ not."
   ((name
     :initarg :name
     :accessor ql-system-name
+    :accessor system/name
     :col-type :text
     :primary-key t
     :reader object-id
@@ -577,10 +584,17 @@ not."
   (:documentation
    "An ASD system contained in a quicklisp distribution."))
 
+(defmethod system/source ((system ql-system))
+  (ql-object-source system))
+
+(defmethod system/system-releases ((system ql-system))
+  (with-source-connection ((system/source system))
+    (retrieve-dao 'ql-system-release :system-name (ql-system-name system))))
+
 
 ;;; * System releases
 
-(defclass ql-system-release ()
+(defclass ql-system-release (ql-table-mixin)
   ((release-id
     :initarg :release-id
     :accessor ql-system-release-release-id
@@ -601,7 +615,7 @@ not."
     "The asd file in which this system is located.")
    (dependencies
     :initarg :dependencies
-    :access ql-system-release-dependencies
+    :accessor ql-system-release-dependencies
     :col-type :text
     :deflate (lambda (x)
                (with-standard-io-syntax
@@ -617,6 +631,33 @@ not."
    "A release of a system. Ties together an ASD system, a point in time (the
    release), and the state of the asd system at that time (what file it was
    located in and its dependencies)."))
+
+(defmethod system-release/system ((system-release ql-system-release))
+  (with-source-connection ((system-release/source system-release))
+    (find-dao 'ql-system :name (ql-system-release-system-name system-release))))
+
+(defmethod system-release/source ((system-release ql-system-release))
+  (ql-object-source system-release))
+
+(defmethod system-release-satisfies-version-spec-p ((system-release ql-system-release) version-spec)
+  "There is currently no good way to reasonably get the system version from the
+  metadata alone, so say everything is satisfied."
+  t)
+
+(defmethod system-release-> ((sr-1 ql-system-release) (sr-2 ql-system-release))
+  (release-> (system-release/release sr-1) (system-release/release sr-2)))
+
+(defmethod system-release/release ((system-release ql-system-release))
+  (with-source-connection ((system-release/source system-release))
+    (find-dao 'ql-release :id (ql-system-release-release-id system-release))))
+
+(defmethod system-release/requirements ((system-release ql-system-release))
+  (let ((deps (remove-if (rcurry #'member (list "asdf" "uiop") :test #'string-equal)
+                         (ql-system-release-dependencies system-release))))
+    (mapcar (lambda (dep-name)
+              (make-instance 'system-requirement
+                             :name dep-name))
+            deps)))
 
 
 ;;; * System files
