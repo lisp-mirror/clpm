@@ -10,6 +10,7 @@
           #:clpm/http-client/cl-plus-ssl
           #:clpm/http-client/defs
           #:clpm/utils
+          #:clpm/version
           #:drakma
           #:puri)
   (:export #:drakma-client))
@@ -42,7 +43,10 @@
   (multiple-value-bind (http-stream status-code)
       (http-request url :want-stream t
                         :verify #+:drakma-no-ssl nil #-:drakma-no-ssl :required
-                        :additional-headers headers)
+                        :additional-headers headers
+                        :user-agent (format nil "CLPM/~A Drakma/~A"
+                                            (clpm-version)
+                                            drakma:*drakma-version*))
     (assert (= 200 status-code))
     (copy-stream http-stream out-stream :element-type '(unsigned-byte 8) :buffer-size 8192)
     (close http-stream)))

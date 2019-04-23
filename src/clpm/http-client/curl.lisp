@@ -6,7 +6,8 @@
 (uiop:define-package #:clpm/http-client/curl
     (:use #:cl
           #:clpm/http-client/defs
-          #:clpm/utils)
+          #:clpm/utils
+          #:clpm/version)
   (:export #:curl-client))
 
 (in-package #:clpm/http-client/curl)
@@ -67,6 +68,10 @@ its version can be successfully queried."
                             "-H" "@-"
                             ;; Follow any redirects
                             "-L"
+                            ;; Set the user agent
+                            "--user-agent"
+                            ,(format nil "CLPM/~A Curl"
+                                     (clpm-version))
                             ;; Don't read any user config files
                             "-q"
                             ;; Bail out on non-200s
