@@ -127,8 +127,24 @@ non-NIL, overwrite."
    "Condition signaled when the groveler cannot continue because of a missing
 dependency."))
 
+(defun sbcl-installed-p ()
+  (zerop (nth-value 2
+                    (uiop:run-program '("sbcl" "--version")
+                                      :ignore-error-status t
+                                      :input nil
+                                      :output nil
+                                      :error-output nil))))
+
+(defun ccl-installed-p ()
+  (zerop (nth-value 2
+                    (uiop:run-program '("ccl" "--version")
+                                      :ignore-error-status t
+                                      :input nil
+                                      :output nil
+                                      :error-output nil))))
+
 (defun launch-sub-lisp ()
-  "Start a SBCL process that does not load config files, has a disabled
+  "Start a SBCL or CCL process that does not load config files, has a disabled
 debugger, and does not print things unless told. Set ASDF_OUTPUT_TRANSLATIONS
 for process to confine build artifacts to CLPM's cache. Use
 ~sandbox-augment-command~ to run the child in a sandbox."
@@ -143,12 +159,21 @@ for process to confine build artifacts to CLPM's cache. Use
     (apply
      #'uiop:launch-program
      (sandbox-augment-command
-      `("sbcl"
-        "--noinform"
-        "--noprint"
-        "--no-sysinit"
-        "--no-userinit"
-        "--disable-debugger")
+      (cond
+        ((sbcl-installed-p)
+         `("sbcl"
+           "--noinform"
+           "--noprint"
+           "--no-sysinit"
+           "--no-userinit"
+           "--disable-debugger"))
+        ((ccl-installed-p)
+         `("ccl"
+           "--batch"
+           "-Q"
+           "-n"))
+        (t
+         (error "SBCL or CCL must be installed")))
       :read-write-pathnames (list cache-dir))
      :input :stream
      :output :stream
@@ -157,7 +182,7 @@ for process to confine build artifacts to CLPM's cache. Use
 
 (defun start-grovel-process ()
   "Start and return a process (using ~launch-sub-lisp~) that contains an
-instance of SBCL with the groveling code loaded."
+instance of SBCL or CCL with the groveling code loaded."
   (ensure-deps-system-in-cache!)
   (let* ((proc-info (launch-sub-lisp))
          (in-stream (uiop:process-info-input proc-info))
@@ -167,16 +192,16 @@ instance of SBCL with the groveling code loaded."
                               (deps-version-string)
                               "clpm-deps.asd"))))
     (uiop:with-safe-io-syntax ()
-      (format in-stream "(require :asdf)~%")
+      (format in-stream "(progn (require :asdf) (values))~%")
       ;; Nuke any existing asdf configuration
-      (format in-stream "(asdf:clear-configuration)~%")
+      (format in-stream "(progn (asdf:clear-configuration) (values))~%")
       ;; Make sure if ASDF reinitializes its configuration that it ignores
       ;; everything but the default (implementation specific) systems.
-      (format in-stream "(setf asdf:*default-source-registries* nil)~%")
-      (format in-stream "(asdf:load-asd ~S)~%" asd-pathname)
-      (format in-stream "(asdf:load-system :clpm-deps)~%")
-      (format in-stream "(print \"ready\")~%")
-      (format in-stream "(finish-output)~%")
+      (format in-stream "(progn (setf asdf:*default-source-registries* nil) (values))~%")
+      (format in-stream "(progn (asdf:load-asd ~S) (values))~%" asd-pathname)
+      (format in-stream "(progn (asdf:load-system :clpm-deps) (values))~%")
+      (format in-stream "(progn (print \"ready\") (values))~%")
+      (format in-stream "(progn (finish-output) (values))~%")
       (finish-output in-stream)
       ;; Wait until the process reports that it is ready.
       (loop
@@ -189,8 +214,9 @@ instance of SBCL with the groveling code loaded."
   (let* ((in-stream (uiop:process-info-input proc-info))
          (out-stream (uiop:process-info-output proc-info)))
     (uiop:with-safe-io-syntax ()
-      (format in-stream "(print (multiple-value-list (clpm-deps/main::safe-load-asd ~S)))~%" asd-pathname)
-      (format in-stream "(finish-output)~%")
+      (format in-stream "(progn (print (multiple-value-list (clpm-deps/main::safe-load-asd ~S))) (values))~%"
+              asd-pathname)
+      (format in-stream "(progn (finish-output) (values))~%")
       (finish-output in-stream)
       (values-list (read out-stream)))))
 
@@ -199,8 +225,9 @@ instance of SBCL with the groveling code loaded."
   (let* ((in-stream (uiop:process-info-input proc-info))
          (out-stream (uiop:process-info-output proc-info)))
     (uiop:with-safe-io-syntax ()
-      (format in-stream "(print (clpm-deps/main::system-direct-deps (asdf:find-system ~S)))~%" system-name)
-      (format in-stream "(finish-output)~%")
+      (format in-stream "(progn (print (clpm-deps/main::system-direct-deps (asdf:find-system ~S))) (values))~%"
+              system-name)
+      (format in-stream "(progn (finish-output) (values))~%")
       (finish-output in-stream)
       (read out-stream))))
 
@@ -210,8 +237,9 @@ instance of SBCL with the groveling code loaded."
   (let* ((in-stream (uiop:process-info-input proc-info))
          (out-stream (uiop:process-info-output proc-info)))
     (uiop:with-safe-io-syntax ()
-      (format in-stream "(print (clpm-deps/main::determine-systems-from-file ~S))~%" system-pathname)
-      (format in-stream "(finish-output)~%")
+      (format in-stream "(progn (print (clpm-deps/main::determine-systems-from-file ~S)) (values))~%"
+              system-pathname)
+      (format in-stream "(progn (finish-output) (values))~%")
       (finish-output in-stream)
       (read out-stream))))
 
