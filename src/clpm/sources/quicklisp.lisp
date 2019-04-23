@@ -640,6 +640,10 @@ not."
   (with-source-connection ((system-release/source system-release))
     (find-dao 'ql-system :name (ql-system-release-system-name system-release))))
 
+(defmethod system-release/system-file ((system-release ql-system-release))
+  (release/system-file (system-release/release system-release)
+                       (ql-system-release-system-file system-release)))
+
 (defmethod system-release/absolute-asd-pathname ((system-release ql-system-release))
   (system-file/absolute-asd-pathname (release/system-file (system-release/release system-release)
                                                           (ql-system-release-system-file system-release))))
