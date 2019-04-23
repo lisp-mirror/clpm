@@ -173,6 +173,6 @@ second is the filename of the file located at ~url~."
                                         :direction :input
                                         :element-type '(unsigned-byte 8))
           (unarchive 'gzipped-tar-archive
-                     archive-stream (uiop:pathname-parent-directory-pathname install-root))))
-      (when activate-globally
-        (activate-release-globally! release)))))
+                     archive-stream (uiop:pathname-parent-directory-pathname install-root)))))
+    (when activate-globally
+      (activate-release-globally! release))))
