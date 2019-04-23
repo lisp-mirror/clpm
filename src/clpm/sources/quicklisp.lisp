@@ -675,7 +675,7 @@ not."
     :initarg :namestring
     :reader system-file/asd-enough-namestring
     :documentation
-    "The namestring for the file. Missing .asd at the end!")
+    "The namestring for the file.")
    (release
     :initarg :release
     :reader system-file/release
@@ -689,9 +689,7 @@ not."
 
 (defmethod system-file/absolute-asd-pathname ((system-file ql-system-file))
   (let* ((release (system-file/release system-file)))
-    (merge-pathnames (concatenate 'string
-                                  (system-file/asd-enough-namestring system-file)
-                                  ".asd")
+    (merge-pathnames (system-file/asd-enough-namestring system-file)
                      (release/lib-pathname release))))
 
 
@@ -771,7 +769,7 @@ local database."
                             :system-name system-name)
             (create-dao 'ql-system-release
                         :release-id (object-id release)
-                        :system-file system-file
+                        :system-file (concatenate 'string system-file ".asd")
                         :system-name system-name
                         :dependencies dependencies)))))))
 
