@@ -83,6 +83,15 @@ by name."
     :when s
       :do (return s)))
 
+(defun find-project-in-sources (project-name sources)
+  "Given a list of sources (typically taken from a search node), find a project
+by name."
+  (loop
+    :for source :in sources
+    :for p := (source/project source project-name)
+    :when p
+      :do (return p)))
+
 
 ;; * resolve individual requirements
 
@@ -115,6 +124,17 @@ objects to a list of system-releases."))
                               systems))
         (setf systems (release/system-releases vcs-release)))
     (list (cons vcs-release systems))))
+
+(defmethod resolve-requirement ((req project-requirement) sources)
+  (let* ((project-name (requirement/name req))
+         (version-spec (requirement/version-spec req))
+         (project (find-project-in-sources project-name sources))
+         (releases (project/releases project))
+         (applicable-releases (remove-if-not (rcurry #'release-satisfies-version-spec-p version-spec)
+                                             releases)))
+    (mapcar (lambda (x)
+              (cons x (release/system-releases x)))
+            (sort applicable-releases #'release->))))
 
 (defmethod resolve-requirement ((req system-requirement) sources)
   (let* ((system-name (requirement/name req))

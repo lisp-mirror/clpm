@@ -427,6 +427,10 @@ not."
   (:documentation
    "Represents a project in a quicklisp distribution."))
 
+(defmethod project/releases ((p ql-project))
+  (with-source-connection ((ql-object-source p))
+    (retrieve-dao 'ql-release :project-name (ql-project-name p))))
+
 
 ;;; * Releases
 
@@ -471,6 +475,10 @@ not."
 (defmethod release/system-release ((release ql-release) system-name)
   (with-source-connection ((release/source release))
     (find-dao 'ql-system-release :system-name system-name :release-id (object-id release))))
+
+(defmethod release/system-releases ((release ql-release))
+  (with-source-connection ((release/source release))
+    (retrieve-dao 'ql-system-release :release-id (object-id release))))
 
 (defmethod release/project ((release ql-release))
   (source/project (release/source release) (ql-release-project-name release)))
