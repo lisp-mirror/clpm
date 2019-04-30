@@ -1,4 +1,6 @@
 #+TITLE: CLPM Configuration
+#+AUTHOR: CLPM Developers
+#+EMAIL: clpm-devel@common-lisp.net
 
 CLPM is configured using a file named =clpm.conf=. CLPM constructs a list of
 directories to search for this file and the first instance found wins. The
@@ -20,7 +22,7 @@ The following describe the configuration options for clpm.
 * ~:archives~
 
   + ~:tar-method~ :: A keyword specifying which tar implementation to
-                     use. Defaults to =:auto=.
+    use. Defaults to =:auto=.
 
 ** ~:tar~
 
@@ -35,7 +37,7 @@ The following describe the configuration options for clpm.
     for PROJECT-NAME, use a local checkout instead.
 
     + ~:path~ :: Path to the folder containing the checkout of the git
-                 repository to use.
+      repository to use.
 
 * ~:git~
 ** ~:remotes~
@@ -43,11 +45,11 @@ The following describe the configuration options for clpm.
     Provide configuration for interacting with HOSTNAME to fetch git repos.
 
     + ~:username~ :: A string containing the username to use when connecting to
-                     the server.
+      the server.
     + ~:password~ :: A string containing the password to use when connecting to
-                     the server.
+      the server.
     + ~:method~ :: A keyword describing how to connect to the server. Can be one
-                   of:
+      of:
       + ~:https~ :: Connect using HTTPS.
       + ~:http~ :: Connect using HTTP.
       + ~:ssh~ :: Connect using SSH.
@@ -60,17 +62,17 @@ The following describe the configuration options for clpm.
      the name HEADER-NAME.
 
      + ~:secure-only-p~ :: If non-NIL, send this header only on secure
-          connections.
+       connections.
      + ~:value~ :: The value to send for the header. If a string, the contents
-                   of the string are used literally. If a pathname naming an
-                   executable file, that file is executed and whatever it prints
-                   to its standard output is used as the value. If a pathname
-                   naming a non-executable file, the contents of the file are
-                   sent.
+       of the string are used literally. If a pathname naming an executable
+       file, that file is executed and whatever it prints to its standard output
+       is used as the value. If a pathname naming a non-executable file, the
+       contents of the file are sent.
 
 * ~:http-client~
   + ~:method~ :: The default method to use to as an HTTP client. Defaults to
-                 =:auto=.
+    =:auto=.
+
 ** ~:curl~
    Settings for the curl method that uses an external curl program.
 

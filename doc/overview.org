@@ -1,7 +1,0 @@
-#+TITLE: CLPM Overview
-#+AUTHOR: Eric Timmons
-#+EMAIL: etimmons@mit.edu
-
-+ [[file:config.org][config.org]]
-+ [[file:sources.org][sources.org]]
-+ [[file:bundle.org][bundle.org]]

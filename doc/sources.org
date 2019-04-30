@@ -1,17 +1,14 @@
 #+TITLE: CLPM Sources
+#+AUTHOR: CLPM Developers
+#+EMAIL: clpm-devel@common-lisp.net
 
 A repository of Common Lisp projects is called a "source". The source you are
-most likely familiar with is Quicklisp, but CLPM is designed to use multiple
-sources and source types. This allows you to easily use CLPM for things such as
-internal projects that can't be released to public repositories.
+most likely familiar with is Quicklisp, but CLPM is designed to be extended to
+support multiple sources and source types. This will allow you to easily use
+CLPM for things such as internal projects that can't be released to public
+repositories.
 
-Currently, the only type of source that CLPM publicly supports is a Quicklisp
-style source. The author is currently working on and testing a new source type
-that improves upon Quicklisp, though (such as tracking of individual system
-versions). If you are interested in trying out that source type, feel free to
-reach out.
-
-The type of every source must can be specified with a keyword.
+The type of every source must be specified with a keyword.
 
 * Quicklisp
 
@@ -27,10 +24,10 @@ The type of every source must can be specified with a keyword.
 
   + =url= :: The URL to the subscription metadata file.
   + =force-https= :: If true, the protocol for all URLs is changed to https
-                     before downloading any files. This is useful because all
-                     URLs contained in the primary Quicklisp distribution have
-                     http as the protocol even though they are also served over
-                     https.
+    before downloading any files. This is useful because all URLs contained in
+    the primary Quicklisp distribution have http as the protocol even though
+    they are also served over https. If the =url= uses the =https= scheme,
+    =force-https= is implicitly set to true and cannot be disabled.
 
   The following table can be added to your CLPM config file to use the primary
   Quicklisp distribution.

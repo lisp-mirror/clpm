@@ -1,6 +1,6 @@
 #+TITLE: CLPM Bundle
-#+AUTHOR: Eric Timmons
-#+EMAIL: etimmons@mit.edu
+#+AUTHOR: CLPM Developers
+#+EMAIL: clpm-devel@common-lisp.net
 
 This file describes the "bundle" capabilities of CLPM. Bundles are meant to ease
 the problems of repeatable deployment and testing in the CL world - i.e.,
@@ -14,19 +14,19 @@ repos simultaneously!).
 A CLPM bundle is a collection of systems locked at specific versions. A bundle
 is fully defined by a =clpmfile.lock= file, which is itself created from a
 =clpmfile= file. Once a lock file is generated, the bundle commands allow you to
-perform tasks such as packaging the whole bundle for easy deployment/sharing and
-running Lisp processes that can load systems in the bundle with zero
-configuration or helpers needed (other than ASDF, of course).
+perform tasks such as running Lisp processes that can load systems in the bundle
+with zero configuration or helpers needed (other than ASDF, of course).
 
 * Files
 ** clpmfile
 
    A =clpmfile= describes what projects or systems a user wants to place in a
    bundle and any constraints she has on the versions of those objects. It is a
-   file that consists of a series of directives where each directive is a list
-   starting with a keyword. The directives are described below. Additionally, the
-   first directive in the file must be the ~:api-version~ directive. This
-   document describes version ="0.1"=.
+   file, typically located at the root of a source code repository, that
+   consists of a series of directives where each directive is a list starting
+   with a keyword. The directives are described below. Additionally, the first
+   directive in the file must be the ~:api-version~ directive. This document
+   describes version ="0.1"=.
 
 *** ~:api-version~
 
@@ -103,10 +103,11 @@ configuration or helpers needed (other than ASDF, of course).
 
 * Configuration
 
-  Every bundle command reads the file =.clpm/bundle.conf= (if it exists) and
-  merges the configuration defined in that file into CLPM's config. Currently,
-  all configuration sections are merged, in a future version a whitelist of
-  configuration options will be defined.
+  Every bundle command reads the file =.clpm/bundle.conf= (if it exists,
+  relative to the =clpmfile.lock=) and merges the configuration defined in that
+  file into CLPM's central config. Currently, all configuration sections are
+  merged, in a future version a whitelist of configuration options will be
+  defined.
 
 * Commands
 ** =clpm bundle install=
@@ -131,6 +132,11 @@ configuration or helpers needed (other than ASDF, of course).
         bundle.
    + =CLPM_BUNDLE_CLPMFILE_LOCK= :: Set to the path to the clpmfile.lock that
         defines the bundle.
+
+** =clpm bundle update=
+
+   Update the lock file to point to the latest versions available that satisfy
+   the constraints in the =clpmfile=.
 
 * Comparisons
 
