@@ -269,6 +269,7 @@ not."
                                        (source/lib-directory source)))
          (db-exists-p (probe-file db-pathname)))
     (assert (uiop:absolute-pathname-p db-pathname))
+    (ensure-directories-exist db-pathname)
     (let ((connection (dbi:connect :sqlite3
                                    :database-name db-pathname)))
       (unless db-exists-p
