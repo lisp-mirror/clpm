@@ -1,0 +1,35 @@
+#+TITLE: CLPM Storage
+#+AUTHOR: CLPM Developers
+#+EMAIL: clpm-devel@common-lisp.net
+
+This document specifies what files on your computer CLPM will touch and why.
+
+* Cache
+
+  CLPM stores its cache in the =common-lisp/clpm= subfolder of your user XDG
+  cache directory (typically =~/.cache/=).
+
+  In the cache folder, CLPM stores tarballs from sources, git repos, fasls
+  generated when grovelling for system info and dependencies, etc.
+
+  Generally, that cache can be deleted at any time (except when an instance of
+  CLPM is running) and CLPM will redownload or generate files as necessary.
+
+* Data
+
+  CLPM installs systems and distribution metadata to the =common-lisp/clpm=
+  subfolder of your user XDG data directory (typically =~/.local/share/=).
+
+* ASDF Configuration
+
+  To enable ASDF to find installed systems outside of bundles, CLPM writes the
+  following files to your user XDG config folder (typically =~/.config/=):
+
+  + =common-lisp/source-registry.conf.d/20-clpm-client.conf= :: Written by =clpm
+    client= to allow ASDF to find the CLPM client.
+  + =common-lisp/source-registry.conf.d/50-clpm.conf= :: Written to any time a
+    new library is installed for your user, pointing ASDF to where it is
+    installed.
+  + =common-lisp/source-registry.conf.d/50-clpm.conf.meta= :: Written to any
+    time a new library is installed for your user. Contains metadata telling
+    CLPM which entries in =50-clpm.conf= belong to which projects.
