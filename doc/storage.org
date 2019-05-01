@@ -7,7 +7,8 @@ This document specifies what files on your computer CLPM will touch and why.
 * Cache
 
   CLPM stores its cache in the =common-lisp/clpm= subfolder of your user XDG
-  cache directory (typically =~/.cache/=).
+  cache directory (typically =~/.cache/=). The location can be overridden using
+  the =CLPM_CACHE_DIR= environment variable.
 
   In the cache folder, CLPM stores tarballs from sources, git repos, fasls
   generated when grovelling for system info and dependencies, etc.
@@ -18,7 +19,8 @@ This document specifies what files on your computer CLPM will touch and why.
 * Data
 
   CLPM installs systems and distribution metadata to the =common-lisp/clpm=
-  subfolder of your user XDG data directory (typically =~/.local/share/=).
+  subfolder of your user XDG data directory (typically =~/.local/share/=). The
+  location can be overridden using the =CLPM_DATA_DIR= environment variable.
 
 * ASDF Configuration
 
