@@ -35,7 +35,7 @@
       (read-client-tarball)))
 
 (defun clpm-client-lib-location ()
-  (clpm-data-pathname `("clpm-client" ,(concatenate 'string "clpm-client-" clpm/version::*version*))
+  (clpm-data-pathname `("clpm-client" ,(concatenate 'string "clpm-client-" (clpm-version)))
                       :ensure-directory t))
 
 (defun write-client (&key force)

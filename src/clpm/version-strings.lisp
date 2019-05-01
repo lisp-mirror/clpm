@@ -8,8 +8,9 @@
           #:alexandria)
   (:import-from #:uiop
                 #:split-string)
-  (:export ;;#:parse-semantic-version
+  (:export #:parse-semantic-version
            #:parse-version-specifier
+           #:parse-version-string
            #:semantic-version<
            #:semantic-version<=
            #:version-spec-satisfied-p/simple-string
@@ -17,57 +18,115 @@
 
 (in-package #:clpm/version-strings)
 
-(defun has-build-metadata-p (first-hyphen first-plus)
-  (declare (ignore first-hyphen))
-  first-plus)
+(defparameter *version-segment-separators* '(#\- #\+)
+  "A list of characters that separate segments of a version string.")
 
-(defun has-pre-release-p (first-hyphen first-plus)
-  (and first-hyphen
-       (or (not first-plus)
-           (< first-hyphen first-plus))))
+(defun safe-min (a b)
+  "Like ~min~, but treats ~nil~ as positive infinity."
+  (check-type a (or null number))
+  (check-type b (or null number))
+  (cond
+    ((and a b)
+     (min a b))
+    (a
+     a)
+    (t
+     b)))
+
+(defun parse-string-or-integer (string)
+  "Given a string, if it represents an integer, return the integer, otherwise
+return the string itself."
+  (check-type string string)
+  (handler-case (parse-integer string)
+    (error ()
+      string)))
 
 (defun parse-dot-separated (string &optional string-only-p)
+  "Given a string consisting of dot separated strings and integers, return a
+list of the strings or integers, in order."
   (mapcar (if string-only-p
               #'identity
               #'parse-string-or-integer)
           (split-string string :separator ".")))
 
-(defun parse-string-or-integer (string)
-  (handler-case (parse-integer string)
-    (error ()
-      string)))
+(defun parse-version-string (version-string)
+  "Given a version string, parse it into a uniform format that is easier to
+reason over. The version string consists of a series of segments, separated by a
+character from ~*version-segment-separators*~. Each segment consists of integers
+or strings separated by period characters. Returns a list where each segment is
+represented as a list of integers and/or strings and each segment is separated
+by the character used to separate the segments."
+  (check-type version-string string)
+  (let* ((first-separator-position (reduce #'safe-min
+                                           (mapcar (lambda (x) (position x version-string))
+                                                   *version-segment-separators*)))
+         (first-separator (and first-separator-position
+                               (aref version-string first-separator-position)))
+         (first-segment (subseq version-string 0 first-separator-position))
+         (parsed-first-segment (parse-dot-separated first-segment)))
+    (if first-separator-position
+        (list* parsed-first-segment
+               first-separator
+               (parse-version-string (subseq version-string
+                                             (1+ first-separator-position))))
+        (list parsed-first-segment))))
 
-(defun parse-semantic-version (version-string &optional (error t))
-  (if (stringp version-string)
-      (let* ((first-hyphen (position #\- version-string))
-             (first-plus (position #\+ version-string))
-             (has-build-metadata-p (has-build-metadata-p first-hyphen first-plus))
-             (has-pre-release-p (has-pre-release-p first-hyphen first-plus))
-             version-number
-             pre-release
-             build-metadata)
-        ;; Break out the separate pieces of the string
-        (cond
-          (has-pre-release-p
-           (setf version-number (subseq version-string 0 first-hyphen)))
-          (has-build-metadata-p
-           (setf version-number (subseq version-string 0 first-plus)))
-          (t
-           (setf version-number version-string)))
-        (when has-pre-release-p
-          (setf pre-release (subseq version-string (1+ first-hyphen) first-plus)))
-        (when has-build-metadata-p
-          (setf build-metadata (subseq version-string (1+ first-plus))))
-        (list (parse-dot-separated version-number)
-              (parse-dot-separated pre-release)
-              (parse-dot-separated build-metadata t)))
-      (when error
-        (error "~S is not a string" version-string))))
+(defun semantic-version-p (version-list)
+  (and (length= 3 version-list)
+       (every #'listp version-list)))
 
-(defun unparse-version (version-list)
-  (destructuring-bind (v pre build)
-      version-list
-    (format nil "~{~D~^.~}~@[-~{~A~^.~}~]~@[+~{~A~^.~}~]" v pre build)))
+(defgeneric parse-semantic-version (string-or-list)
+  (:documentation
+   "A semantic version identifier has some special rules. A hyphen counts as a
+   separator only if it comes before a plus character and there are no hyphens
+   preceeding it. This function takes a semantic version identifier (string or
+   list) and returns a list with three elements, the first is the base version
+   number, the second is the prerelease information or nil, the third is the
+   build metadata or nil."))
+
+(defmethod parse-semantic-version ((string string))
+  (parse-semantic-version (parse-version-string string)))
+
+(defun semantic-version-merge (list-1 list-2)
+  (append (butlast list-1)
+          (list (format nil "~A-~A" (last-elt list-1) (first list-2)))
+          (rest list-2)))
+
+(defmethod parse-semantic-version ((version list))
+  (let ((out nil))
+    (loop
+      :with pre-release-status := :maybe
+      :with build-metadata-status := :maybe
+      :with merge-status := nil
+      :for thing :in version
+      :if (listp thing)
+        :if merge-status
+          :do (push (semantic-version-merge (pop out) thing)
+                    out)
+              (setf merge-status nil)
+        :else
+          :do (push thing out)
+        :end
+      :end
+      :if (eql #\- thing)
+        :do
+           (if (eql pre-release-status :maybe)
+               ;; This is the start of prerelease info!
+               (setf pre-release-status t)
+               ;; The next segment needs to be merge with the previous one.
+               (setf merge-status t))
+      :if (eql #\+ thing)
+        :do (when (eql pre-release-status :maybe)
+              (push nil out))
+            (setf pre-release-status nil)
+            (setf build-metadata-status t)
+            (setf merge-status nil)
+      :finally
+         (when (eql build-metadata-status :maybe)
+           (push nil out)))
+    (nreversef out)
+    (assert (semantic-version-p out))
+    out))
 
 (defun integer-or-string< (thing1 thing2)
   "numeric always have lower precedence than strings"
