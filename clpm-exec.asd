@@ -20,6 +20,9 @@
   :build-pathname "build/bin/dynamic/clpm"
   :depends-on (#:clpm))
 
+(defmethod asdf:operation-done-p ((o image-op) (c (eql (find-system "clpm-exec/dynamic-libs"))))
+  nil)
+
 (defmethod perform ((o image-op) (c (eql (find-system "clpm-exec/dynamic-libs"))))
   "Turn on compression for clpm images."
   (dump-image (output-file o c)
@@ -47,6 +50,9 @@ feature on dump."
   :build-operation :static-program-op
   :build-pathname "build/bin/static/clpm"
   :depends-on (#:clpm))
+
+(defmethod operation-done-p ((o image-op) (c (eql (find-system "clpm-exec/static-libs"))))
+  nil)
 
 (defmethod perform ((o image-op) (c (eql (find-system "clpm-exec/static-libs"))))
   "Turn on compression for clpm images."
