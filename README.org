@@ -78,50 +78,48 @@ is still a little rough around the edges and it may accidentally eat your files.
   + sqlite :: Needed if compiling from source or using the dynamically linked
     version.
 
-  To install CLPM in binary form, download the appropriate file from
-  [[https://common-lisp.net/project/clpm/downloads/][https://common-lisp.net/project/clpm/downloads/]]. It is highly recommended that
-  you use the static variants. Each release of CLPM consists of the following
-  files:
+  After installing CLPM, it is recommended you also install the CLPM client (see
+  [[file:doc/client.org][client.org]]), but it is not needed for the quickstart.
 
-  + =clpm-$VERSION-x86_64-linux-gnu-dynamic= :: CLPM compiled for 64bit
-    Linux. Dynamically links against glibc (GNU's libc) and all supporting
-    libraries.
-  + =clpm-$VERSION-x86_64-linux-gnu-static= :: CLPM compiled for 64bit
-    Linux. Dynamically links against glibc (GNU's libc) and statically linked
-    against all supporting libraries.
-  + =clpm-$VERSION-x86_64-linux-musl-dynamic= :: CLPM compiled for 64bit
-    Linux. Dynamically links against musl libc and all supporting libraries.
-  + =clpm-$VERSION-x86_64-linux-musl-static= :: CLPM compiled for 64bit
-    Linux. Dynamically links against musl libc and statically linked against all
-    supporting libraries.
-  + =clpm-$VERSION-x86_64-windows-dynamic= :: CLPM compiled for 64bit
-    Windows. Dynamically links against all supporting libraries.
-  + =clpm-$VERSION-x86_64-windows-static= :: CLPM compiled for 64bit
-    Windows. Statically linked against all supporting libraries.
-  + =clpm-$VERSION.DIGESTS= :: Text file containing the SHA512 sums for every
-    previously mentioned file.
-  + =clpm-$VERSION.DIGESTS.asc= :: Same as =clpm-$VERSION.DIGESTS=, but signed
-    with GPG key =0x10327DE761AB977333B1AD7629932AC49F3044CE=.
+** Prebuilt binaries
+   To install CLPM in binary form, download the appropriate file from
+   [[https://common-lisp.net/project/clpm/downloads/][https://common-lisp.net/project/clpm/downloads/]]. It is highly recommended that
+   you use the static variants. Each release of CLPM consists of the following
+   files:
 
-  After downloading the binary and validating the SHA512 sum, make sure the
-  file is executable and save it as =clpm= somewhere on your PATH.
+   + =clpm-$VERSION-x86_64-linux-gnu-dynamic= :: CLPM compiled for 64bit
+     Linux. Dynamically links against glibc (GNU's libc) and all supporting
+     libraries.
+   + =clpm-$VERSION-x86_64-linux-gnu-static= :: CLPM compiled for 64bit
+     Linux. Dynamically links against glibc (GNU's libc) and statically linked
+     against all supporting libraries.
+   + =clpm-$VERSION-x86_64-linux-musl-dynamic= :: CLPM compiled for 64bit
+     Linux. Dynamically links against musl libc and all supporting libraries.
+   + =clpm-$VERSION-x86_64-linux-musl-static= :: CLPM compiled for 64bit
+     Linux. Dynamically links against musl libc and statically linked against
+     all supporting libraries.
+   + =clpm-$VERSION-x86_64-windows-dynamic= :: CLPM compiled for 64bit
+     Windows. Dynamically links against all supporting libraries.
+   + =clpm-$VERSION-x86_64-windows-static= :: CLPM compiled for 64bit
+     Windows. Statically linked against all supporting libraries.
+   + =clpm-$VERSION.DIGESTS= :: Text file containing the SHA512 sums for every
+     previously mentioned file.
+   + =clpm-$VERSION.DIGESTS.asc= :: Same as =clpm-$VERSION.DIGESTS=, but signed
+     with GPG key =0x10327DE761AB977333B1AD7629932AC49F3044CE=.
 
-  The next easiest way to install CLPM is to install SBCL, clone the CLPM
-  sources (including the git submodules!), and link the [[file:scripts/clpm-live][clpm-live]] script as
-  =clpm= somewhere on your PATH. Alternatively, you can build a dynamically or
-  statically linked executable by running one of the following:
+   After downloading the binary and validating the SHA512 sum, make sure the
+   file is executable and save it as =clpm= somewhere on your PATH.
 
-  #+begin_src shell
-    sbcl --script scripts/clpm-build-dynamic-sbcl
-    sbcl --script scripts/clpm-build-static-sbcl
-  #+end_src
+** Source install
+   The next easiest way to install CLPM is to install SBCL, clone the CLPM
+   sources (including the git submodules!), and link the [[file:scripts/clpm-live][clpm-live]] script as
+   =clpm= somewhere on your PATH. Alternatively, you can build a dynamically or
+   statically linked executable by running one of the following:
 
-  After ensuring =clpm= is on your path you can install the client library and
-  (optionally) add it to your ASDF search path by running:
-
-  #+begin_src shell
-    clpm client
-  #+end_src
+   #+begin_src shell
+     sbcl --script scripts/clpm-build-dynamic-sbcl
+     sbcl --script scripts/clpm-build-static-sbcl
+   #+end_src
 
 * Quickstart
 

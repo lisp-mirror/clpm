@@ -1,0 +1,34 @@
+#+TITLE: CLPM Client
+#+AUTHOR: CLPM Developers
+#+EMAIL: clpm-devel@common-lisp.net
+
+While CLPM can be used without the client, installing and using the client makes
+Common Lisp coding a more interactive and fun experience. The CLPM Client can be
+loaded into a Lisp image and integrates into ASDF to seamlessly install missing
+systems a la the Quicklisp client.
+
+* Installing
+
+  To install the CLPM Client, run the following. It will additionally prompt if
+  you want to add the client to your ASDF search path (highly recommended).
+
+  #+begin_src shell
+    clpm client
+  #+end_src
+
+* Using
+
+  To use the client, just load it with ASDF and activate it.
+
+  #+begin_src common-lisp
+    (asdf:load-system :clpm-client)
+    (clpm-client:activate-clpm)
+  #+end_src
+
+  Now, if you attempt to ~asdf:load-system~ a missing system, a condition will
+  be signaled with a ~INSTALL-SYSTEM~ restart that will attempt to install the
+  missing system using CLPM and then load it.
+
+  If you would prefer the system to be automatically installed, you can set
+  ~clpm-client:*clpm-system-not-found-behavior*~ to ~:install~ and it will be
+  silently installed if possible.
