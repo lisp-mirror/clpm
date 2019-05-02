@@ -33,17 +33,25 @@ restart available.
 
 + NIL :: Do nothing.")
 
+(defvar *clpm-installed-systems* (make-hash-table :test 'equal)
+  "A cache to hold a mapping from primary system names to .asd pathnames for
+systems installed by CLPM during this session. Used because there doesn't seem
+to be an exposed, stable way to update ASDF's source registry once we install a
+new system.")
+
 (defun clpm-install-system (system-name)
   "Install a system using CLPM (see: *CLPM-EXECUTABLE*). Returns T iff the
 system was successfully installed."
   (multiple-value-bind (output error-output exit-code)
-      (run-clpm (list "install" "-s" "-n" system-name)
+      (run-clpm (list "install" "-s" "-x" "-n" system-name)
                 :ignore-error-status t
                 :input nil
                 :output '(:string :stripped t)
                 :error-output '(:string :stripped t))
     (declare (ignore error-output))
-    (values (= exit-code 0) output)))
+    (values (= exit-code 0)
+            (uiop:with-safe-io-syntax ()
+              (read-from-string output)))))
 
 (define-condition clpm-missing-system (error)
   ((system-name
@@ -69,44 +77,52 @@ signals a condition, and/or installs the system with CLPM-INSTALL-SYSTEM (see:
 *CLPM-SYSTEM-NOT-FOUND-BEHAVIOR*)."
   (unless (or (string-equal "asdf" system-name)
               (string-equal "uiop" system-name))
-    (ecase *clpm-system-not-found-behavior*
-      (:install
-       (multiple-value-bind (success-p pathname)
-           (clpm-install-system system-name)
-         (when success-p
-           (pathname pathname))))
-      (:error
-       (maybe-restart-case
-        (inside-bundle-exec-p)
-        (restart-case
-            ;; The progn is necessary here to prevent RESTART-CASE from
-            ;; using WITH-CONDITION-RESTARTS to associate the restarts with
-            ;; only this condition. This becomes an issue for
-            ;; :DEFSYSTEM-DEPENDS-ON, becuase this error will be signaled
-            ;; in the middle of an ASDF DEFINE-OP and ASDF will catch it,
-            ;; wrap it, and signal a new condition. If
-            ;; WITH-CONDITION-RESTARTS is used in the expansion of this
-            ;; macro, then these restarts won't be available in the
-            ;; interactive debugger in this case.
-            (progn
-              (error 'clpm-missing-system :system-name system-name))
-          (install-system ()
-            :report "Attempt to install the system"
-            (let ((*clpm-system-not-found-behavior* nil))
-              (multiple-value-bind (success-p pathname)
-                  (clpm-install-system system-name)
-                (when success-p
-                  (pathname pathname)))))
-          (continue ()
-            :report "Return control to ASDF"
-            nil))
-        (reload-bundle ()
-                       :report "Clear ASDF configuration and reload from clpmfile.lock"
-                       (asdf:clear-configuration)
-                       (asdf:initialize-source-registry 'bundle-pathnames-for-asd-config)
-                       (clpm-system-search system-name))))
-      ((nil)
-       nil))))
+    (or
+     (gethash (asdf:primary-system-name system-name) *clpm-installed-systems*)
+     (ecase *clpm-system-not-found-behavior*
+       (:install
+        (multiple-value-bind (success-p pathnames)
+            (clpm-install-system system-name)
+          (when success-p
+            (dolist (p pathnames)
+              (setf (gethash (pathname-name p) *clpm-installed-systems*)
+                    (pathname p)))
+            (pathname (first pathnames)))))
+       (:error
+        (maybe-restart-case
+         (inside-bundle-exec-p)
+         (restart-case
+             ;; The progn is necessary here to prevent RESTART-CASE from
+             ;; using WITH-CONDITION-RESTARTS to associate the restarts with
+             ;; only this condition. This becomes an issue for
+             ;; :DEFSYSTEM-DEPENDS-ON, becuase this error will be signaled
+             ;; in the middle of an ASDF DEFINE-OP and ASDF will catch it,
+             ;; wrap it, and signal a new condition. If
+             ;; WITH-CONDITION-RESTARTS is used in the expansion of this
+             ;; macro, then these restarts won't be available in the
+             ;; interactive debugger in this case.
+             (progn
+               (error 'clpm-missing-system :system-name system-name))
+           (install-system ()
+             :report "Attempt to install the system"
+             (let ((*clpm-system-not-found-behavior* nil))
+               (multiple-value-bind (success-p pathnames)
+                   (clpm-install-system system-name)
+                 (when success-p
+                   (dolist (p pathnames)
+                     (setf (gethash (pathname-name p) *clpm-installed-systems*)
+                           (pathname p)))
+                   (pathname (first pathnames))))))
+           (continue ()
+             :report "Return control to ASDF"
+             nil))
+         (reload-bundle ()
+                        :report "Clear ASDF configuration and reload from clpmfile.lock"
+                        (asdf:clear-configuration)
+                        (asdf:initialize-source-registry 'bundle-pathnames-for-asd-config)
+                        (clpm-system-search system-name))))
+       ((nil)
+        nil)))))
 
 (defun clpm-active-p ()
   "Returns T iff 'CLPM-SYSTEM-SEARCH is registered with ASDF's search functions."
@@ -138,5 +154,14 @@ Does nothing if CLPM-ACTIVE-P returns T and :FORCE is NIL.
   (setf *system-definition-search-functions*
         (remove 'clpm-system-search *system-definition-search-functions*)))
 
+(defun clear-clpm-cache ()
+  (setf *clpm-installed-systems* (make-hash-table :test 'equal)))
+(uiop:register-clear-configuration-hook 'clear-clpm-cache)
+
+(defun clear-clpm-cache-hook ()
+  (setf uiop:*clear-configuration-hook*
+        (remove 'clear-clpm-cache uiop:*clear-configuration-hook*)))
+
 ;; Unregister CLPM from ASDF on CLPM cleanup.
 (register-clpm-cleanup-hook 'deactivate-clpm)
+(register-clpm-cleanup-hook 'clear-clpm-cache-hook)

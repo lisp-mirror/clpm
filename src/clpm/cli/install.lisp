@@ -37,6 +37,9 @@
     (flag :short-name "n"
           :long-name "no-deps"
           :description "Do not install dependencies.")
+    (flag :short-name "x"
+          :description "For internal use only"
+          :hidden t)
     (path :argument-name "PROJECT-PATH"
           :short-name "p"
           :long-name "project")
@@ -63,8 +66,14 @@
       (log:debug "Reqs: ~S" reqs)
       (log:debug "releases: ~S" releases-to-install)
       (mapc (rcurry #'install-release :activate-globally t) releases-to-install)
-      (when install-system-p
-        (let ((release (last-elt releases-to-install)))
-          (format t "~A~%"
-                  (system-release/absolute-asd-pathname (release/system-release release package-name))))))
+      (when (and install-system-p
+                 (getopt :short-name "x"))
+        (let* ((releases (reverse releases-to-install))
+               (requested-system-release (release/system-release (first releases) package-name))
+               (system-releases (list* requested-system-release
+                                       (mapcan #'release/system-releases releases))))
+          (format t "~S~%" (remove-duplicates
+                            (mapcar #'system-release/absolute-asd-pathname system-releases)
+                            :from-end t
+                            :test 'uiop:pathname-equal)))))
     t))
