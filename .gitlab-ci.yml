@@ -5,7 +5,7 @@ variables:
 
 build-glibc:
   image:
-    name: daewok/sbcl:1.5.1-debian-build
+    name: daewok/sbcl:1.5.2-debian-build
     entrypoint: [""]
   stage: build
   script:
@@ -20,7 +20,7 @@ build-glibc:
 
 build-musl:
   image:
-    name: daewok/sbcl:1.5.1-alpine-build
+    name: daewok/sbcl:1.5.2-alpine-build
     entrypoint: [""]
   stage: build
   script:
