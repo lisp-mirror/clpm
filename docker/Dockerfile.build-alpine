@@ -2,13 +2,13 @@
 #
 # This software is part of CLPM. See README.org for more information. See
 # LICENSE for license information.
-FROM daewok/sbcl:1.4.16-alpine-build as sbcl-builder
+FROM daewok/sbcl:1.5.2-alpine-build as sbcl-builder
 
 COPY customize-target-features.lisp /usr/local/src/sbcl-${SBCL_VERSION}/
 
 RUN rebuild-sbcl
 
-FROM alpine:3.8
+FROM alpine:3.9
 RUN apk add --no-cache openssl-dev gcc zlib-dev musl-dev sqlite-static sqlite-dev
 
 COPY --from=sbcl-builder /usr/local/bin/sbcl /usr/local/bin/sbcl
@@ -18,5 +18,3 @@ VOLUME /clpm
 WORKDIR /clpm
 
 ENV ASDF_OUTPUT_TRANSLATIONS="(:output-translations :ignore-inherited-configuration (:root (\"/clpm/build/docker-cl-cache/\" :implementation :**/ :*.*.*)))" CLPM_BUILD_CACHE_DIR=/clpm/build/cl-cache
-
-ENTRYPOINT ["sbcl", "--script", "/clpm/scripts/clpm-build"]

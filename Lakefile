@@ -18,6 +18,10 @@
 (defun clpm-version ()
   (asdf:component-version (asdf:find-system :clpm)))
 
+(defun git-tag ()
+  (uiop:run-program '("git" "describe" "--exact-match" "--tags" "HEAD")
+                    :output '(:string :stripped t)))
+
 (namespace "docker-build"
   (task "all" ("glibc" "musl"))
 
@@ -28,36 +32,38 @@
     (sh "docker build -f docker/Dockerfile.build-alpine -t clpm/clpm-build:alpine docker"))
 
   (task "glibc" ("glibc-builder")
-    (sh #?"docker run -i -t --rm -v ${(uiop:pathname-directory-pathname *lakefile-truename*)}:/clpm:ro -v ${(uiop:pathname-directory-pathname *lakefile-truename*)}/build/docker/debian:/clpm/build clpm/clpm-build:debian")
+    (sh #?"docker run -i -t --rm -v ${(uiop:pathname-directory-pathname *lakefile-truename*)}:/clpm:ro -v ${(uiop:pathname-directory-pathname *lakefile-truename*)}/build/docker/debian:/clpm/build clpm/clpm-build:debian sbcl --script /clpm/scripts/build-dynamic.lisp")
+    (sh #?"docker run -i -t --rm -v ${(uiop:pathname-directory-pathname *lakefile-truename*)}:/clpm:ro -v ${(uiop:pathname-directory-pathname *lakefile-truename*)}/build/docker/debian:/clpm/build clpm/clpm-build:debian sbcl --script /clpm/scripts/build-static.lisp")
     (sh "cp build/docker/debian/bin/dynamic/clpm build/bin/clpm-x86_64-linux-gnu-dynamic")
     (sh "cp build/docker/debian/bin/static/clpm build/bin/clpm-x86_64-linux-gnu-static"))
 
   (task "musl" ("musl-builder")
-    (sh #?"docker run -i -t --rm -v ${(uiop:pathname-directory-pathname *lakefile-truename*)}:/clpm:ro -v ${(uiop:pathname-directory-pathname *lakefile-truename*)}/build/docker/alpine:/clpm/build clpm/clpm-build:alpine")
+    (sh #?"docker run -i -t --rm -v ${(uiop:pathname-directory-pathname *lakefile-truename*)}:/clpm:ro -v ${(uiop:pathname-directory-pathname *lakefile-truename*)}/build/docker/alpine:/clpm/build clpm/clpm-build:alpine sbcl --script /clpm/scripts/build-dynamic.lisp")
+    (sh #?"docker run -i -t --rm -v ${(uiop:pathname-directory-pathname *lakefile-truename*)}:/clpm:ro -v ${(uiop:pathname-directory-pathname *lakefile-truename*)}/build/docker/alpine:/clpm/build clpm/clpm-build:alpine sbcl --script /clpm/scripts/build-static.lisp")
     (sh "cp build/docker/alpine/bin/dynamic/clpm build/bin/clpm-x86_64-linux-musl-dynamic")
     (sh "cp build/docker/alpine/bin/static/clpm build/bin/clpm-x86_64-linux-musl-static")))
 
 (namespace "release"
   (task "all" ("files")
-    (echo (clpm-version)))
+    (echo (git-tag)))
 
   (task "dir" ()
-    (ensure-directories-exist (merge-pathnames #?"build/releases/${(clpm-version)}/"
+    (ensure-directories-exist (merge-pathnames #?"build/releases/${(git-tag)}/"
                                                (uiop:getcwd))))
 
   (task "files" (":docker-build" "dir")
-    (uiop:delete-file-if-exists #?"build/releases/${(clpm-version)}/clpm-${(clpm-version)}.DIGESTS")
-    (with-open-file (s #?"build/releases/${(clpm-version)}/clpm-${(clpm-version)}.DIGESTS"
+    (uiop:delete-file-if-exists #?"build/releases/${(git-tag)}/clpm-${(git-tag)}.DIGESTS")
+    (with-open-file (s #?"build/releases/${(git-tag)}/clpm-${(git-tag)}.DIGESTS"
                        :direction :output)
       (write-line "The SHA512 checksums of the following files are:" s)
       (terpri s))
     (flet ((insert-version (s)
-             (concatenate 'string "clpm-" (clpm-version) (subseq s 4))))
+             (concatenate 'string "clpm-" (git-tag) (subseq s 4))))
       (dolist (f '("clpm-x86_64-linux-gnu-dynamic" "clpm-x86_64-linux-gnu-static"
                    "clpm-x86_64-linux-musl-dynamic" "clpm-x86_64-linux-musl-static"))
-        (sh #?"cp build/bin/${f} build/releases/${(clpm-version)}/${(insert-version f)}")
-        (uiop:with-current-directory (#?"build/releases/${(clpm-version)}/")
-          (sh #?"sha512sum ${(insert-version f)} >> clpm-${(clpm-version)}.DIGESTS"))))))
+        (sh #?"cp build/bin/${f} build/releases/${(git-tag)}/${(insert-version f)}")
+        (uiop:with-current-directory (#?"build/releases/${(git-tag)}/")
+          (sh #?"sha512sum ${(insert-version f)} >> clpm-${(git-tag)}.DIGESTS"))))))
 
 (task ("release" version) ("release:all"))
 
