@@ -98,10 +98,12 @@ is still a little rough around the edges and it may accidentally eat your files.
    + =clpm-$VERSION-x86_64-linux-musl-static= :: CLPM compiled for 64bit
      Linux. Dynamically links against musl libc and statically linked against
      all supporting libraries.
-   + =clpm-$VERSION-x86_64-windows-dynamic= :: CLPM compiled for 64bit
+   + =clpm-$VERSION-x86_64-windows-dynamic.exe= :: CLPM compiled for 64bit
      Windows. Dynamically links against all supporting libraries.
-   + =clpm-$VERSION-x86_64-windows-static= :: CLPM compiled for 64bit
+   + =clpm-$VERSION-x86_64-windows-static.exe= :: CLPM compiled for 64bit
      Windows. Statically linked against all supporting libraries.
+   + =clpm-$VERSION-x86_64-darwin-dynamic= :: CLPM compiled for 64bit
+     MacOS. Dynamically links against all supporting libraries.
    + =clpm-$VERSION.DIGESTS= :: Text file containing the SHA512 sums for every
      previously mentioned file.
    + =clpm-$VERSION.DIGESTS.asc= :: Same as =clpm-$VERSION.DIGESTS=, but signed
@@ -179,6 +181,7 @@ is still a little rough around the edges and it may accidentally eat your files.
 
   For more documentation on CLPM, you may find the following files useful:
 
+  + [[file:doc/client.org][client.org]] :: Summary of CLPM's client.
   + [[file:doc/config.org][config.org]] :: Summary of all of CLPM's configuration options.
   + [[file:doc/sources.org][sources.org]] :: Summary of all supported software repositories.
   + [[file:doc/bundle.org][bundle.org]] :: Information on how to use CLPM to manage and repeatably
