@@ -109,7 +109,7 @@
   ()
   (:documentation "root class for version control sources"))
 
-(defclass git-source (vcs-source)
+(defclass %git-source (vcs-source)
   ((host
     :initarg :host
     :accessor source/host
@@ -125,15 +125,18 @@
     :documentation "A hash table mapping system names to system objects."))
   (:documentation "A git source"))
 
-(defclass local-git-source (git-source)
+(defclass git-source (%git-source)
   ())
 
-(defclass github-source (git-source)
+(defclass local-git-source (%git-source)
+  ())
+
+(defclass github-source (%git-source)
   ((host
     :initform "github.com"))
   (:documentation "Github hosted project source."))
 
-(defclass gitlab-source (git-source)
+(defclass gitlab-source (%git-source)
   ((host
     :initform "gitlab.com"))
   (:documentation "Gitlab hosted project source."))
@@ -142,6 +145,8 @@
   "Returns two values: the symbol naming the class of the source and the default
 hostname or NIL."
   (ecase type
+    (:git
+     (values 'git-source nil))
     (:gitlab
      (values 'gitlab-source "gitlab.com"))
     (:local
@@ -151,6 +156,9 @@ hostname or NIL."
 
 (defmethod git-source-type-keyword ((source gitlab-source))
   :gitlab)
+
+(defmethod git-source-type-keyword ((source git-source))
+  :git)
 
 (defun get-git-source-type-by-hostname (hostname)
   "Return the correct class type for a git source based on its hostname."
@@ -193,10 +201,27 @@ hostname or NIL."
                                    :source git-source
                                    :name project-name))))
 
+(defmethod source/cache-directory ((source gitlab-source))
+  "The cache directory for this source is based on the hostname."
+  (clpm-cache-pathname
+   `("vcs-sources"
+     "gitlab"
+     ,(source/host source))
+   :ensure-directory t))
+
+(defmethod source/lib-directory ((source gitlab-source))
+  "The lib directory is based on the hostname."
+  (clpm-data-pathname
+   `("vcs-sources"
+     "gitlab"
+     ,(source/host source))
+   :ensure-directory t))
+
 (defmethod source/cache-directory ((source git-source))
   "The cache directory for this source is based on the hostname."
   (clpm-cache-pathname
    `("vcs-sources"
+     "git"
      ,(source/host source))
    :ensure-directory t))
 
@@ -204,13 +229,14 @@ hostname or NIL."
   "The lib directory is based on the hostname."
   (clpm-data-pathname
    `("vcs-sources"
+     "git"
      ,(source/host source))
    :ensure-directory t))
 
-(defmethod source/project ((source git-source) project-name)
+(defmethod source/project ((source %git-source) project-name)
   (gethash project-name (git-source/projects-by-name source)))
 
-(defmethod source/system ((source git-source) system-name)
+(defmethod source/system ((source %git-source) system-name)
   (or (gethash system-name (git-source/systems-by-name source))
       (some (lambda (project)
               (some (lambda (release)
@@ -284,9 +310,13 @@ hostname or NIL."
                          (when port
                            (format nil ":~A" port))
                          "/"
-                         path-with.git))))))))
+                         path-with.git)))))
+      (git-source
+       (vcs-project/path project)))))
 
-(defun vcs-project/cache-directory (project)
+(defgeneric vcs-project/cache-directory-by-source (project source))
+
+(defmethod vcs-project/cache-directory-by-source (project (source gitlab-source))
   (let* ((path (vcs-project/path project))
          (path-with.git (if (not (ends-with-subseq ".git" path))
                             (concatenate 'string path ".git")
@@ -295,6 +325,26 @@ hostname or NIL."
      `(,(source/cache-directory (project/source project))
        ,path-with.git)
      :ensure-directory t)))
+
+(defmethod vcs-project/cache-directory-by-source (project (source git-source))
+  (let* ((uri-string (git-project/git-uri-string project))
+         (uri (parse-git-uri uri-string))
+         (source-host (source/host source))
+         (path (subseq (uri-path uri) 1))
+         (path-with.git (if (not (ends-with-subseq ".git" path))
+                            (concatenate 'string path ".git")
+                            path)))
+    (uiop:resolve-absolute-location
+     `(,(source/cache-directory (project/source project))
+       ,@(unless source-host
+           (list (git-uri/real-host uri)))
+       ,(string-downcase (string (uri-scheme uri)))
+       ,(git-uri/user-name uri)
+       ,path-with.git)
+     :ensure-directory t)))
+
+(defun vcs-project/cache-directory (project)
+  (vcs-project/cache-directory-by-source project (project/source project)))
 
 (defmethod project/release ((project git-project) (version string))
   "A release named by a string is assumed to refer to a commit SHA1."
@@ -428,8 +478,10 @@ already created."
 (defmethod release/lib-pathname ((release local-git-release))
   (uiop:ensure-directory-pathname (vcs-project/path (release/project release))))
 
-(defmethod release/lib-pathname ((release remote-git-release))
-  (assert (git-release/commit release))
+(defgeneric release/lib-pathname-by-source (release source))
+
+(defmethod release/lib-pathname-by-source ((release remote-git-release)
+                                           (source gitlab-source))
   (let ((project (release/project release))
         (commit-string (git-release/commit release)))
     (uiop:resolve-absolute-location
@@ -439,6 +491,34 @@ already created."
            (subseq commit-string 2 4)
            commit-string)
      :ensure-directory t)))
+
+(defmethod release/lib-pathname-by-source ((release remote-git-release)
+                                           (source git-source))
+  (let* ((project (release/project release))
+         (commit-string (git-release/commit release))
+         (uri-string (git-project/git-uri-string project))
+         (uri (parse-git-uri uri-string))
+         (source-host (source/host source))
+         (path (subseq (uri-path uri) 1))
+         (path-with.git (if (not (ends-with-subseq ".git" path))
+                            (concatenate 'string path ".git")
+                            path)))
+
+    (uiop:resolve-absolute-location
+     `(,(source/lib-directory (release/source release))
+       ,@(unless source-host
+           (list (git-uri/real-host uri)))
+       ,(string-downcase (string (uri-scheme uri)))
+       ,(git-uri/user-name uri)
+       ,path-with.git
+       ,(subseq commit-string 0 2)
+       ,(subseq commit-string 2 4)
+       ,commit-string)
+     :ensure-directory t)))
+
+(defmethod release/lib-pathname ((release remote-git-release))
+  (assert (git-release/commit release))
+  (release/lib-pathname-by-source release (release/source release)))
 
 
 ;; * system files

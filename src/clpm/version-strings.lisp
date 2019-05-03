@@ -122,6 +122,8 @@ by the character used to separate the segments."
             (setf build-metadata-status t)
             (setf merge-status nil)
       :finally
+         (when (eql pre-release-status :maybe)
+           (push nil out))
          (when (eql build-metadata-status :maybe)
            (push nil out)))
     (nreversef out)

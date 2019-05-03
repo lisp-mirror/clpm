@@ -192,6 +192,26 @@ instance."
                                                        source)))
         (clpmfile/user-requirements clpmfile)))
 
+(defun parse-git-statement (clpmfile name
+                            &key repo branch commit tag systems)
+  "Parse a ~:git~ statement from a ~clpmfile~ into a ~git-project-requirement~
+instance."
+  (let ((source (get-git-source :git)))
+    ;; This may be the first time this source is seen. Record it.
+    (pushnew source (clpmfile/implicit-sources clpmfile))
+    ;; Register the git project.
+    (git-source-register-project! source repo name)
+    (assert (xor branch commit tag))
+    (push (make-instance 'git-project-requirement
+                         :systems systems
+                         :name name
+                         :source source
+                         :repo repo
+                         :branch branch
+                         :commit commit
+                         :tag tag)
+          (clpmfile/user-requirements clpmfile))))
+
 (defun parse-gitlab-statement (clpmfile name
                                &key (host "gitlab.com") repo branch commit tag systems)
   "Parse a ~:gitlab~ statement from a ~clpmfile~ into a
@@ -264,6 +284,8 @@ sources."
     (ecase type
       (:source
        (apply #'parse-source-statement clpmfile args))
+      (:git
+       (apply #'parse-git-statement clpmfile args))
       (:gitlab
        (apply #'parse-gitlab-statement clpmfile args))
       (:system

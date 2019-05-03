@@ -55,6 +55,27 @@ with zero configuration or helpers needed (other than ASDF, of course).
 
     All source directives must come immediately after the api-version directive.
 
+*** ~:git~
+
+    The git directive specifies a requirement that must be satisfied by a git
+    repository. Unless specified otherwise, every explicitly defined system (and
+    their dependencies) are included in the bundle.
+
+    #+begin_src common-lisp
+      (name &key repo branch commit tag systems)
+    #+end_src
+
+    + ~name~ :: must be a string, unique in the file.
+    + ~:repo~ :: is a string naming the URL to the repository. Must include the
+      scheme and full path.
+    + ~:branch~ :: If specified, must be a string naming the branch to use. If
+      none of branch, commit, or tag are specified, the branch defaults to the
+      default branch from the server.
+    + ~:commit~ :: If specified, must be a string naming the commit to use.
+    + ~:tag~ :: If specified, must be a string naming the tag to use.
+    + ~:systems~ :: A list naming the systems to require in the bundle. If NIL,
+      all explicitly defined systems are required.[fn:3]
+
 *** ~:gitlab~
 
     The gitlab directive specifies a requirement that must be satisfied by a git
@@ -70,12 +91,12 @@ with zero configuration or helpers needed (other than ASDF, of course).
     + ~:host~ :: is the hostname of the gitlab server. Defaults to gitlab.com.
     + ~:repo~ :: is a string naming the path to the repository.
     + ~:branch~ :: If specified, must be a string naming the branch to use. If
-                   none of branch, commit, or tag are specified, the branch
-                   defaults to the default branch from the server.
+      none of branch, commit, or tag are specified, the branch defaults to the
+      default branch from the server.
     + ~:commit~ :: If specified, must be a string naming the commit to use.
     + ~:tag~ :: If specified, must be a string naming the tag to use.
     + ~:systems~ :: A list naming the systems to require in the bundle. If NIL,
-                    all explicitly defined systems are required.[fn:3]
+      all explicitly defined systems are required.[fn:3]
 *** ~:asd~
 
     This directive states that the specified asd file should be included in the
@@ -86,11 +107,10 @@ with zero configuration or helpers needed (other than ASDF, of course).
     #+end_src
 
     + ~asd-path~ :: Must be a string providing the path to the asd file,
-                    relative to the clpmfile.
+      relative to the clpmfile.
     + ~systems~ :: What systems defined by the ASD file should be included. Must
-                   be a list of strings. If NIL, then all systems explicitly
-                   defined in the asd file are required and have their
-                   dependencies satisfied.[fn:3]
+      be a list of strings. If NIL, then all systems explicitly defined in the
+      asd file are required and have their dependencies satisfied.[fn:3]
 
 ** clpmfile.lock
 
@@ -126,12 +146,12 @@ with zero configuration or helpers needed (other than ASDF, of course).
    following environment variables are set:
 
    + =CL_SOURCE_REGISTRY= :: Set to contain the parent folders of every .asd
-        file in the bundle.
+     file in the bundle.
    + =CLPM_BUNDLE_BIN_PATH= :: Set to the path to the clpm executable.
    + =CLPM_BUNDLE_CLPMFILE= :: Set to the path to the clpmfile that defines the
-        bundle.
+     bundle.
    + =CLPM_BUNDLE_CLPMFILE_LOCK= :: Set to the path to the clpmfile.lock that
-        defines the bundle.
+     defines the bundle.
 
 ** =clpm bundle update=
 
