@@ -69,7 +69,8 @@ NIL until an image is dumped and is set by ~cache-full-version~.")
                            :output '(:string :stripped t))))
 
 (defun git-tag-p (describe)
-  (= 1 (length describe)))
+  (or (= 1 (length describe))
+      (= 3 (length describe))))
 
 (defun get-full-version ()
   (if (git-exists-p)
