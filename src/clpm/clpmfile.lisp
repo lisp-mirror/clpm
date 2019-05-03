@@ -499,16 +499,18 @@ to a file."
 
 (defun read-clpmfile (pathname)
   "Read a ~clpmfile~ instance from ~pathname~."
-  (let ((forms (uiop:with-safe-io-syntax ()
-                 (uiop:read-file-forms pathname)))
-        (clpmfile (make-instance 'clpmfile
-                                 :pathname pathname)))
+  (let* ((*default-pathname-defaults* (uiop:pathname-directory-pathname pathname))
+         (forms (uiop:with-safe-io-syntax ()
+                  (uiop:read-file-forms pathname)))
+         (clpmfile (make-instance 'clpmfile
+                                  :pathname pathname)))
     (parse-clpmfile-forms clpmfile forms)
     clpmfile))
 
 (defun read-lockfile (pathname)
   "Read a ~lockfile~ instance from ~pathname~."
-  (let* ((forms (uiop:with-safe-io-syntax ()
+  (let* ((*default-pathname-defaults* (uiop:pathname-directory-pathname pathname))
+         (forms (uiop:with-safe-io-syntax ()
                   (uiop:read-file-forms pathname)))
          (lockfile (make-instance 'lockfile
                                   :pathname pathname)))
