@@ -15,7 +15,11 @@
 
 ;; NOTE: If this form changes position in this file you *must* update clpm.asd as
 ;; well.
-(defparameter *base-version* "0.0.9"
+(defparameter *version-for-asdf* "0.1.0"
+  "ASDF is overly picky about its version numbers. This should be the primary
+  version number (no prerelease info) as ~*base-version*~.")
+
+(defparameter *base-version* "0.1.0-alpha.1"
   "The base version number of CLPM.")
 
 (defparameter *full-version* nil
@@ -76,21 +80,28 @@ NIL until an image is dumped and is set by ~cache-full-version~.")
             ;; This is a tagged version, just return the base version number.
             *base-version*
             ;; Here's the fun part, assemble the entire version string.
-            (if (equal git-branch "master")
-                (format nil "~A-0.~A+~A~:[~;-dirty~]" *base-version*
-                        (first (third git-describe))
-                        (first (fifth git-describe))
-                        git-dirty-p)
-                (let* ((ancestor (get-git-common-ancestor))
-                       (ancestor-describe (get-git-describe ancestor))
-                       (distance-from-master (get-git-distance-from-master)))
-                  (format nil "~A-0.~A.~A.~A+~A~:[~;-dirty~]"
-                          *base-version*
-                          (first (third ancestor-describe))
-                          git-branch
-                          distance-from-master
+            (destructuring-bind (primary-version prerelease-category build-meta)
+                (parse-semantic-version *base-version*)
+              (declare (ignore build-meta))
+              (unless prerelease-category
+                (setf prerelease-category '(0)))
+              (if (equal git-branch "master")
+                  (format nil "~{~A~^.~}-~{~A~^.~}.~A+~A~:[~;-dirty~]"
+                          primary-version
+                          prerelease-category
+                          (first (third git-describe))
                           (first (fifth git-describe))
-                          git-dirty-p)))))
+                          git-dirty-p)
+                  (let* ((ancestor (get-git-common-ancestor))
+                         (ancestor-describe (get-git-describe ancestor))
+                         (distance-from-master (get-git-distance-from-master)))
+                    (format nil "~A-0.~A.~A.~A+~A~:[~;-dirty~]"
+                            *base-version*
+                            (first (third ancestor-describe))
+                            git-branch
+                            distance-from-master
+                            (first (fifth git-describe))
+                            git-dirty-p))))))
       ;; We don't have git... Best we can currently do is return the base
       ;; version number.
       *base-version*))
