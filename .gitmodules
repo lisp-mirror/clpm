@@ -117,7 +117,7 @@
 	url = https://github.com/m2ym/cl-annot.git
 [submodule "ext/mito"]
 	path = ext/mito
-	url = https://github.com/daewok/mito.git
+	url = https://github.com/fukamachi/mito.git
 [submodule "ext/cl-dbi"]
 	path = ext/cl-dbi
 	url = https://github.com/fukamachi/cl-dbi.git
