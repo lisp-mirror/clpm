@@ -186,7 +186,7 @@ is still a little rough around the edges and it may accidentally eat your files.
   + [[file:doc/sources.org][sources.org]] :: Summary of all supported software repositories.
   + [[file:doc/bundle.org][bundle.org]] :: Information on how to use CLPM to manage and repeatably
     install dependencies for a single project.
-  + [[file:docs/storage.org][storage.org]] :: Information on where CLPM writes data to your hard drive.
+  + [[file:doc/storage.org][storage.org]] :: Information on where CLPM writes data to your hard drive.
 
 * Footnotes
 
