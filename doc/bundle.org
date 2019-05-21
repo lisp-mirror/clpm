@@ -3,10 +3,9 @@
 #+EMAIL: clpm-devel@common-lisp.net
 
 This file describes the "bundle" capabilities of CLPM. Bundles are meant to ease
-the problems of repeatable deployment and testing in the CL world - i.e.,
-helping handle where the rubber meets the road. While ASDF famously does not
-allow developers to specify upper bounds on dependency versions (only lower
-bounds) [fn:1] [fn:2], CLPM's bundle capability allows exactly that, in addition
+the problems of repeatable deployment and testing in the CL world. While ASDF
+does not allow developers to specify upper bounds on dependency versions (only
+lower bounds) [fn:1], CLPM's bundle capability allows exactly that, in addition
 to specifying that some dependency should be satisfied by some unreleased
 version directly from source control (great for developing projects in multiple
 repos simultaneously!).
@@ -26,7 +25,7 @@ with zero configuration or helpers needed (other than ASDF, of course).
    consists of a series of directives where each directive is a list starting
    with a keyword. The directives are described below. Additionally, the first
    directive in the file must be the ~:api-version~ directive. This document
-   describes version ="0.1"=.
+   describes version "0.1".
 
 *** ~:api-version~
 
@@ -40,8 +39,9 @@ with zero configuration or helpers needed (other than ASDF, of course).
 
 *** ~:source~
 
-    Each clpmfile must include at least one source directive. This tells CLPM
-    which sources it is allowed to search for dependencies in. The first
+    Each clpmfile must include at least one source directive. All source
+    directives must come immediately after the api-version directive. This tells
+    CLPM which sources it is allowed to search for dependencies in. The first
     argument to this directive is the name of the source as a string. The
     remainder is a plist describing the source. For example, to use the standard
     quicklisp distribution, you can write:
@@ -52,8 +52,6 @@ with zero configuration or helpers needed (other than ASDF, of course).
        :url "https://beta.quicklisp.org/dist/quicklisp.txt"
        :force-https t)
     #+end_src
-
-    All source directives must come immediately after the api-version directive.
 
 *** ~:git~
 
@@ -74,7 +72,7 @@ with zero configuration or helpers needed (other than ASDF, of course).
     + ~:commit~ :: If specified, must be a string naming the commit to use.
     + ~:tag~ :: If specified, must be a string naming the tag to use.
     + ~:systems~ :: A list naming the systems to require in the bundle. If NIL,
-      all explicitly defined systems are required.[fn:3]
+      all explicitly defined systems are required.[fn:2]
 
 *** ~:gitlab~
 
@@ -132,26 +130,27 @@ with zero configuration or helpers needed (other than ASDF, of course).
 * Commands
 ** =clpm bundle install=
 
-   If the lock file exists, load it and ensure that all releases included in the
-   bundle are installed locally. If the lock file does not exist, create it and
-   then ensure all releases are installed.
+   If the lock file does not exist, create it and then ensure all releases are
+   installed. If the lock file exists, load it and ensure that all releases
+   included in the bundle are installed locally.
 
 ** =clpm bundle exec=
 
-   Execute the specified command (following =exec=) in an environment where ASDF
-   will have access to all systems included in the bundle with no extra
-   configuration. Requires the lock file to exist.
+   Execute the specified command (following =exec=) where environment variables
+   are set such that ASDF will have access to all systems included in the bundle
+   with no extra configuration. Requires the lock file to exist.
 
-   All environment variables are passed on to the new process, additionally the
+   All environment variables are present in the new process, additionally the
    following environment variables are set:
 
    + =CL_SOURCE_REGISTRY= :: Set to contain the parent folders of every .asd
      file in the bundle.
-   + =CLPM_BUNDLE_BIN_PATH= :: Set to the path to the clpm executable.
+   + =CLPM_BUNDLE_BIN_PATH= :: Set to the path to the clpm executable. Used by
+     the client.
    + =CLPM_BUNDLE_CLPMFILE= :: Set to the path to the clpmfile that defines the
-     bundle.
+     bundle. Used by the client.
    + =CLPM_BUNDLE_CLPMFILE_LOCK= :: Set to the path to the clpmfile.lock that
-     defines the bundle.
+     defines the bundle. Used by the client.
 
 ** =clpm bundle update=
 
@@ -177,11 +176,7 @@ with zero configuration or helpers needed (other than ASDF, of course).
 
 [fn:1] https://bugs.launchpad.net/asdf/+bug/1183179
 
-[fn:2] I personally didn't like this restriction at first, but upon much
-reflection realized that Faré's argument made a lot of sense. That realization
-was one of the impetuses to designing the bundle capabilities of CLPM.
-
-[fn:3] Only the top level system of a package-inferred-system is considered to
+[fn:2] Only the top level system of a package-inferred-system is considered to
 be explicitly defined. If you require dependencies of subsystems that the top
 level system does not depend on to be satisfied, you must list those systems
 explicitly.

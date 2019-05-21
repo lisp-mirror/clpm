@@ -3,14 +3,15 @@
 #+EMAIL: clpm-devel@common-lisp.net
 
 While CLPM can be used without the client, installing and using the client makes
-Common Lisp coding a more interactive and fun experience. The CLPM Client can be
-loaded into a Lisp image and integrates into ASDF to seamlessly install missing
+Common Lisp coding a more interactive and fun experience. The CLPM client can be
+loaded into a Lisp image and integrates with ASDF to seamlessly install missing
 systems a la the Quicklisp client.
 
 * Installing
 
-  To install the CLPM Client, run the following. It will additionally prompt if
-  you want to add the client to your ASDF search path (highly recommended).
+  To install the CLPM Client, run the following in your favorite terminal
+  emulator. It will additionally prompt if you want to add the client to your
+  ASDF search path (highly recommended).
 
   #+begin_src shell
     clpm client

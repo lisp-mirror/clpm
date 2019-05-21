@@ -14,17 +14,23 @@ is still a little rough around the edges and it may accidentally eat your files.
   It consists of two major pieces. First is a standalone program that is
   responsible for all the heavy lifting of fetching and unpacking releases in
   the correct place and managing project specific environments. This piece is
-  generally referred to as CLPM, the CLPM core, or =clpm=. The second is a small
-  client library written in portable Common Lisp that interfaces with ASDF and
-  calls CLPM as necessary to find and install missing systems. This piece is
-  generally referred to as the CLPM client or =clpm-client=.
+  generally referred to as CLPM, the CLPM core, or =clpm= and is distributed as
+  a precompiled image using SBCL (but it is possible to compile it from
+  source). The second is a small client library written in portable Common Lisp
+  that interfaces with ASDF and calls CLPM as necessary to find and install
+  missing systems. This piece is generally referred to as the CLPM client or
+  =clpm-client= and is meant to be loaded into development images.
+
+  To contact the developers, send email to and/or join
+  clpm-devel@common-lisp.net
+  [[https://mailman.common-lisp.net/listinfo/clpm-devel]].
 
 * Project Goals
 
   CLPM is far from the only package manager available for Common Lisp[fn:1], but
   it makes very different assumptions and design choices than the other
-  available solutions. We try to describe our high level goals and how they
-  affect our design decisions in this section.
+  available solutions. In this section we describe our high level goals and how
+  they affect our design decisions.
 
   + Minimize footprint in development Lisp image :: Ultimately, dependency
     management should not be a large part of developing a library or
@@ -33,7 +39,7 @@ is still a little rough around the edges and it may accidentally eat your files.
     (nontrivial amounts of) code necessary for downloading libraries, resolving
     their dependencies, unpacking them, and installing them ever be present in
     your development Lisp image? This drives CLPM's separation into the core and
-    client. Additionally, some Lisps (I'm looking at you, SBCL) have a large
+    the client. Additionally, some Lisps (I'm looking at you, SBCL) have a large
     memory footprint and this helps keep that down.
   + Use existing libraries where possible :: Because the CLPM core never needs
     to be loaded into a development image, there are no issues with version
@@ -41,7 +47,7 @@ is still a little rough around the edges and it may accidentally eat your files.
     and the code being developed. This means that existing libraries can be
     leveraged where it makes sense and we don't need to reinvent the wheel.
   + Support cleanup on image dump :: Many Common Lisp implementations allow you
-    to deliver programs by dumping an in memory image to file. For most programs
+    to deliver programs by dumping an in-memory image to file. For most programs
     generated there is no need to have a bundled package manager. Therefore,
     CLPM provides an option to remove the client from the image when it is
     dumped (using UIOP provided functions).
@@ -56,14 +62,14 @@ is still a little rough around the edges and it may accidentally eat your files.
     dependencies.
   + Support multiple package sources :: At first, CLPM will support only
     Quicklisp-style distributions as a package source/repository. But we
-    envision adding support for new sources, such as a new work in progress
-    repository geared toward projects that maintain their own release schedule.
+    envision adding support for new sources, preferably including one that
+    stores the upstream repos for each project.
 
 * Installing
 
   CLPM is distributed in both source and binary form. Additionally, the binaries
-  are distributed in both dynamic and statically linked forms (note: the
-  binaries are built with SBCL which does not support statically linking against
+  are distributed in both dynamically and statically linked forms (note: the
+  binaries are built with SBCL, which does not support statically linking against
   the C library[fn:3], so you need to get the one that matches your OS's libc
   (most likely the =gnu= variant)).
 
@@ -78,8 +84,8 @@ is still a little rough around the edges and it may accidentally eat your files.
   + sqlite :: Needed if compiling from source or using the dynamically linked
     version.
 
-  After installing CLPM, it is recommended you also install the CLPM client (see
-  [[file:doc/client.org][client.org]]), but it is not needed for the quickstart.
+  After installing CLPM core, it is recommended you also install the CLPM client
+  (see [[file:doc/client.org][client.org]]), but it is not needed for the quickstart.
 
 ** Prebuilt binaries
    To install CLPM in binary form, download the appropriate file from
@@ -110,11 +116,12 @@ is still a little rough around the edges and it may accidentally eat your files.
      with GPG key =0x10327DE761AB977333B1AD7629932AC49F3044CE=.
 
    After downloading the binary and validating the SHA512 sum, make sure the
-   file is executable and save it as =clpm= somewhere on your PATH.
+   file is executable, and save it as =clpm= (or =clpm.exe=) somewhere on your
+   PATH.
 
 ** Source install
    The next easiest way to install CLPM is to install SBCL, clone the CLPM
-   sources (including the git submodules!), and link the [[file:scripts/clpm-live][clpm-live]] script as
+   sources (including the git submodules!), and symlink the [[file:scripts/clpm-live][clpm-live]] script as
    =clpm= somewhere on your PATH. Alternatively, you can build a dynamically or
    statically linked executable by running one of the following:
 
@@ -204,5 +211,5 @@ know!
 
 [fn:1] See, for example: [[https://www.quicklisp.org/beta/][Quicklisp]], [[https://github.com/fukamachi/qlot/][Qlot]], and [[https://github.com/CodyReichert/qi][Qi]].
 
-[fn:2] Using the archive library for a full Common Lisp solution is on the
+[fn:2] Using the archive CL library for a full Common Lisp solution is on the
 roadmap, but it needs a decent amount of work.

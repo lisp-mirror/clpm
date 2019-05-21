@@ -8,11 +8,11 @@ default order of directories searched is first the =common-lisp/clpm= folder of
 the user's XDG config directory (typically =$HOME/.confg/=), then in the system
 config folder (typically =/etc/=). The order can be changed with the
 =CLPM_CONFIG_DIRS= environment variable. If specified, it must be a list of
-directories separated by your OS's conventional directory separator. The default
-search locations will be spliced into the list if any entry in the list is
-empty.
+directories separated by your OS's conventional directory separator. If any
+entry in the list is empty. The default search locations will be spliced into
+the list.
 
-The contents of this file must be a single list that starts with ~clpm-config~
+The contents of =clpm.conf= must be a single list that starts with ~clpm-config~
 and the rest must be a plist. Each key in the plist names either a value or a
 section. If it names a section, the value must be another plist. If it names a
 value, the value is read according to the rules for that value.
