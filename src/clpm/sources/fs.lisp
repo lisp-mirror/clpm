@@ -25,7 +25,7 @@
 
 ;; * Source
 
-(defclass fs-source (clpm-known-source)
+(defclass fs-source (clpm-source)
   ((root-dir
     :initarg :root-dir
     :initform (error ":root-dir must be provided.")

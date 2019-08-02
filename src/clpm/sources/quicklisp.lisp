@@ -218,7 +218,7 @@ not."
 
 ;;; * Quicklisp backed source
 
-(defclass quicklisp-source (clpm-known-source)
+(defclass quicklisp-source (clpm-source)
   ((force-https
     :initarg :force-https
     :initform nil

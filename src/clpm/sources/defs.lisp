@@ -11,8 +11,7 @@
           #:clpm/data
           #:puri
           #:split-sequence)
-  (:export #:clpm-known-source
-           #:clpm-project
+  (:export #:clpm-project
            #:clpm-release
            #:clpm-system-release
            #:clpm-source
@@ -92,10 +91,6 @@
   (:documentation "Base class for any CLPM source. A source is identified
 uniquely by a URL to its canonical location and contains projects and
 systems."))
-
-(defclass clpm-known-source (clpm-source)
-  ()
-  (:documentation "Base class for any CLPM source whose type is known."))
 
 (defmethod initialize-instance :after ((self clpm-source) &rest initargs &key url)
   "Ensure that the URL field on a CLPM-SOURCE instance is a puri URL."

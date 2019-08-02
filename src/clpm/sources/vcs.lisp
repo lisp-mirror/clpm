@@ -105,7 +105,7 @@
 (defvar *git-source-cache* (make-hash-table :test 'equalp)
   "A global cache mapping host names to git sources.")
 
-(defclass vcs-source (clpm-known-source)
+(defclass vcs-source (clpm-source)
   ()
   (:documentation "root class for version control sources"))
 
