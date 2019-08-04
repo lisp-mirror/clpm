@@ -139,3 +139,15 @@
 [submodule "ext/trivial-utf-8"]
 	path = ext/trivial-utf-8
 	url = https://gitlab.common-lisp.net/trivial-utf-8/trivial-utf-8.git
+[submodule "ext/fast-http"]
+	path = ext/fast-http
+	url = https://github.com/fukamachi/fast-http.git
+[submodule "ext/proc-parse"]
+	path = ext/proc-parse
+	url = https://github.com/fukamachi/proc-parse.git
+[submodule "ext/xsubseq"]
+	path = ext/xsubseq
+	url = https://github.com/fukamachi/xsubseq.git
+[submodule "ext/smart-buffer"]
+	path = ext/smart-buffer
+	url = https://github.com/fukamachi/smart-buffer.git
