@@ -15,11 +15,53 @@
                 #:read-file-form
                 #:with-safe-io-syntax)
   (:export #:ensure-file-fetched
-           #:fetch-url))
+           #:fetch-url
+           #:http-request))
 
 (in-package #:clpm/http-client)
 
 (setup-logger)
+
+(defun day-name (day-of-week)
+  (ecase day-of-week
+    (0
+     "Mon")
+    (1
+     "Tue")
+    (2
+     "Wed")
+    (3
+     "Thu")
+    (4
+     "Fri")
+    (5
+     "Sat")
+    (6
+     "Sun")))
+
+(defun month-name (month)
+  (ecase month
+    (1 "Jan")
+    (2 "Feb")
+    (3 "Mar")
+    (4 "Apr")
+    (5 "May")
+    (6 "Jun")
+    (7 "Jul")
+    (8 "Aug")
+    (9 "Sep")
+    (10 "Oct")
+    (11 "Nov")
+    (12 "Dec")))
+
+(defun universal-time-to-http-date (universal-time)
+  "Given a universal-time return the same date as a string suitable for HTTP
+headers."
+  (multiple-value-bind (second minute hour date month year day-of-week)
+      ;; Times in HTTP Headers are always GMT
+      (decode-universal-time universal-time 0)
+    (format nil "~A, ~2,'0D ~A ~A ~2,'0D:~2,'0D:~2,'0D GMT"
+            (day-name day-of-week) date (month-name month) year hour minute second)))
 
 (defgeneric canonicalize-header-value (header-value)
   (:documentation "Given a ~header-value~ from a config file, return a string
@@ -70,36 +112,55 @@ the request."
   (let ((url (puri:parse-uri url)))
     (log:debug "Fetching ~A" url)
     (babel:octets-to-string
-     (flexi-streams:with-output-to-sequence (s :element-type '(unsigned-byte 8))
-       (fetch-url-to-stream url s
-                            :headers (get-additional-headers-for-hostname (puri:uri-host url)
-                                                                          (puri:uri-scheme url)))))))
+     (http-request url :additional-headers (get-additional-headers-for-hostname
+                                            (puri:uri-host url)
+                                            (puri:uri-scheme url))))))
 
-(defun ensure-file-fetched (pathname url &key refresh-time)
+(defun ensure-file-fetched (pathname url &key force)
   "Given a pathname, make sure it exists. If it does not exist, fetch it from
 URL (string or puri URI).
 
-If refresh-time is non-NIL, fetches the file if it already exists and it is
-older than refresh-time in seconds."
+If force is non-NIL, fetches the file without sending an If-Modified-Since
+header.
+
+Returns T if the contents of PATHNAME were modified, NIL otherwise."
   (setf url (puri:parse-uri url))
   (log:debug "Fetching ~A" url)
-  (when (or (not (probe-file pathname))
-            (and refresh-time
-                 (> (- (get-universal-time) (file-write-date pathname))
-                    refresh-time)))
-    ;; Base the tmp pathname off the pathname pathname to try and ensure that
-    ;; they are on the same filesystem.
-    (let ((tmp-pathname (uiop:tmpize-pathname pathname)))
-      (ensure-directories-exist pathname)
-      (unwind-protect
-           (progn
-             (with-open-file (file-stream tmp-pathname :direction :output
-                                                       :if-exists :supersede
-                                                       :element-type '(unsigned-byte 8))
-               (fetch-url-to-stream url file-stream
-                                    :headers (get-additional-headers-for-hostname
-                                              (puri:uri-host url)
-                                              (puri:uri-scheme url))))
-             (rename-file tmp-pathname pathname))
-          (when (probe-file tmp-pathname)
-            (delete-file tmp-pathname))))))
+  ;; Base the tmp pathname off the pathname pathname to try and ensure that
+  ;; they are on the same filesystem.
+  (let ((tmp-pathname (uiop:tmpize-pathname pathname))
+        (additional-headers nil))
+    (when (and (not force)
+               (probe-file pathname))
+      (push (cons :if-modified-since (universal-time-to-http-date (file-write-date pathname)))
+            additional-headers))
+    (ensure-directories-exist pathname)
+    (unwind-protect
+         (progn
+           (multiple-value-bind (http-stream status-code)
+               (http-request url
+                             :want-stream t
+                             :additional-headers (append
+                                                  (get-additional-headers-for-hostname
+                                                   (puri:uri-host url)
+                                                   (puri:uri-scheme url))
+                                                  additional-headers))
+             (log:debug "Status code: ~S" status-code)
+             (case status-code
+               (200
+                (with-open-file (file-stream tmp-pathname :direction :output
+                                                          :if-exists :supersede
+                                                          :element-type '(unsigned-byte 8))
+                  ;; Save the data to the file.
+                  (copy-stream http-stream file-stream
+                               :element-type '(unsigned-byte 8)
+                               :buffer-size 8192))
+                (rename-file tmp-pathname pathname)
+                t)
+               (304
+                ;; No changes
+                nil)
+               (t
+                (error "Can't handle HTTP code ~A" status-code)))))
+      (when (probe-file tmp-pathname)
+        (delete-file tmp-pathname)))))

@@ -13,6 +13,8 @@
           #:clpm/version
           #:drakma
           #:puri)
+  (:shadowing-import-from #:drakma
+                          #:http-request)
   (:export #:drakma-client))
 
 (in-package #:clpm/http-client/drakma)
@@ -38,15 +40,13 @@
   (or (not (featurep :drakma-no-ssl))
       (eql (uri-scheme url) :http)))
 
-(defmethod %fetch-url-to-stream ((client drakma-client) url out-stream
-                                 &key headers)
-  (multiple-value-bind (http-stream status-code)
-      (http-request url :want-stream t
-                        :verify #+:drakma-no-ssl nil #-:drakma-no-ssl :required
-                        :additional-headers headers
-                        :user-agent (format nil "CLPM/~A Drakma/~A"
-                                            (clpm-version)
-                                            drakma:*drakma-version*))
-    (assert (= 200 status-code))
-    (copy-stream http-stream out-stream :element-type '(unsigned-byte 8) :buffer-size 8192)
-    (close http-stream)))
+(defmethod %http-request ((client drakma-client) url
+                          &key additional-headers
+                            want-stream)
+  (http-request url :additional-headers additional-headers
+                    :want-stream want-stream
+                    :force-binary t
+                    :verify #+:drakma-no-ssl nil #-:drakma-no-ssl :required
+                    :user-agent (format nil "CLPM/~A Drakma/~A"
+                                        (clpm-version)
+                                        drakma:*drakma-version*)))

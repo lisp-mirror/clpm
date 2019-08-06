@@ -9,12 +9,12 @@
           #:anaphora
           #:clpm/config
           #:iterate)
-  (:export #:fetch-url-to-stream
-           #:%fetch-url-to-stream
-           #:http-client
+  (:export #:http-client
            #:http-client-available-p
            #:http-client-can-handle-url-p
            #:http-fetch-error
+           #:http-request
+           #:%http-request
            #:http-simple-fetch-error
            #:register-http-client))
 
@@ -105,15 +105,14 @@ resource over HTTP."))
 (define-condition http-simple-fetch-error (http-fetch-error simple-error)
   ())
 
-(defgeneric %fetch-url-to-stream (client url stream &key headers)
-  (:documentation "Using ~client~, GET the resource located at ~url~ and send it
-to ~stream~. ~headers~ is an alist of header name (keyword)/value pairs to send
-with the request."))
+(defgeneric %http-request (client url &key additional-headers want-stream))
 
 
 ;; * GETing URLs
 
-(defun fetch-url-to-stream (url stream &key headers)
-  "Given a ~url~, GET it and put its contents into ~stream~. ~headers~ is an
-alist of header name (keyword)/value pairs to send with the request."
-  (%fetch-url-to-stream (get-preferred-http-client url) url stream :headers headers))
+(defun http-request (url
+                     &key additional-headers
+                       want-stream)
+  (%http-request (get-preferred-http-client url) url
+                 :additional-headers additional-headers
+                 :want-stream want-stream))
