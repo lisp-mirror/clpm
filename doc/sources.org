@@ -33,10 +33,7 @@ The type of every source must be specified with a keyword.
   Quicklisp distribution.
 
   #+begin_src common-lisp
-    (clpm-config
-     :sources
-     ("quicklisp"
-      (:type :quicklisp
-       :url "https://beta.quicklisp.org/dist/quicklisp.txt"
-       :force-https t)))
+    ((table :sources "quicklisp")
+     :type :quicklisp
+     :url "https://beta.quicklisp.org/dist/quicklisp.txt")
   #+end_src

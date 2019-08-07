@@ -80,19 +80,24 @@ directory in ~*clpm-config-directories*~."
 ;; * Configuration variables and merging configs
 
 (defparameter *default-config*
-  `(clpm-config
-    :grovel
-    (:sandbox
-     (:method :auto))
-    :archives
-    (:tar-method :auto
-     :tar
-     (:path "tar"))
-    :http-client
-    (:curl
-     (:path "curl")
-     :method :auto))
-  "Default configuration of clpm")
+  '(progn
+    (version "0.1")
+
+    ((table :grovel :sandbox)
+     :method :auto)
+
+    ((table :archives)
+     :tar-method :auto)
+
+    ((table :archives :tar)
+     :path "tar")
+
+    ((table :http-client)
+     :method :auto)
+
+    ((table :http-client :curl)
+     :path "curl"))
+  "Default configuration of clpm.")
 
 (defvar *config* nil
   "Active configuration. Computed at program execution time.")
@@ -140,94 +145,50 @@ overwrites the value from ~default-ht~."
 
 ;; * Parsing configs
 
-(defun names-path-p (path-1 path-2)
-  "Returns T if ~path-1~ is named by ~path-2~. ~path-2~ can have
-wildcards (~'*~) in it."
-  (or (equal path-1 path-2)
-      (and (eql '* (first path-2))
-           (names-path-p (rest path-1)
-                         (rest path-2)))))
+(defgeneric parse-config-value (value))
 
-(defun path-table-p (path)
-  "Returns T if ~path~ is a path to a configuration value that contains a
-table."
-  (switch (path :test #'names-path-p)
-    ('(:archives)
-      t)
-    ('(:tar :archives)
-      t)
-    ('(:bundle)
-      t)
-    ('(:local :bundle)
-      t)
-    ('(* :local :bundle)
-      t)
-    ('(:git)
-      t)
-    ('(:remotes :git)
-      t)
-    ('(* :remotes :git)
-      t)
-    ('(:http)
-      t)
-    ('(:headers :http)
-      t)
-    ('(* :headers :http)
-      t)
-    ('(* * :headers :http)
-      t)
-    ('(:http-client)
-      t)
-    ('(:curl :http-client)
-      t)
-    ('(:grovel)
-      t)
-    ('(:sandbox :grovel)
-      t)
-    ('(:sources)
-      t)
-    ('(* :sources)
-      t)))
+(defmethod parse-config-value ((value t))
+  value)
 
-(defun parse-table (path table)
-  "Given the ~path~ to the table and the ~table~ represented as a plist, return
-a hash table representing the ~table~."
-  (let ((out (make-hash-table :test 'equalp)))
-    (iter
-      (for (key value) :on table :by #'cddr)
-      (for new-path := (list* key path))
-      (for value-table-p := (path-table-p new-path))
-      (if value-table-p
-          (setf (gethash key out) (parse-table new-path value))
-          (setf (gethash key out) value)))
-    out))
+(defmethod parse-config-value ((value list))
+  (assert (eql 'table (first value)))
+  (parse-config-form value))
 
-(defun %parse-config-form (form)
-  "Given a top level config represented as a plist, return a hash table
-representing the config."
-  (let ((out (make-hash-table :test 'equalp)))
-    (iter
-      (for (key value) :on form :by #'cddr)
-      (for path := (list key))
-      (for table-p := (path-table-p path))
-      (if table-p
-          (let ((existing-table (gethash key out (make-hash-table :test 'equalp))))
-            (setf (gethash key out) (merge-hts (parse-table path value) existing-table)))
-          (setf (gethash key out) value)))
-    out))
+(defgeneric %parse-config-form (first rest table))
 
-(defun parse-config-form (form)
+(defmethod %parse-config-form ((first (eql 'table)) rest table)
+  (loop
+    :for key :in rest :by #'cddr
+    :for value :in (rest rest) :by #'cddr
+    :do (setf (gethash key table) (parse-config-value value))))
+
+(defmethod %parse-config-form ((first list) rest table)
+  (destructuring-bind (first &rest path) first
+    (assert (eql 'table first))
+    (let ((sub-table (make-hash-table :test 'equalp)))
+      (%parse-config-form 'table rest sub-table)
+      (setf (gethashes* table path) sub-table))))
+
+(defmethod %parse-config-form ((first (eql 'progn)) rest table)
+  (mapc (rcurry #'parse-config-form table) rest)
+  table)
+
+(defmethod %parse-config-form ((first (eql 'version)) rest table)
+  (assert (equal (first rest) "0.1")))
+
+(defun parse-config-form (form &optional (table (make-hash-table :test 'equalp)))
   "Given a top level config represented as a ~(clpm-config plist)~, return a
 hash table representing the config."
   (assert (listp form))
-  (assert (string-equal 'clpm-config (first form)))
-  (%parse-config-form (rest form)))
+  (%parse-config-form (first form) (rest form) table)
+  table)
 
 (defun merge-file-into-config! (pathname)
   "Read a config form from ~pathname~ and merge it into the currently active
 config."
-  (uiop:with-safe-io-syntax ()
-    (merge-ht-into-config! (parse-config-form (uiop:read-file-form pathname)))))
+  (uiop:with-safe-io-syntax (:package :clpm/config)
+    (dolist (subform (uiop:read-file-forms pathname))
+      (merge-ht-into-config! (parse-config-form subform)))))
 
 (defun load-global-config ()
   "Seed ~*config*~ with ~*default-config*~ and merge the primary CLPM config
@@ -241,9 +202,6 @@ file (clpm.conf) into ~*active*~."
 (defun clear-global-config ()
   "Clear the ~*config*~ variable."
   (setf *config* nil))
-
-(uiop:register-clear-configuration-hook 'clear-global-config)
-(uiop:register-image-restore-hook 'load-global-config)
 
 
 ;; * Querying the config
@@ -260,7 +218,7 @@ file (clpm.conf) into ~*active*~."
   "Modify the value in ~hash-table~ addressed by the list of ~keys~."
   (if (rest keys)
       (setf (gethashes* (ensure-gethash (first keys) hash-table
-                                        (make-hash-table :test 'equal))
+                                        (make-hash-table :test 'equalp))
                         (rest keys))
             value)
       (setf (gethash (first keys) hash-table) value)))
@@ -286,6 +244,43 @@ file (clpm.conf) into ~*active*~."
         (collect (flatten-hts value))
         (collect value))))
 
+(defun print-table (table path stream)
+  (let ((tables nil)
+        (values nil))
+    (maphash (lambda (k v)
+               (if (hash-table-p v)
+                   (push (cons (append path (list k)) v) tables)
+                   (push (cons k v) values)))
+             table)
+    (when values
+      (let ((*print-pretty* t)
+            (*print-case* :downcase))
+        (pprint-logical-block (stream values :prefix "(" :suffix ")")
+          (format stream "(table ~{~S~^ ~})" path)
+          (pprint-exit-if-list-exhausted)
+          (pprint-newline :mandatory stream)
+          (loop
+            (let* ((pair (pprint-pop))
+                   (key (car pair))
+                   (value (cdr pair)))
+              (prin1 key stream)
+              (write-char #\Space stream)
+              (prin1 value stream)
+              (pprint-exit-if-list-exhausted)
+              (pprint-newline :mandatory stream))))
+        (pprint-newline :mandatory stream)
+        (terpri stream)
+        (terpri stream)))
+    (dolist (sub-table tables)
+      (print-table (cdr sub-table) (car sub-table) stream))))
+
 (defun print-config (stream)
-  "Flatte ~*config*~ using ~flatten-hts~ and print it to ~stream~."
-  (format stream "~S~%" (flatten-hts *config*)))
+  "Print the configuration to ~stream~."
+  (format stream "(version \"0.1\")~%~%")
+  (maphash (lambda (k v)
+             (assert (hash-table-p v))
+             (print-table v (list k) stream))
+           *config*))
+
+(uiop:register-clear-configuration-hook 'clear-global-config)
+(uiop:register-image-restore-hook 'load-global-config)

@@ -12,12 +12,39 @@ directories separated by your OS's conventional directory separator. If any
 entry in the list is empty. The default search locations will be spliced into
 the list.
 
-The contents of =clpm.conf= must be a single list that starts with ~clpm-config~
-and the rest must be a plist. Each key in the plist names either a value or a
-section. If it names a section, the value must be another plist. If it names a
-value, the value is read according to the rules for that value.
+Logically, CLPM is configured by a series of nested tables. The config file
+describes these tables using a series of forms. It is recommended (and will
+likely be required in the future) that the first form in the config file
+declares the version of the config file API being used, such as the
+following. The described version API is 0.1.
 
-The following describe the configuration options for clpm.
+#+begin_src common-lisp
+  (version "0.1")
+#+end_src
+
+Each subsequent form must describe a table. Each subsequent form must start
+with ~table~ or ~(table &rest path)~. The body of the form then contains a
+plist describing key/value pairs for that table. Tables can be nested by either
+declaring toplevel tables with overlapping paths or by embedding a table
+(without a path) as a value inside another table.
+
+For example, the following config would force CLPM to use curl as its HTTP
+client and use the primary quicklisp destribution as a source.
+
+#+begin_src common-lisp
+  (version "0.1")
+
+  ((table :http-client)
+   :method :curl)
+
+  ((table :sources "quicklisp")
+   :type :quicklisp
+   :url "https://beta.quicklisp.org/dist/quicklisp.txt")
+#+end_src
+
+The following describes the available configuration tables for CLPM. Each
+header describes a table (or sub table). The lists in each section describe
+that tables keys.
 
 * ~:archives~
 
@@ -63,11 +90,11 @@ The following describe the configuration options for clpm.
 
      + ~:secure-only-p~ :: If non-NIL, send this header only on secure
        connections.
-     + ~:value~ :: The value to send for the header. If a string, the contents
-       of the string are used literally. If a pathname naming an executable
-       file, that file is executed and whatever it prints to its standard output
-       is used as the value. If a pathname naming a non-executable file, the
-       contents of the file are sent.
+     + ~:value~ :: The value to send for the header. Must be a string.
+     + ~:exec~ :: A path to a file that, when executed, prints the header value
+       to its standard output. Must be a string or pathname.
+     + ~:contents~ :: A path to a file that contains the value to use for the
+       header. Must be a string or pathname.
 
 * ~:http-client~
   + ~:method~ :: The default method to use to as an HTTP client. Defaults to
