@@ -33,7 +33,6 @@
                 #:object-id
                 #:save-dao)
   (:import-from #:trivial-garbage
-                #:finalize
                 #:make-weak-hash-table)
   (:export #:quicklisp-source))
 
