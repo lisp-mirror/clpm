@@ -103,8 +103,8 @@ the request."
     (when headers-ht
       (iter
         (for (key value) :in-hashtable headers-ht)
-        (unless (or (eql scheme :https)
-                    (not (gethash :secure-only-p value)))
+        (when (or (eql scheme :https)
+                  (not (gethash :secure-only-p value)))
           (collect (cons key (canonicalize-header-value (gethash :value value)))))))))
 
 (defun fetch-url (url)
