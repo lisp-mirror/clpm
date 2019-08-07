@@ -11,9 +11,6 @@
           #:clpm/log
           #:iterate)
   (:import-from #:flexi-streams)
-  (:import-from #:uiop
-                #:read-file-form
-                #:with-safe-io-syntax)
   (:export #:ensure-file-fetched
            #:fetch-url
            #:http-request))
@@ -63,38 +60,6 @@ headers."
     (format nil "~A, ~2,'0D ~A ~A ~2,'0D:~2,'0D:~2,'0D GMT"
             (day-name day-of-week) date (month-name month) year hour minute second)))
 
-(defgeneric canonicalize-header-value (header-value)
-  (:documentation "Given a ~header-value~ from a config file, return a string
-that contains the value of the header that should be sent as part of the HTTP
-request."))
-
-(defmethod canonicalize-header-value ((header-value string))
-  "A string simply returns itself."
-  header-value)
-
-#-os-windows
-(defun pathname-executable-p (pathname)
-  "On non-Windows platforms, a file is executable if its execute bit is set."
-  (let* ((stat (sb-posix:stat pathname))
-         (mode (sb-posix:stat-mode stat)))
-    (or (not (zerop (boole boole-and mode sb-posix:s-ixoth)))
-        (not (zerop (boole boole-and mode sb-posix:s-ixgrp)))
-        (not (zerop (boole boole-and mode sb-posix:s-ixusr))))))
-
-#+os-windows
-(defun pathname-executable-p (pathname)
-  "On windows, a file is executable if its type is exe."
-  (equalp "exe" (pathname-type pathname)))
-
-(defmethod canonicalize-header-value ((header-value pathname))
-  "If given a pathname to an executable file, run it and use the value it prints
-to stdout as the value. Otherwise, read the contents of the file and use that."
-  (if (pathname-executable-p header-value)
-      ;; executable
-      (uiop:run-program (namestring header-value) :output '(:string :stripped t))
-      ;; not executable
-      (uiop:read-file-string header-value)))
-
 (defun get-additional-headers-for-hostname (hostname scheme)
   "Given a ~hostname~ and ~scheme~ used (~:http~ or ~:https~), return an alist
 mapping header names (as keywords) to values that should be included as part of
@@ -105,7 +70,17 @@ the request."
         (for (key value) :in-hashtable headers-ht)
         (when (or (eql scheme :https)
                   (not (gethash :secure-only-p value)))
-          (collect (cons key (canonicalize-header-value (gethash :value value)))))))))
+          (let ((value (gethash :value value))
+                (exec (gethash :exec value))
+                (contents (gethash :contents value)))
+            (cond
+              (value
+               (assert (stringp value))
+               (collect (cons key value)))
+              (exec
+               (collect (cons key (uiop:run-program (namestring exec) :output '(:string :stripped t)))))
+              (contents
+               (collect (cons key (uiop:read-file-string contents)))))))))))
 
 (defun fetch-url (url)
   "Given a URL, return a string with the contents of the file located at ~url~."
