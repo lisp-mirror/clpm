@@ -63,7 +63,8 @@
 
 (defun maybe-load-sqlite-lib ()
   (unless (member :cl-sqlite-foreign-libs-already-loaded *features*)
-    (sqlite-ffi:load-library)))
+    (sqlite-ffi:load-library)
+    (pushnew :cl-sqlite-foreign-libs-already-loaded *features*)))
 
 (uiop:register-image-restore-hook 'maybe-load-sqlite-lib nil)
 
