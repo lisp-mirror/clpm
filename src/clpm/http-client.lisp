@@ -129,7 +129,9 @@ Returns T if the contents of PATHNAME were modified, NIL otherwise."
   ;; Base the tmp pathname off the pathname pathname to try and ensure that
   ;; they are on the same filesystem.
   (let ((tmp-pathname (uiop:tmpize-pathname pathname))
-        (additional-headers nil))
+        (additional-headers (get-additional-headers-for-hostname
+                             (puri:uri-host url)
+                             (puri:uri-scheme url))))
     (when (and (not force)
                (probe-file pathname))
       (push (cons :if-modified-since (universal-time-to-http-date (file-write-date pathname)))
@@ -140,11 +142,7 @@ Returns T if the contents of PATHNAME were modified, NIL otherwise."
            (multiple-value-bind (http-stream status-code)
                (http-request url
                              :want-stream t
-                             :additional-headers (append
-                                                  (get-additional-headers-for-hostname
-                                                   (puri:uri-host url)
-                                                   (puri:uri-scheme url))
-                                                  additional-headers))
+                             :additional-headers additional-headers)
              (log:debug "Status code: ~S" status-code)
              (case status-code
                (200
