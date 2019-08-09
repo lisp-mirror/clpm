@@ -9,8 +9,6 @@
   (:export #:convert-asd-system-spec-to-req
            #:fs-system-file-requirement
            #:fs-system-requirement
-           #:git-project-requirement
-           #:git-requirement
            #:project-requirement
            #:requirement/branch
            #:requirement/commit
@@ -22,7 +20,9 @@
            #:requirement/system-files
            #:requirement/tag
            #:requirement/version-spec
-           #:system-requirement))
+           #:system-requirement
+           #:vcs-project-requirement
+           #:vcs-requirement))
 
 (in-package #:clpm/requirement)
 
@@ -53,13 +53,13 @@ this source."))
   (:documentation
    "A requirement that can specify a version that needs to be satisfied."))
 
-(defclass git-requirement (requirement)
+(defclass vcs-requirement (requirement)
   ((repo
     :initarg :repo
-    :initform nil
+    :initform (error "Repo must be provided")
     :reader requirement/repo
     :documentation
-    "String containing the repo URL.")
+    "The repo object describing the upstream repo for this requirement.")
    (branch
     :initarg :branch
     :initform nil
@@ -79,7 +79,7 @@ this source."))
     :documentation
     "If non-NIL, string naming the required tag."))
   (:documentation
-   "A requirement on something that must be fetched from git."))
+   "A requirement on something that must be fetched from a vcs."))
 
 (defclass project-requirement (versioned-requirement)
   ()
@@ -91,7 +91,7 @@ this source."))
   (:documentation
    "A requirement on the presence of a system."))
 
-(defclass git-project-requirement (git-requirement)
+(defclass vcs-project-requirement (vcs-requirement)
   ((systems
     :initarg :systems
     :initform nil
@@ -105,7 +105,7 @@ this source."))
     :documentation
     "A list of system files to require."))
   (:documentation
-   "A requirement on the presence of a project retrieved from git. If both
+   "A requirement on the presence of a project retrieved from a VCS. If both
 systems and system-files are NIL, requires all systems in all asd files defined
 in the project."))
 

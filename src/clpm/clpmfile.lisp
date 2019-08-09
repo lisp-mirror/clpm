@@ -10,6 +10,7 @@
           #:iterate
           #:clpm/config
           #:clpm/deps
+          #:clpm/repos
           #:clpm/requirement
           #:clpm/source)
   (:export #:clpmfile/all-requirements
@@ -49,6 +50,12 @@
     :accessor clpmfile/fs-source
     :documentation
     "The filesystem source rooted at this clpmfile's directory.")
+   (vcs-source
+    :initform (make-instance 'vcs-source
+                             :name "%clpmfile-vcs")
+    :accessor clpmfile/vcs-source
+    :documentation
+    "The VCS source for all orphaned VCS requirements in this clpmfile.")
    (implicit-sources
     :initform nil
     :accessor clpmfile/implicit-sources
@@ -132,6 +139,7 @@ clpmfile is located."
 (defun clpmfile/sources (clpmfile)
   "Return a list of all the sources associated with ~clpmfile~."
   (list* (clpmfile/fs-source clpmfile)
+         (clpmfile/vcs-source clpmfile)
          (append (clpmfile/implicit-sources clpmfile)
                  (clpmfile/user-global-sources clpmfile))))
 
@@ -145,41 +153,21 @@ or raise an error if it does not exist."
 
 (defun parse-req-statement (clpmfile name
                             &key (type :project) version source
-                              git systems)
+                              systems)
   "Parse a ~:req~ statement from a ~clpmfile~ into a ~requirement~ instance."
+  (assert (null systems))
   (let ((req nil))
-    (if git
-        (destructuring-bind (type
-                             &key branch commit tag repo host
-                             &allow-other-keys)
-            git
-          (let ((source (get-git-source type host)))
-            ;; This may be the first time this source is seen. Record it.
-            (pushnew source (clpmfile/implicit-sources clpmfile))
-            ;; Register the git project.
-            (git-source-register-project! source repo name)
-            (assert (xor branch commit tag))
-
-            (setf req
-                  (make-instance 'git-project-requirement
-                                 :systems systems
-                                 :name name
-                                 :source source
-                                 :repo git
-                                 :branch branch
-                                 :commit commit
-                                 :tag tag))))
-        (setf req
-              (make-instance (ecase type
-                               (:project 'project-requirement)
-                               (:system 'system-requirement))
-                             :name (string-downcase (string name))
-                             :source (when source
-                                       (find-source-or-error (clpmfile/user-global-sources clpmfile)
-                                                             source))
-                             :version-spec (when version
-                                             (cons (first version)
-                                                   (second version))))))
+    (setf req
+          (make-instance (ecase type
+                           (:project 'project-requirement)
+                           (:system 'system-requirement))
+                         :name (string-downcase (string name))
+                         :source (when source
+                                   (find-source-or-error (clpmfile/user-global-sources clpmfile)
+                                                         source))
+                         :version-spec (when version
+                                         (cons (first version)
+                                               (second version)))))
     (push req (clpmfile/user-requirements clpmfile))))
 
 (defun parse-system-statement (clpmfile name &key source)
@@ -192,37 +180,16 @@ instance."
                                                        source)))
         (clpmfile/user-requirements clpmfile)))
 
-(defun parse-git-statement (clpmfile name
-                            &key repo branch commit tag systems)
-  "Parse a ~:git~ statement from a ~clpmfile~ into a ~git-project-requirement~
-instance."
-  (let ((source (get-git-source :git)))
-    ;; This may be the first time this source is seen. Record it.
-    (pushnew source (clpmfile/implicit-sources clpmfile))
-    ;; Register the git project.
-    (git-source-register-project! source repo name)
-    (assert (xor branch commit tag))
-    (push (make-instance 'git-project-requirement
-                         :systems systems
-                         :name name
-                         :source source
-                         :repo repo
-                         :branch branch
-                         :commit commit
-                         :tag tag)
-          (clpmfile/user-requirements clpmfile))))
-
 (defun parse-gitlab-statement (clpmfile name
-                               &key (host "gitlab.com") repo branch commit tag systems)
+                               &key (host "gitlab.com") path branch commit tag systems)
   "Parse a ~:gitlab~ statement from a ~clpmfile~ into a
-~git-project-requirement~ instance."
-  (let ((source (get-git-source :gitlab host)))
-    ;; This may be the first time this source is seen. Record it.
-    (pushnew source (clpmfile/implicit-sources clpmfile))
+~vcs-project-requirement~ instance."
+  (let ((source (clpmfile/vcs-source clpmfile))
+        (repo (make-repo-from-description (list :gitlab :host host :path path))))
     ;; Register the git project.
-    (git-source-register-project! source repo name)
+    (vcs-source-register-project! source repo name)
     (assert (xor branch commit tag))
-    (push (make-instance 'git-project-requirement
+    (push (make-instance 'vcs-project-requirement
                          :systems systems
                          :name name
                          :source source
@@ -284,8 +251,6 @@ sources."
     (ecase type
       (:source
        (apply #'parse-source-statement clpmfile args))
-      (:git
-       (apply #'parse-git-statement clpmfile args))
       (:gitlab
        (apply #'parse-gitlab-statement clpmfile args))
       (:system
@@ -323,28 +288,17 @@ sources."
     (push system-file (lockfile/system-files lockfile))
     lockfile))
 
-(defmethod parse-system-file-statement (lockfile (statement-type (eql :git))
-                                        &key type host repo commit system-files
+(defmethod parse-system-file-statement (lockfile (statement-type (eql :gitlab))
+                                        &key host path commit system-files
                                           name)
   ;; First, look for a local override.
   (let ((local (config-value :bundle :local name :path)))
     (if local
         ;; A local override exists.
-        (let* ((local-path (uiop:ensure-directory-pathname
-                            (merge-pathnames local
-                                             (uiop:pathname-directory-pathname
-                                              (lockfile/pathname lockfile)))))
-               (source (get-git-source :local))
-               (project (git-source-register-project! source local-path name))
-               (release (project/release project :current))
-               (system-files (mapcar (curry #'release/system-file release) system-files)))
-          (log:debug "Using override for ~S" name)
-          (unless (commit-in-repo-p release commit)
-            (error "Commit ~S is missing from local repo at ~S" commit local-path))
-          (setf (lockfile/system-files lockfile)
-                (append system-files (lockfile/system-files lockfile))))
-        (let* ((source (get-git-source type host))
-               (project (git-source-register-project! source repo name))
+        (error "local overrides currently broken.")
+        (let* ((source (clpmfile/vcs-source (lockfile/clpmfile lockfile)))
+               (repo (make-repo-from-description `(:gitlab :host ,host :path ,path)))
+               (project (vcs-source-register-project! source repo name))
                (release (project/release project `(:commit ,commit)))
                (system-files (mapcar (curry #'release/system-file release) system-files)))
           (setf (lockfile/system-files lockfile)
@@ -402,9 +356,25 @@ sources."
     ,@(when-let ((source (requirement/source req)))
         (list :source (source/name source)))))
 
-(defmethod req-to-sexp ((req git-project-requirement))
+(defgeneric repo-to-sexp (repo req))
+
+(defmethod repo-to-sexp ((repo gitlab-repo) req)
+  `(:gitlab
+    :host ,(gitlab-repo-host repo)
+    :path ,(gitlab-repo-path repo)
+    ,@(awhen (requirement/branch req)
+        `(:branch ,it))
+    ,@(awhen (requirement/commit req)
+        `(:commit ,it))
+    ,@(awhen (requirement/tag req)
+        `(:tag ,it))
+    ,@(awhen (requirement/systems req)
+        `(:systems ,it))))
+
+(defmethod req-to-sexp ((req vcs-project-requirement))
   `(:req ,(requirement/name req)
-    :git ,(requirement/repo req)))
+    :type :vcs
+    :vcs-type ,@(repo-to-sexp (requirement/repo req) req)))
 
 (defun lockfile-system-file-sexps (lockfile)
   "Return a list of system file statements from ~lockfile~ suitable for writing
@@ -428,18 +398,20 @@ to a file."
            (collect `(:local-asd
                       :path ,(system-file/asd-enough-namestring file)))))
         ;; TODO: Make this handle local vs remote git repos
-        ((typep release 'git-release)
-         (let ((version (release/version release))
-               (source (release/source release)))
+        ((typep release 'vcs-release)
+         (let* ((version (release/version release))
+                (project (release/project release))
+                (repo (project/repo project)))
            (assert (listp version))
            (assert (eql :commit (first version)))
            (assert (stringp (second version)))
 
-           (collect `(:git
+           (collect `(,(etypecase repo
+                         (gitlab-repo
+                          :gitlab))
                       :name ,(project/name (release/project release))
-                      :type ,(git-source-type-keyword source)
-                      :host ,(git-source/host source)
-                      :repo ,(vcs-project/path (release/project release))
+                      :host ,(gitlab-repo-host repo)
+                      :path ,(gitlab-repo-path repo)
                       :commit ,(second version)
                       :system-files ,(mapcar #'system-file/asd-enough-namestring system-files-in-release)))))
         (t

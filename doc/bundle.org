@@ -82,12 +82,12 @@ with zero configuration or helpers needed (other than ASDF, of course).
     bundle.
 
     #+begin_src common-lisp
-      (name &key (host "gitlab.com") repo branch commit tag systems)
+      (name &key (host "gitlab.com") path branch commit tag systems)
     #+end_src
 
     + ~name~ :: must be a string, unique in the file.
     + ~:host~ :: is the hostname of the gitlab server. Defaults to gitlab.com.
-    + ~:repo~ :: is a string naming the path to the repository.
+    + ~:path~ :: is a string naming the path to the repository.
     + ~:branch~ :: If specified, must be a string naming the branch to use. If
       none of branch, commit, or tag are specified, the branch defaults to the
       default branch from the server.

@@ -100,7 +100,7 @@ by name."
 representing satisfying solutions of the requirement. The alist maps release
 objects to a list of system-releases."))
 
-(defmethod resolve-requirement ((req git-project-requirement) sources)
+(defmethod resolve-requirement ((req vcs-project-requirement) sources)
   (let* ((project-name (requirement/name req))
          (systems (requirement/systems req))
          (system-files (requirement/system-files req))
@@ -212,7 +212,7 @@ satisfied. Returns one of :SAT, :UNSAT, or :UNKNOWN."))
       (t
        :unsat))))
 
-(defmethod requirement-state (search-node (req git-requirement))
+(defmethod requirement-state (search-node (req vcs-requirement))
   :unknown)
 
 
@@ -297,8 +297,7 @@ nil (if there are no remaining children)."
 
 (defun req-implies-system-file-p (req)
   (or (typep req 'fs-system-file-requirement)
-      (typep req 'fs-system-requirement)
-      (typep req 'git-project-requirement)))
+      (typep req 'fs-system-requirement)))
 
 (defun resolve-requirements (reqs sources &key no-deps)
   "Given a list of sources and requirements, returns an alist representing a

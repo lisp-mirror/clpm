@@ -31,8 +31,8 @@
     *bundle-arguments*
     *common-arguments*))
 
-(defun ensure-git-req-installed-and-rewrite-req (req)
-  "Given a git requirement, install it and return a new requirement on the
+(defun ensure-vcs-req-installed-and-rewrite-req (req)
+  "Given a VCS requirement, install it and return a new requirement on the
 correct commit."
   (let* ((project-name (requirement/name req))
          (branch (requirement/branch req))
@@ -49,8 +49,8 @@ correct commit."
                                          (tag
                                           `(:tag ,tag))))))
     (install-release vcs-release)
-    (make-instance 'git-project-requirement
-                   :commit (git-release/commit vcs-release)
+    (make-instance 'vcs-project-requirement
+                   :commit (vcs-release/commit vcs-release)
                    :repo (requirement/repo req)
                    :source (requirement/source req)
                    :name (requirement/name req)
@@ -62,11 +62,11 @@ correct commit."
   (let* ((sources (clpmfile/sources clpmfile))
          (raw-reqs (clpmfile/all-requirements clpmfile))
          reqs)
-    ;; Make sure all git releases are installed and replace their requirements
+    ;; Make sure all vcs releases are installed and replace their requirements
     ;; with a requirement on the commit.
     (dolist (r raw-reqs)
-      (if (typep r 'git-requirement)
-          (push (ensure-git-req-installed-and-rewrite-req r) reqs)
+      (if (typep r 'vcs-requirement)
+          (push (ensure-vcs-req-installed-and-rewrite-req r) reqs)
           (push r reqs)))
 
     ;; Resolve the requirements!

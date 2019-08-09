@@ -186,6 +186,7 @@ instances) that provide this system."))
     :accessor project/name
     :documentation "The name of this project.")
    (repo
+    :initarg :repo
     :accessor project/repo))
   (:documentation "The base class for all CLPM projects. A project can provide
 many systems and the list of provided systems can change over time as new
