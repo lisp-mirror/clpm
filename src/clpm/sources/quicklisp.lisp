@@ -19,9 +19,6 @@
           #:clpm/utils
           #:puri
           #:split-sequence)
-  (:import-from #:babel
-                #:string-to-octets
-                #:octets-to-string)
   (:import-from #:dbi
                 #:with-transaction)
   (:export #:quicklisp-source))
@@ -547,13 +544,15 @@
 (defun latest-version-map (source)
   "Fetch the latest versions for a source. Returns an alist mapping version
 strings to distinfo.txt urls."
-  (let* ((versions-string (fetch-url (ql-versions-url source)))
-         (versions-lines (split-sequence #\Newline versions-string :remove-empty-subseqs t)))
-    (mapcar (lambda (l)
-              (destructuring-bind (version url)
-                  (split-sequence #\Space l)
-                (cons version url)))
-            versions-lines)))
+  (let ((versions-pathname (merge-pathnames "metadata/distinfo-versions.txt"
+                                            (source/cache-directory source))))
+    (when (ensure-file-fetched versions-pathname (ql-versions-url source))
+      (let ((versions-lines (uiop:read-file-lines versions-pathname)))
+        (mapcar (lambda (l)
+                  (destructuring-bind (version url)
+                      (split-sequence #\Space l)
+                    (cons version url)))
+                versions-lines)))))
 
 (defun sync-version-list! (source)
   "Given a ~source~, sync the known versions of this distribution."
@@ -567,83 +566,101 @@ strings to distinfo.txt urls."
                         :id (car pair)
                         :canonical-distinfo-url (cdr pair))))))))
 
-(defun sync-version-projects! (dist-version)
+(defun sync-version-projects! (source dist-version)
   "Given a ~ql-dist-version~, download its release data and merge it into the
 local database."
-  (let* ((release-index-url (ql-dist-version-release-index-url dist-version))
-         (release-index-contents (fetch-url release-index-url))
-         (dist-version-id (ql-dist-version-id dist-version)))
-    (dolist (line (split-sequence #\Newline release-index-contents :remove-empty-subseqs t))
-      (destructuring-bind (project url size file-md5 content-sha1 prefix &rest system-files)
-          (split-sequence #\Space line)
-        (unless (find-dao 'ql-project :name project)
-          (create-dao 'ql-project :name project))
-        (let* ((release-meta (or (find-dao 'ql-release-meta
-                                           :project-name project
-                                           :url url)
-                                 (create-dao 'ql-release-meta
-                                             :project-name project
-                                             :url url
-                                             :size size
-                                             :file-md5 file-md5
-                                             :content-sha1 content-sha1
-                                             :prefix prefix
-                                             :system-files system-files)))
-               (meta-id (object-id release-meta)))
-          (unless (find-dao 'ql-release
-                            :meta-id meta-id
-                            :dist-version-id dist-version-id)
-            (create-dao 'ql-release
-                        :meta-id meta-id
-                        :project-name project
-                        :dist-version-id dist-version-id)))))))
+  (let ((release-index-pathname (merge-pathnames (uiop:strcat "metadata/"
+                                                              (ql-dist-version-id dist-version)
+                                                              "/releases.txt")
+                                                 (source/cache-directory source)))
+        (release-index-url (ql-dist-version-release-index-url dist-version)))
+    (ensure-file-fetched release-index-pathname release-index-url)
 
-(defun sync-version-systems! (dist-version)
+    (let ((release-index-contents (uiop:read-file-string release-index-pathname))
+          (dist-version-id (ql-dist-version-id dist-version)))
+      (dolist (line (split-sequence #\Newline release-index-contents :remove-empty-subseqs t))
+        (destructuring-bind (project url size file-md5 content-sha1 prefix &rest system-files)
+            (split-sequence #\Space line)
+          (unless (find-dao 'ql-project :name project)
+            (create-dao 'ql-project :name project))
+          (let* ((release-meta (or (find-dao 'ql-release-meta
+                                             :project-name project
+                                             :url url)
+                                   (create-dao 'ql-release-meta
+                                               :project-name project
+                                               :url url
+                                               :size size
+                                               :file-md5 file-md5
+                                               :content-sha1 content-sha1
+                                               :prefix prefix
+                                               :system-files system-files)))
+                 (meta-id (object-id release-meta)))
+            (unless (find-dao 'ql-release
+                              :meta-id meta-id
+                              :dist-version-id dist-version-id)
+              (create-dao 'ql-release
+                          :meta-id meta-id
+                          :project-name project
+                          :dist-version-id dist-version-id))))))))
+
+(defun sync-version-systems! (source dist-version)
   "Given a ~ql-dist-version~, download its system data and merge it into the
 local database."
-  (let* ((system-index-url (ql-dist-version-system-index-url dist-version))
-         (system-index-contents (fetch-url system-index-url))
-         (dist-version-id (ql-dist-version-id dist-version)))
-    (dolist (line (split-sequence #\Newline system-index-contents :remove-empty-subseqs t))
-      (destructuring-bind (project system-file system-name &rest dependencies)
-          (split-sequence #\Space line)
-        (unless (find-dao 'ql-system :name system-name)
-          (create-dao 'ql-system :name system-name))
-        (let ((release (find-dao 'ql-release
-                                 :project-name project
-                                 :dist-version-id dist-version-id)))
-          (assert release)
-          (unless (find-dao 'ql-system-release
-                            :release-id (object-id release)
-                            :system-name system-name)
-            (create-dao 'ql-system-release
-                        :release-id (object-id release)
-                        :system-file (concatenate 'string system-file ".asd")
-                        :system-name system-name
-                        :dependencies dependencies)))))))
+  (let ((system-index-pathname (merge-pathnames (uiop:strcat "metadata/"
+                                                             (ql-dist-version-id dist-version)
+                                                             "/systems.txt")
+                                                (source/cache-directory source)))
+        (system-index-url (ql-dist-version-system-index-url dist-version)))
+    (ensure-file-fetched system-index-pathname system-index-url)
+
+    (let ((system-index-contents (uiop:read-file-string system-index-pathname))
+          (dist-version-id (ql-dist-version-id dist-version)))
+      (dolist (line (split-sequence #\Newline system-index-contents :remove-empty-subseqs t))
+        (destructuring-bind (project system-file system-name &rest dependencies)
+            (split-sequence #\Space line)
+          (unless (find-dao 'ql-system :name system-name)
+            (create-dao 'ql-system :name system-name))
+          (let ((release (find-dao 'ql-release
+                                   :project-name project
+                                   :dist-version-id dist-version-id)))
+            (assert release)
+            (unless (find-dao 'ql-system-release
+                              :release-id (object-id release)
+                              :system-name system-name)
+              (create-dao 'ql-system-release
+                          :release-id (object-id release)
+                          :system-file (concatenate 'string system-file ".asd")
+                          :system-name system-name
+                          :dependencies dependencies))))))))
 
 (defun sync-version! (dist-version)
   "Given a ~ql-dist-version~ object, sync its data to the local database."
   (when (ql-dist-version-synced-p dist-version)
     (error "Already synced!"))
+
   (let* ((source (db-backed-object-source dist-version))
          (distinfo-url (ql-dist-version-canonical-distinfo-url dist-version))
-         (distinfo-contents (fetch-url distinfo-url))
-         (distinfo-plist (parse-distinfo distinfo-contents)))
-    (destructuring-bind (&key
-                           release-index-url system-index-url
-                           canonical-distinfo-url
-                         &allow-other-keys)
-        distinfo-plist
-      (setf (ql-dist-version-canonical-distinfo-url dist-version) canonical-distinfo-url
-            (ql-dist-version-system-index-url dist-version) system-index-url
-            (ql-dist-version-release-index-url dist-version) release-index-url
-            (ql-dist-version-synced-int dist-version) 1)
-      (with-source-connection (source)
-        (with-transaction *connection*
-          (sync-version-projects! dist-version)
-          (sync-version-systems! dist-version)
-          (save-dao dist-version))))))
+         (distinfo-pathname (merge-pathnames (uiop:strcat "metadata/"
+                                                          (ql-dist-version-id dist-version)
+                                                          "/distinfo.txt")
+                                             (source/cache-directory source))))
+    (ensure-file-fetched distinfo-pathname distinfo-url)
+    (let* ((distinfo-contents (uiop:read-file-string distinfo-pathname))
+           (distinfo-plist (parse-distinfo distinfo-contents)))
+      (destructuring-bind (&key
+                             release-index-url system-index-url
+                             canonical-distinfo-url
+                           &allow-other-keys)
+          distinfo-plist
+        (setf (ql-dist-version-canonical-distinfo-url dist-version) canonical-distinfo-url
+              (ql-dist-version-system-index-url dist-version) system-index-url
+              (ql-dist-version-release-index-url dist-version) release-index-url
+              (ql-dist-version-synced-int dist-version) 1)
+        (with-source-connection (source)
+          (with-transaction *connection*
+            (sync-version-projects! source dist-version)
+            (sync-version-systems! source dist-version)
+            (save-dao dist-version)))))))
 
 (defmethod sync-source ((source quicklisp-source))
   "Sync the version list and then sync all unsynced dist versions."
