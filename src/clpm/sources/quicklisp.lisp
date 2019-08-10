@@ -12,28 +12,18 @@
           #:clpm/http-client
           #:clpm/log
           #:clpm/requirement
+          #:clpm/sources/db-backed
           #:clpm/sources/defs
           #:clpm/sources/simple-versioned-project
           #:clpm/sources/tarball-release
           #:clpm/utils
           #:puri
-          #:split-sequence
-          #:sxql)
+          #:split-sequence)
   (:import-from #:babel
                 #:string-to-octets
                 #:octets-to-string)
-  (:import-from #:dbd.sqlite3)
   (:import-from #:dbi
                 #:with-transaction)
-  (:import-from #:mito.core
-                #:*connection*
-                #:create-dao
-                #:dao-table-class
-                #:dao-table-mixin
-                #:object-id
-                #:save-dao)
-  (:import-from #:trivial-garbage
-                #:make-weak-hash-table)
   (:export #:quicklisp-source))
 
 (in-package #:clpm/sources/quicklisp)
@@ -61,164 +51,10 @@
 ;;;
 ;;; The data for Quicklisp distributions is stored in a sqlite database.
 
-(defun maybe-load-sqlite-lib ()
-  (unless (member :cl-sqlite-foreign-libs-already-loaded *features*)
-    (sqlite-ffi:load-library)
-    (pushnew :cl-sqlite-foreign-libs-already-loaded *features*)))
-
-(uiop:register-image-restore-hook 'maybe-load-sqlite-lib nil)
-
-
-;;; * Mito utilities
-;;;
-;;; We use mito as an ORM on top of a sqlite database.
-
-(defclass ql-table-mixin ()
-  ((source
-    :initarg :source
-    :accessor ql-object-source
-    :ghost t
-    :documentation
-    "The source this object is part of. Automatically populated on load from the
-    database."))
-  (:metaclass dao-table-mixin)
-  (:documentation
-   "A mixin used to add a reference to the toplevel quicklisp source an object
-   belongs to. If an object of this type is retrieved from the database, the
-   source is automatically populated based on the source the connection belongs
-   to."))
-
-(defvar *current-source* nil
-  "Bound to the ~quicklisp-source~ object in use by the ORM layer (i.e., the
-  source used to compute which database to connect to.")
-
-(defvar *dao-cache* (make-weak-hash-table :test 'equal :weakness :value)
-  "Some other pieces of CLPM require that two objects representing the same thing
-  (i.e., a specific release) be EQ to each other. To facilitate that, this
-  caches all results returned from the ORM layer. It is a weak cache so as to
-  not prevent GC.")
-
-(defparameter *tables*
-  '(ql-dist-version ql-project ql-release
-    ql-release-meta ql-system ql-system-release ql-source-meta)
-  "A list of table names used in the Quicklisp database. Used for seeding an
-  empty DB.")
-
-(defparameter *indices*
-  '((:key_ql-release-meta_project-name_url
-     :ql_release_meta :project_name :url)
-    (:key_ql-release_meta-id_dist-version-id
-     :ql_release :meta_id :dist_version_id)
-    (:key_ql-release_project-name_dist-version-id
-     :ql_release :project_name :dist_version_id)
-    (:key_ql-system-release_release-id_system-name
-     :ql_system_release :release_id :system_name))
-  "Currently, Mito ignores keys when operating on a sqlite DB. So we manually
-  create the indices we're interested in. Used for seeding an empty DB.")
-
-(defun clear-dao-cache ()
-  "Make sure the cache is cleared on image dump."
-  (setf *dao-cache* (make-weak-hash-table :test 'equal :weakness :value)))
-
-(uiop:register-image-dump-hook 'clear-dao-cache)
-
-(defun find-dao (class &rest fields-and-values)
-  "A wrapper around ~mito:find-dao~ that uses the ~*dao-cache*~ and populates the
-  ~source~ slot on ~ql-table-mixin~ objects."
-  (let ((result (apply #'mito.core:find-dao class fields-and-values)))
-    (when result
-      (let ((id (object-id result)))
-        (multiple-value-bind (out exists-p)
-            (ensure-gethash (list *current-source* class id) *dao-cache* result)
-          (when (and (not exists-p)
-                     (typep out 'ql-table-mixin))
-            (setf (ql-object-source out) *current-source*))
-          out)))))
-
-(defun retrieve-dao (class &rest fields-and-values)
-  "A wrapper around ~mito:retrieve-dao~ that uses the ~*dao-cache*~ and populates
-  the ~source~ slot on ~ql-table-mixin~ objects."
-  (let ((results (apply #'mito.core:retrieve-dao class fields-and-values)))
-    (loop
-      :for result :in results
-      :for id := (object-id result)
-      :for (actual-result exists-p) := (multiple-value-list
-                                        (ensure-gethash (list *current-source* class id) *dao-cache* result))
-      :collect actual-result
-      :when (and (not exists-p) (typep actual-result 'ql-table-mixin))
-        :do (setf (ql-object-source actual-result) *current-source*))))
-
-(defun seed-empty-db (conn)
-  "Given a connection to an empty database, seed it."
-  (let ((*connection* conn))
-    ;; Create the tables
-    (dolist (table *tables*)
-      (mito.core:ensure-table-exists table))
-    ;; Create the indices
-    (dolist (index *indices*)
-      (destructuring-bind (name . on)
-          index
-        (mito.core:execute-sql (create-index name :on on))))
-    ;; Create the metadata table.
-    (create-dao 'ql-source-meta)))
-
-(defun check-schema-or-error (conn)
-  "Make sure the database connected to has a compatible schema. Error if it does
-not."
-  (let* ((*connection* conn)
-         ;; Use the underlying ~find-dao~ to bypass our cache.
-         (meta (mito.core:find-dao 'ql-source-meta :id 0)))
-    (unless (= 1 (ql-source-meta-db-version meta))
-      (error "Unknown DB Schema!"))))
-
-(defclass ql-source-meta ()
-  ((id
-    :initform 0
-    :accessor ql-source-meta-id
-    :primary-key t
-    :reader object-id
-    :col-type :integer
-    :documentation
-    "To make the single row easy to query, give it a constant ID of 0.")
-   (db-version
-    :initform 1
-    :accessor ql-source-meta-db-version
-    :col-type (:smallint () :unsigned)
-    :documentation
-    "The version of the database schema in use."))
-  (:metaclass dao-table-class)
-  (:documentation
-   "A table in the database used to store metadata about the source and the
-   database itself in a single row."))
-
-(defun call-with-source-connection (source thunk)
-  "Call ~thunk~ with ~*connection*~ and ~*current-source*~ bound to ~source~'s
-  connection and ~source~ respectively."
-  (let ((db (ql-db source)))
-    (if db
-        ;; We already have an open connection, use it.
-        (let ((*connection* db)
-              (*current-source* source))
-          (funcall thunk))
-        ;; We need to open a new connection and ensure it is closed when we're
-        ;; finished.
-        (unwind-protect
-             (progn
-               (setf db (ql-db-connection source))
-               (setf (ql-db source) db)
-               (let ((*connection* db)
-                     (*current-source* source))
-                 (funcall thunk)))
-          (when db (dbi:disconnect db))
-          (setf (ql-db source) nil)))))
-
-(defmacro with-source-connection ((source) &body body)
-  `(call-with-source-connection ,source (lambda () ,@body)))
-
 
 ;;; * Quicklisp backed source
 
-(defclass quicklisp-source (clpm-source)
+(defclass quicklisp-source (clpm-source db-backed-source)
   ((force-https
     :initarg :force-https
     :initform nil
@@ -228,14 +64,30 @@ not."
    (versions-url
     :accessor ql-versions-url
     :documentation
-    "Holds the URL to the .txt file that stores all versions of this source.")
-   (db
-    :initform nil
-    :accessor ql-db
-    :documentation
-    "Holds a reference to the DB connection for this source, if active."))
+    "Holds the URL to the .txt file that stores all versions of this source."))
   (:documentation
    "A CLPM source backed by a quicklisp-style repository."))
+
+(defclass ql-source-meta (db-backed-source-meta)
+  ()
+  (:metaclass dao-table-class))
+
+(defmethod db-source-indices ((source quicklisp-source))
+  '((:key_ql-release-meta_project-name_url
+     :ql_release_meta :project_name :url)
+    (:key_ql-release_meta-id_dist-version-id
+     :ql_release :meta_id :dist_version_id)
+    (:key_ql-release_project-name_dist-version-id
+     :ql_release :project_name :dist_version_id)
+    (:key_ql-system-release_release-id_system-name
+     :ql_system_release :release_id :system_name)))
+
+(defmethod db-source-table-names ((source quicklisp-source))
+  '(ql-dist-version ql-project ql-release
+    ql-release-meta ql-system ql-system-release ql-source-meta))
+
+(defmethod db-source-meta-class-name ((source quicklisp-source))
+  'ql-source-meta)
 
 (defmethod initialize-instance :after ((source quicklisp-source) &rest initargs
                                        &key &allow-other-keys)
@@ -260,22 +112,6 @@ not."
                        (merge-pathnames (concatenate 'string file-name "-versions")
                                         path))
                       (source/url source)))))
-
-(defun ql-db-connection (source)
-  "Returns a new connection to ~source~'s database. If the database does not
-  exist, it is populated with the correct tables and indices. Errors if the
-  database schema is incorrect."
-  (let* ((db-pathname (merge-pathnames "ql.db"
-                                       (source/lib-directory source)))
-         (db-exists-p (probe-file db-pathname)))
-    (assert (uiop:absolute-pathname-p db-pathname))
-    (ensure-directories-exist db-pathname)
-    (let ((connection (dbi:connect :sqlite3
-                                   :database-name db-pathname)))
-      (unless db-exists-p
-        (seed-empty-db connection))
-      (check-schema-or-error connection)
-      connection)))
 
 (defmethod source/cache-directory ((source quicklisp-source))
   "Compute the cache location for this source, based on its canonical url."
@@ -329,7 +165,7 @@ not."
 
 ;;; * Version of a quicklisp distribution
 
-(defclass ql-dist-version (ql-table-mixin)
+(defclass ql-dist-version (db-backed-mixin)
   ((id
     :initarg :id
     :accessor ql-dist-version-id
@@ -413,7 +249,7 @@ not."
 
 ;;; * Projects
 
-(defclass ql-project (ql-table-mixin)
+(defclass ql-project (db-backed-mixin)
   ((name
     :initarg :name
     :accessor ql-project-name
@@ -429,13 +265,13 @@ not."
    "Represents a project in a quicklisp distribution."))
 
 (defmethod project/releases ((p ql-project))
-  (with-source-connection ((ql-object-source p))
+  (with-source-connection ((db-backed-object-source p))
     (retrieve-dao 'ql-release :project-name (ql-project-name p))))
 
 
 ;;; * Releases
 
-(defclass ql-release (ql-table-mixin
+(defclass ql-release (db-backed-mixin
                       tarball-release-with-md5
                       tarball-release-with-size
                       simple-versioned-release)
@@ -466,7 +302,7 @@ not."
    class."))
 
 (defmethod release/source ((r ql-release))
-  (ql-object-source r))
+  (db-backed-object-source r))
 
 (defmethod release/system-file ((release ql-release) system-file-namestring)
   (make-instance 'ql-system-file
@@ -582,7 +418,7 @@ not."
 
 ;;; * Systems
 
-(defclass ql-system (ql-table-mixin)
+(defclass ql-system (db-backed-mixin)
   ((name
     :initarg :name
     :accessor ql-system-name
@@ -598,7 +434,7 @@ not."
    "An ASD system contained in a quicklisp distribution."))
 
 (defmethod system/source ((system ql-system))
-  (ql-object-source system))
+  (db-backed-object-source system))
 
 (defmethod system/system-releases ((system ql-system))
   (with-source-connection ((system/source system))
@@ -607,7 +443,7 @@ not."
 
 ;;; * System releases
 
-(defclass ql-system-release (ql-table-mixin)
+(defclass ql-system-release (db-backed-mixin)
   ((release-id
     :initarg :release-id
     :accessor ql-system-release-release-id
@@ -658,7 +494,7 @@ not."
                                                           (ql-system-release-system-file system-release))))
 
 (defmethod system-release/source ((system-release ql-system-release))
-  (ql-object-source system-release))
+  (db-backed-object-source system-release))
 
 (defmethod system-release-satisfies-version-spec-p ((system-release ql-system-release) version-spec)
   "There is currently no good way to reasonably get the system version from the
@@ -790,7 +626,7 @@ local database."
   "Given a ~ql-dist-version~ object, sync its data to the local database."
   (when (ql-dist-version-synced-p dist-version)
     (error "Already synced!"))
-  (let* ((source (ql-object-source dist-version))
+  (let* ((source (db-backed-object-source dist-version))
          (distinfo-url (ql-dist-version-canonical-distinfo-url dist-version))
          (distinfo-contents (fetch-url distinfo-url))
          (distinfo-plist (parse-distinfo distinfo-contents)))
