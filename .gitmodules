@@ -151,3 +151,6 @@
 [submodule "ext/smart-buffer"]
 	path = ext/smart-buffer
 	url = https://github.com/fukamachi/smart-buffer.git
+[submodule "ext/lisp-invocation"]
+	path = ext/lisp-invocation
+	url = https://gitlab.common-lisp.net/qitab/lisp-invocation.git

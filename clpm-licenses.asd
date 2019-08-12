@@ -32,6 +32,7 @@
                              (:static-file "flexi-streams")
                              (:static-file "ironclad")
                              (:static-file "iterate")
+                             (:static-file "lisp-invocation")
                              (:static-file "log4cl")
                              (:static-file "log4cl.NOTICE")
                              (:static-file "mito")
