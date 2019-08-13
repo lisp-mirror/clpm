@@ -104,7 +104,7 @@ first is T iff the file was loaded successfully. The second value is a backtrace
 if an unknown error occurred, the third is a missing system."
   (handler-case
       (let ((*standard-output* (make-broadcast-stream))
-            ;;(*error-output* (make-broadcast-stream))
+            (*error-output* (make-broadcast-stream))
             (*terminal-io* (make-broadcast-stream))
             (*file-being-loaded* pathname))
         (asdf:load-asd pathname)
