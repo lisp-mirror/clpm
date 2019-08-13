@@ -7,6 +7,7 @@
     (:use #:cl
           #:alexandria
           #:clpm/config
+          #:clpm/sources/clpi
           #:clpm/sources/defs
           #:clpm/sources/quicklisp
           #:clpm/utils)
@@ -26,6 +27,8 @@
 
 (defun resolve-type (type)
   (ecase type
+    (:clpi
+     'clpi-source)
     (:quicklisp
      'quicklisp-source)))
 
