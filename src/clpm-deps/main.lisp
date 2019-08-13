@@ -31,34 +31,66 @@
 
 (defvar *cache* (make-hash-table :test 'equalp))
 
-(defun chase-package-inferred-deps (system-name parent-system-name)
-  (if (gethash system-name *cache*)
-      nil
-      (setf (gethash system-name *cache*)
-            (cond
-              ((listp system-name)
-               (list system-name))
-              ((string= parent-system-name
-                        (asdf:primary-system-name system-name))
-               (mapcan (lambda (d)
-                         (chase-package-inferred-deps d parent-system-name))
-                       (asdf:system-depends-on (asdf:find-system system-name))))
-              (t
-               (list system-name))))))
+;; (defun chase-package-inferred-deps (system-name parent-system-name)
+;;   (if (gethash system-name *cache*)
+;;       nil
+;;       (setf (gethash system-name *cache*)
+;;             (cond
+;;               ((listp system-name)
+;;                (list system-name))
+;;               ((string= parent-system-name
+;;                         (asdf:primary-system-name system-name))
+;;                (mapcan (lambda (d)
+;;                          (chase-package-inferred-deps d parent-system-name))
+;;                        (asdf:system-depends-on (asdf:find-system system-name))))
+;;               (t
+;;                (list system-name))))))
+
+(defgeneric asdf-dependency-system-name (dep))
+
+(defmethod asdf-dependency-system-name ((dep string))
+  dep)
+
+(defmethod asdf-dependency-system-name ((dep list))
+  (case (first dep)
+    (:version
+     (second dep))
+    (t
+     nil)))
+
+(defun clean-up-deps-list (dependencies)
+  (remove-duplicates
+   (remove-if (lambda (x)
+                (gethash x *cache*))
+              dependencies)
+   :test #'equalp))
+
+(defun chase-package-inferred-deps (dependencies system)
+  (let ((dep-with-same-primary-system (find-if (lambda (x)
+                                                 (equal (asdf:primary-system-name system)
+                                                        (asdf:primary-system-name
+                                                         (asdf-dependency-system-name x))))
+                                               dependencies)))
+    (if dep-with-same-primary-system
+        ;; There is a dependency with the same primary system name. Replace it
+        ;; with its dependencies.
+        (let ((new-dependencies
+                (append (asdf:system-depends-on
+                         (asdf:find-system (asdf-dependency-system-name dep-with-same-primary-system)))
+                        (remove dep-with-same-primary-system dependencies))))
+          (setf (gethash dep-with-same-primary-system *cache*) t)
+          (chase-package-inferred-deps (clean-up-deps-list new-dependencies) system))
+        dependencies)))
 
 (defun system-direct-deps (system)
   (let* ((defsystem-deps (asdf:system-defsystem-depends-on system))
          (source-file (asdf:system-source-file system))
          (*cache* (make-hash-table :test 'equalp))
-         (depends-on (asdf:system-depends-on system)
-                     ;; (if (typep system 'asdf:package-inferred-system)
-                     ;;     (remove-duplicates
-                     ;;      (chase-package-inferred-deps
-                     ;;       (asdf:component-name system)
-                     ;;       (asdf:primary-system-name (asdf:component-name system)))
-                     ;;      :test #'equalp)
-                     ;;     (asdf:system-depends-on system))
-                     ))
+         (direct-depends-on (asdf:system-depends-on system))
+         (depends-on (if (typep system 'asdf:package-inferred-system)
+                         (chase-package-inferred-deps direct-depends-on system)
+                         direct-depends-on)))
+
     `(,(asdf:component-name system)
       :depends-on ,depends-on
       :version ,(asdf:component-version system)
