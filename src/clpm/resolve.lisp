@@ -537,7 +537,7 @@ objects to a list of system-releases."))
 
 ;; * Installing VCS requirements
 
-(defun ensure-vcs-req-installed-and-rewrite-req (req)
+(defun ensure-vcs-req-installed-and-rewrite-req (req vcs-source)
   "Given a VCS requirement, install it and return a new requirement on the
 correct commit."
   (let* ((project-name (requirement/name req))
@@ -545,23 +545,30 @@ correct commit."
          (commit (requirement/commit req))
          (tag (requirement/tag req))
          (source (requirement/source req))
-         (vcs-project (source/project source project-name))
-         (vcs-release (project/release vcs-project
-                                       (cond
-                                         (commit
-                                          `(:commit ,commit))
-                                         (branch
-                                          `(:branch ,branch))
-                                         (tag
-                                          `(:tag ,tag))))))
-    (install-release vcs-release)
-    (make-instance 'vcs-project-requirement
-                   :commit (vcs-release/commit vcs-release)
-                   :repo (requirement/repo req)
-                   :source (requirement/source req)
-                   :name (requirement/name req)
-                   :systems (requirement/systems req)
-                   :system-files (requirement/system-files req))))
+         (repo (or (requirement/repo req)
+                   (project/repo (source/project source project-name)))))
+    (unless (typep source 'vcs-source)
+      ;; We need to rehome this requirement so we get all the groveling
+      ;; capabilities.
+      (setf source vcs-source)
+      (vcs-source-register-project! vcs-source repo project-name))
+    (let* ((vcs-project (source/project source project-name))
+           (vcs-release (project/release vcs-project
+                                         (cond
+                                           (commit
+                                            `(:commit ,commit))
+                                           (branch
+                                            `(:branch ,branch))
+                                           (tag
+                                            `(:tag ,tag))))))
+      (install-release vcs-release)
+      (make-instance 'vcs-project-requirement
+                     :commit (vcs-release/commit vcs-release)
+                     :repo repo
+                     :source source
+                     :name project-name
+                     :systems (requirement/systems req)
+                     :system-files (requirement/system-files req)))))
 
 
 
@@ -579,7 +586,13 @@ list of system-releases. If NO-DEPS is non-NIL, don't resolve dependencies."
   ;; or :req (with VCS options enabled) directives in clpmfiles) instead of
   ;; relying on metadata, especially when such systems have the
   ;; :defsystem-depends-on option specified.
-  (let ((*sources* sources))
+  (let* ((vcs-source (find-if (lambda (x) (typep x 'vcs-source)) sources))
+         (*sources* (if vcs-source
+                        sources
+                        (progn
+                          (setf vcs-source (make-instance 'vcs-source
+                                                          :name "%resolve-vcs-source"))
+                          (list* vcs-source sources)))))
     (mapc #'resolve-requirement-source! reqs)
 
     ;; Make sure all vcs releases are installed and replace their requirements
@@ -587,7 +600,7 @@ list of system-releases. If NO-DEPS is non-NIL, don't resolve dependencies."
     (let* ((reqs (loop
                    :for r :in reqs
                    :when (typep r 'vcs-requirement)
-                     :collect (ensure-vcs-req-installed-and-rewrite-req r)
+                     :collect (ensure-vcs-req-installed-and-rewrite-req r vcs-source)
                    :else
                      :collect r))
            (root-node (make-instance 'search-node
