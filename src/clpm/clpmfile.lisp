@@ -74,7 +74,13 @@
     :initform nil
     :accessor clpmfile/user-requirements
     :documentation
-    "A list of requirements specified by the user."))
+    "A list of requirements specified by the user.")
+   (user-raw-requirements
+    :initarg :user-raw-requirements
+    :initform nil
+    :accessor clpmfile/user-raw-requirements
+    :documentation
+    "A list of raw requirements specified by the user."))
   (:documentation
    "Representation of a clpmfile."))
 
@@ -171,14 +177,30 @@ or raise an error if it does not exist."
     (push req (clpmfile/user-requirements clpmfile))))
 
 (defun parse-project-statement (clpmfile name
-                                &key source branch)
-  (push (make-instance 'vcs-project-requirement
-                       :name (string-downcase (string name))
-                       :source (when source
-                                 (find-source-or-error (clpmfile/user-global-sources clpmfile)
-                                                       source))
-                       :branch branch)
-        (clpmfile/user-requirements clpmfile)))
+                                &key source vcs version
+                                  systems)
+  (if vcs
+      (destructuring-bind (&key branch commit tag)
+          vcs
+        (push (make-instance 'vcs-project-requirement
+                             :name (string-downcase (string name))
+                             :source (when source
+                                       (find-source-or-error (clpmfile/user-global-sources clpmfile)
+                                                             source))
+                             :branch branch
+                             :commit commit
+                             :tag tag
+                             :systems systems)
+              (clpmfile/user-requirements clpmfile)))
+      (push (make-instance 'project-requirement
+                           :name (string-downcase (string name))
+                           :source (when source
+                                     (find-source-or-error (clpmfile/user-global-sources clpmfile)
+                                                           source))
+                           :version-spec (when version
+                                           (cons (first version)
+                                                 (second version))))
+            (clpmfile/user-requirements clpmfile))))
 
 (defun parse-system-statement (clpmfile name &key source)
   "Parse a ~:system~ statement from a ~clpmfile~ into a ~system-requirement~
@@ -249,7 +271,8 @@ sources."
   (iter
     ;; Sources are only allowed immediately following the :api-version
     (with source-allowed-p := t)
-    (for (type . args) :in forms)
+    (for form :in forms)
+    (for (type . args) := form)
     (when (and (eql type :source)
                (not source-allowed-p))
       (error "Global sources must be specified immediately after the api declaration"))
@@ -262,13 +285,14 @@ sources."
       (:source
        (apply #'parse-source-statement clpmfile args))
       (:gitlab
+       (push form (clpmfile/user-raw-requirements clpmfile))
        (apply #'parse-gitlab-statement clpmfile args))
       (:system
+       (push form (clpmfile/user-raw-requirements clpmfile))
        (apply #'parse-system-statement clpmfile args))
       (:project
+       (push form (clpmfile/user-raw-requirements clpmfile))
        (apply #'parse-project-statement clpmfile args))
-      (:req
-       (apply #'parse-req-statement clpmfile args))
       (:asd
        (apply #'parse-asd-statement clpmfile args))))
   (nreversef (clpmfile/user-asd-files clpmfile))
@@ -348,46 +372,6 @@ sources."
                    (rest x)))
           (cdr all-system-files-form))))
 
-(defgeneric req-to-sexp (req)
-  (:documentation
-   "Return a list representing ~req~ suitable for writing to a file."))
-
-(defmethod req-to-sexp ((req project-requirement))
-  `(:req ,(requirement/name req)
-    :type :project
-    :version (,(car (requirement/version-spec req))
-              ,(cdr (requirement/version-spec req)))
-    ,@(when-let ((source (requirement/source req)))
-        (list :source (source/name source)))))
-
-(defmethod req-to-sexp ((req system-requirement))
-  `(:req ,(requirement/name req)
-    :type :system
-    :version (,(car (requirement/version-spec req))
-              ,(cdr (requirement/version-spec req)))
-    ,@(when-let ((source (requirement/source req)))
-        (list :source (source/name source)))))
-
-(defgeneric repo-to-sexp (repo req))
-
-(defmethod repo-to-sexp ((repo gitlab-repo) req)
-  `(:gitlab
-    :host ,(gitlab-repo-host repo)
-    :path ,(gitlab-repo-path repo)
-    ,@(awhen (requirement/branch req)
-        `(:branch ,it))
-    ,@(awhen (requirement/commit req)
-        `(:commit ,it))
-    ,@(awhen (requirement/tag req)
-        `(:tag ,it))
-    ,@(awhen (requirement/systems req)
-        `(:systems ,it))))
-
-(defmethod req-to-sexp ((req vcs-project-requirement))
-  `(:req ,(requirement/name req)
-    :type :vcs
-    :vcs-type ,@(repo-to-sexp (requirement/repo req) req)))
-
 (defun lockfile-system-file-sexps (lockfile)
   "Return a list of system file statements from ~lockfile~ suitable for writing
 to a file."
@@ -452,7 +436,7 @@ to a file."
              :stream stream)
       (terpri stream)
 
-      (write `(:user-reqs ,@(mapcar #'req-to-sexp (clpmfile/user-requirements clpmfile)))
+      (write `(:user-reqs ,@(clpmfile/user-raw-requirements clpmfile))
              :stream stream
              :pretty t
              :right-margin 120)
