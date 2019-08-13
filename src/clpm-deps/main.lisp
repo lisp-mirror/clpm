@@ -4,9 +4,14 @@
 ;;;; LICENSE for license information.
 
 (uiop:define-package #:clpm-deps/main
-    (:use #:cl)
+    (:nicknames #:clpm-deps)
+  (:use #:cl)
   (:import-from #:uiop
-                #:pathname-equal))
+                #:pathname-equal)
+  (:export #:determine-systems-from-file
+           #:safe-load-asd
+           #:start-rel
+           #:system-direct-deps))
 
 (in-package #:clpm-deps/main)
 
@@ -85,3 +90,12 @@ if an unknown error occurred, the third is a missing system."
                           (system-source-file (asdf:system-source-file system)))
                      (pathname-equal asd-pathname system-source-file)))
                  (asdf:registered-systems)))
+
+(defun start-rel ()
+  "Some lisp's like to always print a prompt at their REPL. To avoid needing to
+handle skipping this prompt when READ'ing the groveler's output, we run our own
+REL (READ EVAL LOOP) instead. All prints must be explcit."
+  (loop
+    (let ((input (read)))
+      (eval input)
+      (finish-output))))

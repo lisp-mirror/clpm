@@ -9,6 +9,7 @@
           #:clpm/cli/client
           #:clpm/cli/config
           #:clpm/cli/entry
+          #:clpm/cli/grovel
           #:clpm/cli/install
           #:clpm/cli/license-info
           #:clpm/cli/sync))

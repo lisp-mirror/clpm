@@ -9,6 +9,7 @@
           #:split-sequence)
   (:export #:*live-script-location*
            #:ensure-uri-scheme-https!
+           #:mktemp
            #:retriable-error
            #:run-program-augment-env-args
            #:uri-to-string
@@ -43,6 +44,17 @@ process."
 
 #-sbcl
 (defun run-program-augment-env-args (new-env-alist)
+  (error "not implemented"))
+
+#+(and sbcl unix)
+(defun mktemp ()
+  "Make a temporary directory and return its pathname."
+  (let ((template-pathname (merge-pathnames "clpm-XXXXXX"
+                                            (uiop:temporary-directory))))
+    (uiop:ensure-directory-pathname (sb-posix:mkdtemp (namestring template-pathname)))))
+
+#-(and sbcl unix)
+(defun mktemp ()
   (error "not implemented"))
 
 (defun uri-to-string (uri)

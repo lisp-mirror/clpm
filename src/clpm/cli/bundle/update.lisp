@@ -31,45 +31,12 @@
     *bundle-arguments*
     *common-arguments*))
 
-(defun ensure-vcs-req-installed-and-rewrite-req (req)
-  "Given a VCS requirement, install it and return a new requirement on the
-correct commit."
-  (let* ((project-name (requirement/name req))
-         (branch (requirement/branch req))
-         (commit (requirement/commit req))
-         (tag (requirement/tag req))
-         (source (requirement/source req))
-         (vcs-project (source/project source project-name))
-         (vcs-release (project/release vcs-project
-                                       (cond
-                                         (commit
-                                          `(:commit ,commit))
-                                         (branch
-                                          `(:branch ,branch))
-                                         (tag
-                                          `(:tag ,tag))))))
-    (install-release vcs-release)
-    (make-instance 'vcs-project-requirement
-                   :commit (vcs-release/commit vcs-release)
-                   :repo (requirement/repo req)
-                   :source (requirement/source req)
-                   :name (requirement/name req)
-                   :systems (requirement/systems req)
-                   :system-files (requirement/system-files req))))
-
 (defun build-lockfile (clpmfile)
   "Given a clpmfile instance, make a lockfile instance for it."
   (let* ((sources (clpmfile/sources clpmfile))
          (user-global-sources (clpmfile/user-global-sources clpmfile))
-         (raw-reqs (clpmfile/all-requirements clpmfile))
-         reqs)
+         (reqs (clpmfile/all-requirements clpmfile)))
     (mapc #'sync-source user-global-sources)
-    ;; Make sure all git releases are installed and replace their requirements
-    ;; with a requirement on the commit.
-    (dolist (r raw-reqs)
-      (if (typep r 'vcs-requirement)
-          (push (ensure-vcs-req-installed-and-rewrite-req r) reqs)
-          (push r reqs)))
 
     ;; Resolve the requirements!
     (multiple-value-bind (releases-to-install system-releases)

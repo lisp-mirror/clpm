@@ -36,7 +36,7 @@ objects (like pathnames).")
    (source
     :initarg :source
     :initform nil
-    :reader requirement/source
+    :accessor requirement/source
     :documentation
     "If non-NIL, the requirement must be satisfied using releases provided by
 this source."))
@@ -56,7 +56,7 @@ this source."))
 (defclass vcs-requirement (requirement)
   ((repo
     :initarg :repo
-    :initform (error "Repo must be provided")
+    :initform nil
     :reader requirement/repo
     :documentation
     "The repo object describing the upstream repo for this requirement.")

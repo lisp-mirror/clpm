@@ -170,6 +170,16 @@ or raise an error if it does not exist."
                                                (second version)))))
     (push req (clpmfile/user-requirements clpmfile))))
 
+(defun parse-project-statement (clpmfile name
+                                &key source branch)
+  (push (make-instance 'vcs-project-requirement
+                       :name (string-downcase (string name))
+                       :source (when source
+                                 (find-source-or-error (clpmfile/user-global-sources clpmfile)
+                                                       source))
+                       :branch branch)
+        (clpmfile/user-requirements clpmfile)))
+
 (defun parse-system-statement (clpmfile name &key source)
   "Parse a ~:system~ statement from a ~clpmfile~ into a ~system-requirement~
 instance."
@@ -229,10 +239,10 @@ sources."
     (error "The first form must be a list"))
   (unless (eql :api-version (first (first forms)))
     (error "The first form must specify the api version"))
-  (unless (equal '(:api-version "0.1") (first forms))
-    (error "This only supports api version 0.1"))
+  (unless (equal '(:api-version "0.2") (first forms))
+    (error "This only supports api version 0.2"))
   (pop forms)
-  ;; Now that we know we're using api version 0.1, let's make sure everything
+  ;; Now that we know we're using api version 0.2, let's make sure everything
   ;; left is a list.
   (unless (every #'listp forms)
     (error "Every form must be a list."))
@@ -255,6 +265,8 @@ sources."
        (apply #'parse-gitlab-statement clpmfile args))
       (:system
        (apply #'parse-system-statement clpmfile args))
+      (:project
+       (apply #'parse-project-statement clpmfile args))
       (:req
        (apply #'parse-req-statement clpmfile args))
       (:asd
@@ -314,10 +326,10 @@ sources."
     (error "The first form must be a list"))
   (unless (eql :api-version (first (first forms)))
     (error "The first form must specify the api version"))
-  (unless (equal '(:api-version "0.1") (first forms))
-    (error "This version of CLPM only supports api version 0.1"))
+  (unless (equal '(:api-version "0.2") (first forms))
+    (error "This version of CLPM only supports api version 0.2"))
   (pop forms)
-  ;; Now that we know we're using API version 0.1, let's make sure everything
+  ;; Now that we know we're using API version 0.2, let's make sure everything
   ;; left is a list.
   (unless (every #'listp forms)
     (error "every form must be a list."))
@@ -429,7 +441,7 @@ to a file."
       (write-string ";;; -*- mode: common-lisp -*-" stream)
       (terpri stream)
 
-      (write '(:api-version "0.1") :stream stream)
+      (write '(:api-version "0.2") :stream stream)
       (terpri stream)
 
       (write `(:user-global-sources ,@(mapcar #'source-to-form (clpmfile/user-global-sources clpmfile)))

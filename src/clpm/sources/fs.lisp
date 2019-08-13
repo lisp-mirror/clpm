@@ -7,7 +7,7 @@
 (uiop:define-package #:clpm/sources/fs
     (:use #:cl
           #:alexandria
-          #:clpm/deps
+          #:clpm/groveler
           #:clpm/requirement
           #:clpm/sources/defs
           #:clpm/sources/semantic-versioned-project)
@@ -189,7 +189,8 @@ contains."
   (unless (fs-system-file/groveled-p system-file)
     ;; Sigh. We need to grovel the file to make sure we know everything it
     ;; defines.
-    (let ((systems-in-file (grovel-systems-in-file (system-file/absolute-asd-pathname system-file)))
+    (active-groveler-ensure-asd-loaded! (system-file/absolute-asd-pathname system-file))
+    (let ((systems-in-file (active-groveler-systems-in-file (system-file/absolute-asd-pathname system-file)))
           (source (system-file/source system-file)))
       (dolist (system-name systems-in-file)
         ;; Call these for effect to make sure they're created.
@@ -251,8 +252,8 @@ include it."
 
 (defun grovel-system-release! (system-release)
   "Invoke the groveler to get info on this system."
-  (let ((info (grovel-system-info (system-release/absolute-asd-pathname system-release)
-                                  (system/name (system-release/system system-release)))))
+  (active-groveler-ensure-asd-loaded! (system-release/absolute-asd-pathname system-release))
+  (let ((info (active-groveler-system-deps (system/name (system-release/system system-release)))))
     (parse-system-release-info-from-groveler! system-release info)))
 
 (defmethod slot-unbound (class (system-release fs-system-release) (slot-name (eql 'version)))
