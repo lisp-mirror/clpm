@@ -2,7 +2,7 @@
 #
 # This software is part of CLPM. See README.org for more information. See
 # LICENSE for license information.
-FROM daewok/sbcl:1.5.2-debian-build as sbcl-builder
+FROM daewok/sbcl:1.5.5-debian-build as sbcl-builder
 
 COPY customize-target-features.lisp /usr/local/src/sbcl-${SBCL_VERSION}/
 
