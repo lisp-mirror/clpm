@@ -55,7 +55,14 @@
     (log:info "clpmfile located at ~S" clpmfile-pathname)
     ;; Get the lock file
     (if (probe-file lockfile-pathname)
-        (setf lockfile (read-lockfile lockfile-pathname))
+        (handler-bind
+            ((source-no-such-object
+               (lambda (c)
+                 (declare (ignore c))
+                 (when (find-restart 'sync-and-retry)
+                   (log:info "Syncing source and retrying")
+                   (invoke-restart 'sync-and-retry)))))
+          (setf lockfile (read-lockfile lockfile-pathname)))
         (progn
           ;; The lock file doesn't exist. Create it!
           (log:info "syncing sources")
