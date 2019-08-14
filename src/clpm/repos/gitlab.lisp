@@ -46,7 +46,8 @@
     out))
 
 (defmethod git-repo-uri-string ((repo gitlab-repo))
-  (ecase (gitlab-repo-config repo :method)
+  (ecase (or (gitlab-repo-config repo :method)
+             :https)
     (:https
      (uiop:strcat "https://" (gitlab-repo-host repo) "/" (gitlab-repo-path repo) ".git"))
     (:ssh
