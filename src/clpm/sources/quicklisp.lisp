@@ -561,13 +561,13 @@
 strings to distinfo.txt urls."
   (let ((versions-pathname (merge-pathnames "metadata/distinfo-versions.txt"
                                             (source/cache-directory source))))
-    (when (ensure-file-fetched versions-pathname (ql-versions-url source))
-      (let ((versions-lines (uiop:read-file-lines versions-pathname)))
-        (mapcar (lambda (l)
-                  (destructuring-bind (version url)
-                      (split-sequence #\Space l)
-                    (cons version url)))
-                versions-lines)))))
+    (ensure-file-fetched versions-pathname (ql-versions-url source))
+    (let ((versions-lines (uiop:read-file-lines versions-pathname)))
+      (mapcar (lambda (l)
+                (destructuring-bind (version url)
+                    (split-sequence #\Space l)
+                  (cons version url)))
+              versions-lines))))
 
 (defun sync-version-list! (source)
   "Given a ~source~, sync the known versions of this distribution."
