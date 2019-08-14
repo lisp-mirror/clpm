@@ -220,7 +220,7 @@ ref is present locally, fetching or cloning the repo as necessary."
   (let ((local-dir (git-repo-local-dir repo)))
     (if (uiop:probe-file* local-dir)
         ;; Repo is present, need to fetch if the ref is not present.
-        (unless (ref-present-p repo :commit commit :tag tag :branch branch)
+        (when (or branch (not (ref-present-p repo :commit commit :tag tag)))
           (with-retries (:max 5 :sleep 2)
             (fetch-repo! repo))
           ;; Make sure the ref is actually present, raising an error otherwise.
