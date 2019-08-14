@@ -48,9 +48,11 @@
            #:source/systems
            #:source/url
            #:source-context-pathname
+           #:source-no-such-object
            #:source-source-registry-cache-pathname
            #:source-to-form
            #:source-type-keyword
+           #:sync-and-retry
            #:sync-source
            #:system/name
            #:system/system-releases
@@ -75,6 +77,12 @@
            #:system-version))
 
 (in-package #:clpm/sources/defs)
+
+
+;; * Conditions
+
+(define-condition source-no-such-object ()
+  ())
 
 
 ;; * Sources
@@ -135,8 +143,11 @@ initargs and a :type as a keyword."))
   (:documentation "Return an instance of CLPM-PROJECT or NIL if the project is
 not located in the source."))
 
-(defgeneric source/project-release (source project-name version-string)
-  (:documentation "Return a release object for the specified project and version."))
+(defgeneric source/project-release (source project-name version-string &optional error)
+  (:documentation
+   "Return a release object for the specified project and version. If error is
+t (default), a ~source-no-such-object~ error is signaled. If possible, the
+source implementation should provide a ~sync-and-retry~ restart."))
 
 (defgeneric source/system (source system-name)
   (:documentation "Return an instance of CLPM-SYSTEM or NIL if the system is not

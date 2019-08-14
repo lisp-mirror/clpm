@@ -130,11 +130,23 @@
      ,@(split-sequence #\/ (uri-path (source/url source)) :remove-empty-subseqs t))
    :ensure-directory t))
 
-(defmethod source/project-release ((source quicklisp-source) project-name version-string)
+(defun %source/project-release (source project-name version-string
+                                &optional (error t))
   (with-source-connection (source)
-    (find-dao 'ql-release
-              :project-name project-name
-              :dist-version-id version-string)))
+    (or (find-dao 'ql-release
+                  :project-name project-name
+                  :dist-version-id version-string)
+        (when error
+          (error 'source-no-such-object)))))
+
+(defmethod source/project-release ((source quicklisp-source) project-name version-string
+                                   &optional (error t))
+    (restart-case
+        (%source/project-release source project-name version-string error)
+      (sync-and-retry ()
+        :report "Sync source and try again."
+        (sync-source source)
+        (%source/project-release source project-name version-string error))))
 
 (defmethod source/project ((source quicklisp-source) project-name)
   (with-source-connection (source)
