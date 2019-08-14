@@ -265,6 +265,9 @@
   (with-source-connection ((db-backed-object-source p))
     (retrieve-dao 'ql-release :project-name (ql-project-name p))))
 
+(defmethod project/source ((p ql-project))
+  (db-backed-object-source p))
+
 
 ;;; * Releases
 
