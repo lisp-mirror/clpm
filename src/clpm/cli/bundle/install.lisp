@@ -61,7 +61,7 @@
                  (declare (ignore c))
                  (when (find-restart 'sync-and-retry)
                    (log:info "Syncing source and retrying")
-                   (invoke-restart 'sync-and-retry)))))
+                   (invoke-restart 'sync-and-retry c)))))
           (setf lockfile (read-lockfile lockfile-pathname)))
         (progn
           ;; The lock file doesn't exist. Create it!

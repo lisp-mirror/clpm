@@ -49,6 +49,13 @@
 ;;; The data for Quicklisp distributions is stored in a sqlite database.
 
 
+;;; * Quicklisp conditions
+
+(define-condition quicklisp-version-missing (source-no-such-object)
+  ((missing-version
+    :initarg :missing-version)))
+
+
 ;;; * Quicklisp backed source
 
 (defclass quicklisp-source (clpm-source db-backed-source)
@@ -137,15 +144,18 @@
                   :project-name project-name
                   :dist-version-id version-string)
         (when error
-          (error 'source-no-such-object)))))
+          (error 'quicklisp-version-missing
+                 :missing-version version-string)))))
 
 (defmethod source/project-release ((source quicklisp-source) project-name version-string
                                    &optional (error t))
     (restart-case
         (%source/project-release source project-name version-string error)
-      (sync-and-retry ()
+      (sync-and-retry (c)
         :report "Sync source and try again."
-        (sync-source source)
+        (sync-version-list! source)
+        (with-source-connection (source)
+          (sync-version! (find-dao 'ql-dist-version :id (slot-value c 'missing-version))))
         (%source/project-release source project-name version-string error))))
 
 (defmethod source/project ((source quicklisp-source) project-name)
