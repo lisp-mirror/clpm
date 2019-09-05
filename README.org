@@ -81,8 +81,6 @@ is still a little rough around the edges and it may accidentally eat your files.
     needed if you use bundles).
   + openssl :: Needed if accessing sources over https *and* compiling from
     source or using the dynamically linked version.
-  + sqlite :: Needed if compiling from source or using the dynamically linked
-    version.
 
   After installing CLPM core, it is recommended you also install the CLPM client
   (see [[file:doc/client.org][client.org]]), but it is not needed for the quickstart.

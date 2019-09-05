@@ -33,7 +33,6 @@
     (o (s (eql (find-system "clpm-exec/dynamic-libs"))))
   "Prevent cl-ssl from loading the foreign libraries at build time."
   `(:cl+ssl-foreign-libs-already-loaded
-    :cl-sqlite-foreign-libs-already-loaded
     ,@(when (uiop:os-windows-p)
         `(:drakma-no-ssl))))
 
@@ -41,7 +40,7 @@
     (o (s (eql (find-system "clpm-exec/dynamic-libs"))))
   "The libraries are not truly loaded, we just tricked cl+ssl, so remove that
 feature on dump."
-  (list :cl+ssl-foreign-libs-already-loaded :cl-sqlite-foreign-libs-already-loaded))
+  (list :cl+ssl-foreign-libs-already-loaded))
 
 (defsystem #:clpm-exec/static-libs
   :license "BSD-2-Clause"
@@ -70,12 +69,10 @@ feature on dump."
      :for lib :in `(,(first (input-files o s))
                     ,@(unless (uiop:os-windows-p)
                         '("-l:libcrypto.a"
-                          "-l:libssl.a"))
-                    "-l:libsqlite3.a")
+                          "-l:libssl.a")))
      :appending (cffi-toolchain::link-all-library lib))))
 
 (defmethod cffi-toolchain:static-image-new-features (o (s (eql (find-system "clpm-exec/static-libs"))))
   `(:cl+ssl-foreign-libs-already-loaded
-    :cl-sqlite-foreign-libs-already-loaded
     ,@(when (uiop:os-windows-p)
         '(:drakma-no-ssl))))

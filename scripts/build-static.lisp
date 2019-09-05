@@ -24,7 +24,6 @@
   ;; (require :sb-bsd-sockets)
   ;; By default, openssl is ~useless on Windows. Don't build it until we can
   ;; figure out how to make it use the OS' certificate store.
-  (pushnew :drakma-no-ssl *features*)
-  (pushnew :cl-sqlite-foreign-libs-already-loaded *features*))
+  (pushnew :drakma-no-ssl *features*))
 
 (asdf:make :clpm-exec/static-libs)

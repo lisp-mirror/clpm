@@ -10,7 +10,7 @@ RUN rebuild-sbcl
 
 FROM debian:stretch
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends build-essential libssl1.0-dev libz-dev libsqlite3-dev \
+    && apt-get install -y --no-install-recommends build-essential libssl1.0-dev libz-dev \
     && rm -rf /var/lists/apt
 
 COPY --from=sbcl-builder /usr/local/bin/sbcl /usr/local/bin/sbcl

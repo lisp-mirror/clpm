@@ -19,6 +19,3 @@
   :entry-point "clpm/cli/entry:main"
   :depends-on (#:clpm/clpm)
   :in-order-to ((prepare-op (build-op :clpm-client))))
-
-(asdf:register-system-packages :mito-core '(:mito.core))
-(asdf:register-system-packages :dbd-sqlite3 '(:dbd.sqlite3))
