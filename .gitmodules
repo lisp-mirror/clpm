@@ -100,36 +100,9 @@
 [submodule "ext/lparallel"]
 	path = ext/lparallel
 	url = https://github.com/lmj/lparallel.git
-[submodule "ext/cl-sqlite"]
-	path = ext/cl-sqlite
-	url = https://github.com/daewok/cl-sqlite.git
-[submodule "ext/sxql"]
-	path = ext/sxql
-	url = https://github.com/fukamachi/sxql.git
-[submodule "ext/optima"]
-	path = ext/optima
-	url = https://github.com/m2ym/optima.git
 [submodule "ext/closer-mop"]
 	path = ext/closer-mop
 	url = https://github.com/pcostanza/closer-mop.git
-[submodule "ext/cl-annot"]
-	path = ext/cl-annot
-	url = https://github.com/m2ym/cl-annot.git
-[submodule "ext/mito"]
-	path = ext/mito
-	url = https://github.com/fukamachi/mito.git
-[submodule "ext/cl-dbi"]
-	path = ext/cl-dbi
-	url = https://github.com/fukamachi/cl-dbi.git
-[submodule "ext/dissect"]
-	path = ext/dissect
-	url = https://github.com/Shinmera/dissect.git
-[submodule "ext/cl-reexport"]
-	path = ext/cl-reexport
-	url = https://github.com/takagi/cl-reexport.git
-[submodule "ext/uuid"]
-	path = ext/uuid
-	url = https://github.com/dardoria/uuid.git
 [submodule "ext/ironclad"]
 	path = ext/ironclad
 	url = https://github.com/sharplispers/ironclad.git
@@ -154,3 +127,15 @@
 [submodule "ext/lisp-invocation"]
 	path = ext/lisp-invocation
 	url = https://gitlab.common-lisp.net/qitab/lisp-invocation.git
+[submodule "ext/cl-conspack"]
+	path = ext/cl-conspack
+	url = https://github.com/daewok/cl-conspack.git
+[submodule "ext/ieee-floats"]
+	path = ext/ieee-floats
+	url = https://github.com/marijnh/ieee-floats.git
+[submodule "ext/fast-io"]
+	path = ext/fast-io
+	url = https://github.com/rpav/fast-io.git
+[submodule "ext/static-vectors"]
+	path = ext/static-vectors
+	url = https://github.com/sionescu/static-vectors.git

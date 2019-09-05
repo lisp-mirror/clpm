@@ -13,19 +13,18 @@
           #:clpm/log
           #:clpm/repos
           #:clpm/requirement
-          #:clpm/sources/db-backed
           #:clpm/sources/defs
           #:clpm/sources/simple-versioned-project
           #:clpm/sources/tarball-release
           #:clpm/sources/vcs
           #:clpm/utils
-          #:split-sequence
-          #:sxql)
+          #:split-sequence)
   (:import-from #:puri
                 #:parse-uri
                 #:uri-path
                 #:uri-scheme
                 #:uri-host)
+  (:import-from #:cl-conspack)
   (:export #:clpi-source))
 
 (uiop:define-package #:clpm/sources/clpi-index-file
@@ -38,25 +37,39 @@
 
 ;;; * Source
 
-(defclass clpi-source (clpm-source db-backed-source)
-  ())
+(defclass clpi-source (clpm-source)
+  ((project-ht
+    :initform (make-hash-table :test 'equal)
+    :accessor clpi-source-project-ht)
+   (system-ht
+    :initform (make-hash-table :test 'equal)
+    :accessor clpi-source-system-ht)))
 
-(defclass clpi-source-meta (db-backed-source-meta)
-  ()
-  (:metaclass dao-table-class))
+(defmethod initialize-instance :after ((source clpi-source) &key &allow-other-keys)
+  ;; Load the synced files if they exist.
+  (let ((pn (merge-pathnames "clpi-source.conspack"
+                             (source/lib-directory source))))
+    (when (probe-file pn)
+      (with-open-file (s pn
+                         :element-type '(unsigned-byte 8))
+        (assert (= 1 (cpk:decode-stream s)))
+        (let ((*active-source* source))
+          (cpk:tracking-refs ()
+            (setf (clpi-source-project-ht source) (cpk:decode-stream s))
+            (setf (clpi-source-system-ht source) (cpk:decode-stream s))))))))
 
-(defmethod db-source-table-names ((source clpi-source))
-  '(clpi-source-meta clpi-project clpi-release
-    clpi-system clpi-system-release))
-
-(defmethod db-source-indices ((source clpi-source))
-  '((:key_clpi-release_project-name_version
-     :clpi_release :project_name :version)
-    (:key_clpi-system-release_release-id_system-name
-     :clpi_system_release :release_id :system_name)))
-
-(defmethod db-source-meta-class-name ((source clpi-source))
-  'clpi-source-meta)
+(defun save-clpi-source! (source)
+  (let ((pn (merge-pathnames "clpi-source.conspack"
+                             (source/lib-directory source))))
+    (ensure-directories-exist pn)
+    (with-open-file (s pn
+                       :if-exists :supersede
+                       :direction :output
+                       :element-type '(unsigned-byte 8))
+      (cpk:encode 1 :stream s)
+      (cpk:tracking-refs ()
+        (cpk:encode (clpi-source-project-ht source) :stream s)
+        (cpk:encode (clpi-source-system-ht source) :stream s)))))
 
 (defun clpi-source-index-url (source)
   (let* ((base-url (source/url source))
@@ -87,12 +100,10 @@
    :ensure-directory t))
 
 (defmethod source/project ((source clpi-source) project-name)
-  (with-source-connection (source)
-    (find-dao 'clpi-project :name project-name)))
+  (gethash project-name (clpi-source-project-ht source)))
 
 (defmethod source/system ((source clpi-source) system-name)
-  (with-source-connection (source)
-    (find-dao 'clpi-system :name system-name)))
+  (gethash system-name (clpi-source-system-ht source)))
 
 (defmethod source-to-form ((source clpi-source))
   (list (source/name source)
@@ -102,57 +113,49 @@
 
 ;;; * Projects
 
-(defclass clpi-project (db-backed-mixin)
-  ((name
+(defclass clpi-project ()
+  ((source
+    :initarg :source
+    :reader clpi-project-source
+    :reader project/source
+    :documentation
+    "The source of the project.")
+   (name
     :initarg :name
     :accessor clpi-project-name
     :reader project/name
-    :col-type :text
-    :primary-key t
-    :reader object-id
     :documentation
     "The name of the project.")
    (repo-type
     :initarg :repo-type
     :initform nil
     :accessor clpi-project-repo-type
-    :col-type (or :text :null)
-    :deflate (lambda (x)
-               (uiop:with-safe-io-syntax ()
-                 (prin1-to-string x)))
-    :inflate (lambda (x)
-               (uiop:with-safe-io-syntax ()
-                 (read-from-string x)))
     :documentation
     "The type of the upstream repo.")
    (repo-args
     :initarg :repo-args
     :initform nil
-    :accessor clpi-project-repo-args
-    :col-type (or :text :null)
-    :deflate (lambda (x)
-               (uiop:with-safe-io-syntax ()
-                 (prin1-to-string x)))
-    :inflate (lambda (x)
-               (uiop:with-safe-io-syntax ()
-                 (read-from-string x)))))
-  (:metaclass dao-table-class)
-  (:record-timestamps nil)
+    :accessor clpi-project-repo-args)
+   (release-ht
+    :initform (make-hash-table :test 'equal)
+    :reader clpi-project-release-ht
+    :documentation
+    "Maps version strings to ~clpi-release~ objects."))
   (:documentation
    "Represents a project in a CLPI source."))
 
-(defmethod project/source ((p clpi-project))
-  (db-backed-object-source p))
+(cpk:defencoding clpi-project
+  name repo-type repo-args release-ht)
+
+(defmethod cpk:decode-object :around ((class (eql 'clpi-project)) alist &key &allow-other-keys)
+  (aprog1 (call-next-method)
+    (setf (slot-value it 'source) *active-source*)))
 
 (defmethod project/release ((p clpi-project) (version string))
-  (with-source-connection ((db-backed-object-source p))
-    (find-dao 'clpi-release
-              :project-name (clpi-project-name p)
-              :version version)))
+  (gethash version (clpi-project-release-ht p)))
 
 (defmethod project/releases ((p clpi-project))
-  (with-source-connection ((db-backed-object-source p))
-    (retrieve-dao 'clpi-release :project-name (clpi-project-name p))))
+  (hash-table-values (clpi-project-release-ht p)))
 
 (defmethod project/repo ((p clpi-project))
   (let ((repo-type (clpi-project-repo-type p))
@@ -162,132 +165,133 @@
 
 ;;; * Releases
 
-(defclass clpi-release (db-backed-mixin
-                        tarball-release
+(defclass clpi-release (tarball-release
                         simple-versioned-release)
-  ((project-name
-    :initarg :project-name
-    :accessor clpi-release-project-name
-    :col-type :text
+  ((source
+    :initarg :source
+    :accessor clpi-release-source
+    :reader release/source
     :documentation
-    "The name of the project to which this release corresponds.")
+    "The source of the release.")
+   (project
+    :initarg :project
+    :accessor clpi-release-project
+    :reader release/project
+    :documentation
+    "The project to which this release corresponds.")
    (version
     :reader release/version
     :initarg :version
-    :col-type :text
     :documentation
     "The version of this release.")
    (prefix
     :accessor clpi-release-prefix
     :initarg :prefix
-    :col-type :text
     :documentation
     "The prefix of all files in the tarball.")
    (url
     :accessor clpi-release-url
     :reader tarball-release/url
     :initarg :url
-    :col-type :text
-    :deflate (lambda (x)
-               (uri-to-string x))
-    :inflate (lambda (x)
-               (parse-uri x))
     :documentation
-    "The URL where the tarball for this release is located."))
-  (:metaclass dao-table-class)
-  (:record-timestamps nil)
+    "The URL where the tarball for this release is located.")
+   (system-release-ht
+    :initform (make-hash-table :test 'equal)
+    :reader clpi-release-system-release-ht
+    :documentation
+    "Maps system names to ~clpi-system-release~ objects."))
   (:documentation
    "Represents a release of a project."))
 
+(cpk:defencoding clpi-release
+  project version prefix url system-release-ht)
+
+(defmethod cpk:decode-object :around ((class (eql 'clpi-release)) alist &key &allow-other-keys)
+  (aprog1 (call-next-method)
+    (setf (slot-value it 'source) *active-source*)))
+
 (defmethod release/lib-pathname ((r clpi-release))
-  (with-source-connection ((release/source r))
-    (uiop:resolve-absolute-location
-     (list (source/lib-directory (release/source r))
-           "projects"
-           (project/name (release/project r))
-           (clpi-release-prefix r))
-     :ensure-directory t)))
+  (uiop:resolve-absolute-location
+   (list (source/lib-directory (release/source r))
+         "projects"
+         (project/name (release/project r))
+         (clpi-release-prefix r))
+   :ensure-directory t))
 
 (defmethod release/system-releases ((release clpi-release))
-  (with-source-connection ((release/source release))
-    (retrieve-dao 'clpi-system-release :release-id (object-id release))))
-
-(defmethod release/project ((release clpi-release))
-  (with-source-connection ((release/source release))
-    (find-dao 'clpi-project :name (clpi-release-project-name release))))
+  (hash-table-values (clpi-release-system-release-ht release)))
 
 
 ;;; * Systems
 
-(defclass clpi-system (db-backed-mixin)
-  ((name
+(defclass clpi-system ()
+  ((source
+    :initarg :source
+    :accessor clpi-system-source
+    :reader system/source
+    :documentation
+    "The source of the system.")
+   (name
     :initarg :name
     :accessor system/name
-    :col-type :text
-    :primary-key t
-    :reader object-id
     :documentation
     "The name of the system."))
-  (:metaclass dao-table-class)
-  (:record-timestamps nil)
   (:documentation
    "An ASD system contained in a CLPI source."))
+
+(cpk:defencoding clpi-system
+  name)
+
+(defmethod cpk:decode-object :around ((class (eql 'clpi-system)) alist &key &allow-other-keys)
+  (aprog1 (call-next-method)
+    (setf (slot-value it 'source) *active-source*)))
 
 
 ;;; * System releases
 
-(defclass clpi-system-release (db-backed-mixin)
-  ((release-id
-    :initarg :release-id
-    :accessor clpi-system-release-release-id
-    :col-type :integer
+(defclass clpi-system-release ()
+  ((source
+    :initarg :source
+    :accessor clpi-system-release-source
+    :reader system-release/source
     :documentation
-    "The ID of the release to which the system release belongs.")
-   (system-name
-    :initarg :system-name
-    :accessor clpi-system-release-system-name
-    :col-type :text
+    "The source of the system release.")
+   (release
+    :initarg :release
+    :accessor clpi-system-release-release
+    :reader system-release/release
     :documentation
-    "The name of the system.")
+    "The release to which the system release belongs.")
+   (system
+    :initarg :system
+    :accessor clpi-system-release-system
+    :reader system-release/system
+    :documentation
+    "The system.")
    (system-version
     :initarg :system-version
     :accessor clpi-system-release-system-version
-    :col-type (or :text :null)
     :documentation
     "The version of this system at this release.")
    (depends-on
     :initarg :depends-on
     :accessor clpi-system-release-depends-on
-    :col-type :text
-    :deflate (lambda (x)
-               (uiop:with-safe-io-syntax ()
-                 (prin1-to-string x)))
-    :inflate (lambda (x)
-               (uiop:with-safe-io-syntax ()
-                 (read-from-string x)))
     :documentation
     "The list of dependencies this system has.")
    (system-file
     :initarg :system-file
     :accessor clpi-system-release-system-file
-    :col-type :text
     :documentation
     "The asd file in which this system is located."))
-  (:metaclass dao-table-class)
-  (:record-timestamps nil)
   (:documentation
    "A release of a system."))
 
-(defmethod system-release/source ((system-release clpi-system-release))
-  (db-backed-object-source system-release))
+(cpk:defencoding clpi-system-release
+  release system system-version depends-on system-file)
 
-(defmethod system-release/system ((system-release clpi-system-release))
-  (with-source-connection ((system-release/source system-release))
-    (find-dao 'clpi-system :name (clpi-system-release-system-name system-release))))
-
-(defmethod system-release/release ((system-release clpi-system-release))
-  (with-source-connection ((system-release/source system-release))
-    (find-dao 'clpi-release :id (clpi-system-release-release-id system-release))))
+(defmethod cpk:decode-object :around ((class (eql 'clpi-system-release)) alist &key &allow-other-keys)
+  (aprog1 (call-next-method)
+    (setf (slot-value it 'source) *active-source*)))
 
 (defmethod system-release/requirements ((system-release clpi-system-release))
   (let ((deps (remove-if (rcurry #'member (list "asdf" "uiop") :test #'string-equal)
@@ -305,80 +309,107 @@
 (defmethod sync-source ((source clpi-source))
   (let ((index-file (merge-pathnames "index.lisp"
                                      (source/cache-directory source))))
-    (when (ensure-file-fetched index-file (clpi-source-index-url source))
+    (ensure-file-fetched index-file (clpi-source-index-url source))
+    (when t ;;(ensure-file-fetched index-file (clpi-source-index-url source))
       (let ((*package* (find-package :clpm/sources/clpi-index-file))
             (*active-source* source))
-        (load index-file))))
+        (load index-file)
+        (save-clpi-source! source))))
   (values))
 
-(defun ensure-project (name repo)
-  (let ((existing-proj (find-dao 'clpi-project :name name)))
+(defun ensure-project (source name repo)
+  (aprog1
+      (ensure-gethash name (clpi-source-project-ht source)
+                      (make-instance 'clpi-project
+                                     :source source
+                                     :name name))
     (destructuring-bind (repo-type &rest repo-args) (or repo (list nil))
-      (when existing-proj
-        ;; Ensure the project's data is up to date.
-        (setf (clpi-project-repo-type existing-proj) repo-type
-              (clpi-project-repo-args existing-proj) repo-args)
-        (save-dao existing-proj))
-      (or existing-proj
-          (create-dao 'clpi-project
-                      :name name
-                      :repo-type repo-type
-                      :repo-args repo-args)))))
+      (setf (clpi-project-repo-type it) repo-type
+            (clpi-project-repo-args it) repo-args))))
 
-(defun ensure-release (project-name version prefix url)
-  (let ((existing-release (find-dao 'clpi-release
-                                    :project-name project-name
-                                    :version version)))
-    (when existing-release
-      ;; Ensure the release is up to date.
-      (setf (clpi-release-prefix existing-release) prefix
-            (clpi-release-url existing-release) (parse-uri url))
-      (save-dao existing-release))
-    (or existing-release
-        (create-dao 'clpi-release
-                    :project-name project-name
-                    :version version
-                    :prefix prefix
-                    :url (parse-uri url)))))
+(defun ensure-release (source project version prefix url)
+  (aprog1
+      (ensure-gethash version (clpi-project-release-ht project)
+                      (make-instance 'clpi-release
+                                     :source source
+                                     :version version
+                                     :project project))
+    (setf (clpi-release-prefix it) prefix
+          (clpi-release-url it) url)))
 
-(defun ensure-system-release (release-id system-name system-file system-version depends-on)
-  (let ((existing (find-dao 'clpi-system-release
-                            :release-id release-id
-                            :system-name system-name)))
-    (when existing
-      ;; Ensure the system release is up to date.
-      (setf (clpi-system-release-system-file existing) system-file
-            (clpi-system-release-system-version existing) system-version
-            (clpi-system-release-depends-on existing) depends-on)
-      (save-dao existing))
-    (or existing
-        (create-dao 'clpi-system-release
-                    :release-id release-id
-                    :system-name system-name
-                    :system-file system-file
-                    :system-version system-version
-                    :depends-on depends-on))))
+(defun ensure-system (source system-name)
+  (ensure-gethash system-name (clpi-source-system-ht source)
+                  (make-instance 'clpi-system
+                                 :source source
+                                 :name system-name)))
+
+(defun ensure-system-release (source release system-name system-file system-version depends-on)
+  (aprog1
+      (ensure-gethash system-name (clpi-release-system-release-ht release)
+                      (make-instance 'clpi-system-release
+                                     :source source
+                                     :release release))
+    (setf (clpi-system-release-system-version it) system-version
+          (clpi-system-release-depends-on it) depends-on
+          (clpi-system-release-system it) (ensure-system source system-name)
+          (clpi-system-release-system-file it) system-file)))
+
+;; (defun ensure-system-release (release-id system-name system-file system-version depends-on)
+;;   (let ((existing (find-dao 'clpi-system-release
+;;                             :release-id release-id
+;;                             :system-name system-name)))
+;;     (when existing
+;;       ;; Ensure the system release is up to date.
+;;       (setf (clpi-system-release-system-file existing) system-file
+;;             (clpi-system-release-system-version existing) system-version
+;;             (clpi-system-release-depends-on existing) depends-on)
+;;       (save-dao existing))
+;;     (or existing
+;;         (create-dao 'clpi-system-release
+;;                     :release-id release-id
+;;                     :system-name system-name
+;;                     :system-file system-file
+;;                     :system-version system-version
+;;                     :depends-on depends-on))))
 
 (defun ensure-project-defined (name &key repo releases)
-  (with-source-connection (*active-source*)
-    (let* ((name (string-downcase (string name)))
-           (proj (ensure-project name repo)))
-      (dolist (r-desc releases)
-        (destructuring-bind (version &key url tar-prefix ((:systems systems-desc)))
-            r-desc
-          (let ((release (ensure-release name version tar-prefix url)))
-            (dolist (s-desc systems-desc)
-              (destructuring-bind (system-name &key asd-pathname depends-on ((:version system-version)))
-                  s-desc
-                (ensure-system-release (object-id release) system-name
-                                       asd-pathname
-                                       system-version
-                                       depends-on)
-                (or (find-dao 'clpi-system
-                              :name system-name)
-                    (create-dao 'clpi-system
-                                :name system-name)))))))
-      proj)))
+  (let* ((name (string-downcase (string name)))
+         (proj (ensure-project *active-source* name repo)))
+    (dolist (r-desc releases)
+      (destructuring-bind (version &key url tar-prefix ((:systems systems-desc)))
+          r-desc
+        (let ((release (ensure-release *active-source* proj version tar-prefix url)))
+          (dolist (s-desc systems-desc)
+            (destructuring-bind (system-name &key asd-pathname depends-on ((:version system-version)))
+                s-desc
+              (ensure-system-release *active-source*
+                                     release
+                                     system-name
+                                     asd-pathname
+                                     system-version
+                                     depends-on))))))
+    proj))
+
+;; (defun ensure-project-defined (name &key repo releases)
+;;   (with-source-connection (*active-source*)
+;;     (let* ((name (string-downcase (string name)))
+;;            (proj (ensure-project name repo)))
+;;       (dolist (r-desc releases)
+;;         (destructuring-bind (version &key url tar-prefix ((:systems systems-desc)))
+;;             r-desc
+;;           (let ((release (ensure-release name version tar-prefix url)))
+;;             (dolist (s-desc systems-desc)
+;;               (destructuring-bind (system-name &key asd-pathname depends-on ((:version system-version)))
+;;                   s-desc
+;;                 (ensure-system-release (object-id release) system-name
+;;                                        asd-pathname
+;;                                        system-version
+;;                                        depends-on)
+;;                 (or (find-dao 'clpi-system
+;;                               :name system-name)
+;;                     (create-dao 'clpi-system
+;;                                 :name system-name)))))))
+;;       proj)))
 
 (in-package #:clpm/sources/clpi-index-file)
 

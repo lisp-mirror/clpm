@@ -17,6 +17,7 @@
            #:clpm-source
            #:clpm-system
            #:init-source-cache
+           #:project
            #:project/name
            #:project/release
            #:project/releases
@@ -74,7 +75,8 @@
            #:system-release/system-version
            #:system-release->
            #:system-release-satisfies-version-spec-p
-           #:system-version))
+           #:system-version
+           #:version))
 
 (in-package #:clpm/sources/defs)
 
