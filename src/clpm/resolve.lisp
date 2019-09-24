@@ -151,7 +151,9 @@
 
 (defun search-done-p (search-node)
   "Returns T iff the search is complete at SEARCH-NODE."
-  (null (search-state-unresolved-reqs (search-node-state search-node))))
+  (and (null (search-state-unresolved-reqs (search-node-state search-node)))
+       (null (search-state-unresolved-grovel-reqs (search-node-state search-node)))
+       (null (search-state-system-files-pending-groveling (search-node-state search-node)))))
 
 (defun search-node-load-asd-in-groveler! (search-node asd-pathname)
   "Load the asd file into the groveler. If the current groveler is
