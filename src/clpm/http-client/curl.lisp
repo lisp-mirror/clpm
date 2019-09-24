@@ -114,7 +114,6 @@ condition variable is notified."
              (bt:condition-notify cv)))
       (uiop:wait-process proc)
       (close (uiop:process-info-input proc))
-      (close (uiop:process-info-output proc))
       (close (uiop:process-info-error-output proc)))))
 
 (defmethod %http-request ((client curl-client) url
