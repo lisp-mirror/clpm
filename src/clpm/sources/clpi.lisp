@@ -34,6 +34,8 @@
 
 (setup-logger)
 
+(defvar *active-source* nil)
+
 
 ;;; * Source
 
@@ -303,8 +305,6 @@
 
 
 ;;; * Syncing
-
-(defvar *active-source* nil)
 
 (defmethod sync-source ((source clpi-source))
   (let ((index-file (merge-pathnames "index.lisp"
