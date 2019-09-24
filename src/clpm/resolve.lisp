@@ -283,6 +283,9 @@ incompatible, a new one is created."
                    ;; Add the deps we just computed.
                    (setf (search-state-unresolved-reqs new-search-state)
                          (append reqs (search-state-unresolved-reqs new-search-state)))))
+               ;; activate the system releases
+               (search-state-add-resolution! new-search-state (system-file/release sf)
+                                             system-releases nil)
                (lambda ()
                  (values new-search-node nil)))))))
       ((search-state-unresolved-reqs search-state)
