@@ -5,12 +5,13 @@
 
 (uiop:define-package #:clpm/clpm
     (:use #:cl
-          #:clpm/cli/bundle
-          #:clpm/cli/client
+          ;;#:clpm/cli/bundle
+          ;;#:clpm/cli/client
           #:clpm/cli/config
           #:clpm/cli/entry
-          #:clpm/cli/install
-          #:clpm/cli/license-info
-          #:clpm/cli/sync))
+          ;;#:clpm/cli/install
+          ;;#:clpm/cli/license-info
+          ;;#:clpm/cli/sync
+          ))
 
 (in-package #:clpm/clpm)
