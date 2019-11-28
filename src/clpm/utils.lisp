@@ -42,7 +42,11 @@ process."
                       inherited-env)))
     (list :environment env)))
 
-#-sbcl
+#+ccl
+(defun run-program-augment-env-args (new-env-alist)
+  (list :env new-env-alist))
+
+#-(or sbcl ccl)
 (defun run-program-augment-env-args (new-env-alist)
   (error "not implemented"))
 
