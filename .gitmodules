@@ -7,9 +7,6 @@
 [submodule "ext/alexandria"]
 	path = ext/alexandria
 	url = https://gitlab.common-lisp.net/alexandria/alexandria.git
-[submodule "ext/clon"]
-	path = ext/clon
-	url = https://github.com/didierverna/clon
 [submodule "ext/named-readtables"]
 	path = ext/named-readtables
 	url = https://github.com/melisgl/named-readtables
