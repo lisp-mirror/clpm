@@ -6,29 +6,27 @@
 (uiop:define-package #:clpm/cli/bundle/pathnames
     (:use #:cl
           #:clpm/cli/bundle/common
-          #:clpm/cli/entry
+          #:clpm/cli/common-args
+          #:clpm/cli/config/common
+          #:clpm/cli/subcommands
           #:clpm/clpmfile
           #:clpm/source)
-  (:import-from #:net.didierverna.clon
-                #:defsynopsis
-                #:make-context
-                #:getopt
-                #:remainder
-                #:help)
+  (:import-from #:adopt)
   (:export #:cli-bundle-pathnames))
 
 (in-package #:clpm/cli/bundle/pathnames)
 
-(defparameter *synopsis*
-  (defsynopsis (:make-default nil
-                :postfix "command")
-    (text :contents "bundle exec")
-    (text :contents
-          "Print out the pathnames to asd files that are part of the bundle.")
-    *bundle-arguments* *common-arguments*))
+(defparameter *bundle-pathnames-ui*
+  (adopt:make-interface
+   :name "clpm bundle pathnames"
+   :summary "Common Lisp Package Manager Bundle Pathnames"
+   :usage "bundle pathnames [options]"
+   :help "Print out the pathnames to asd files that are part of the bundle."
+   :contents (list *group-common*
+                   *group-bundle*)))
 
-(define-bundle-entry pathnames (*synopsis*)
-  (let* ((clpmfile-pathname (merge-pathnames (getopt :short-name "f")
+(define-cli-command (("bundle" "pathnames") *bundle-pathnames-ui*) (args options)
+  (let* ((clpmfile-pathname (merge-pathnames (gethash :bundle-file options)
                                              (uiop:getcwd)))
          (lockfile-pathname (merge-pathnames (make-pathname :type "lock")
                                              clpmfile-pathname))

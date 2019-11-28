@@ -19,4 +19,4 @@
    :help "Common Lisp Package Manager"
    :contents (list *group-common*)))
 
-(define-cli-command-folder ("config") *default-ui*)
+(define-cli-command-folder (("config") *default-ui*))

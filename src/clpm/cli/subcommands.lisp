@@ -21,7 +21,7 @@
 
 (defvar *commands* (make-hash-table :test 'equal))
 
-(defun ensure-ht-path (ht path &optional default-ui)
+(defun ensure-ht-path (ht path &optional default-ui thunk)
   (let ((next (if path
                   (ensure-gethash (pop path) ht
                                   (make-hash-table :test 'equal))
@@ -32,13 +32,16 @@
             (error "Expected another hash table!"))
           (ensure-ht-path next path default-ui))
         (progn
-          (when default-ui
-            (setf (gethash :ui next) default-ui))
+          (when (or default-ui thunk)
+            (setf (gethash :ui next) (list default-ui thunk)))
           next))))
 
-(defmacro define-cli-command-folder (path default-ui)
+(defmacro define-cli-command-folder ((path default-ui) &rest args-and-body)
   `(progn
-     (ensure-ht-path *commands* ',path ,default-ui)))
+     (ensure-ht-path *commands* ',path ,default-ui
+                     ,(when args-and-body
+                        `(lambda ,(first args-and-body)
+                           ,@(rest args-and-body))))))
 
 (defmacro define-cli-command ((path ui) args &body body)
   (let* ((function-name-string (apply
@@ -76,13 +79,19 @@
 (defun dispatch-subcommand (working-ht arguments options ui)
   (let* ((subcommand-name (first arguments))
          (dir-or-fun (gethash subcommand-name working-ht)))
+
     (cond
       ((and dir-or-fun
             (or (functionp dir-or-fun)
                 (symbolp dir-or-fun)))
        (funcall dir-or-fun))
       ((hash-table-p dir-or-fun)
-       (let ((default-ui (gethash :ui dir-or-fun)))
+       (destructuring-bind (default-ui thunk)
+           (gethash :ui dir-or-fun)
+         (when thunk
+           (multiple-value-bind (sub-args sub-options)
+               (adopt:parse-options default-ui)
+             (funcall thunk sub-args sub-options)))
          (dispatch-subcommand dir-or-fun (rest arguments) options default-ui)))
       ((gethash :help options)
        (adopt:print-help ui)

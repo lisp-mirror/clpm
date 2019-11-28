@@ -6,73 +6,39 @@
 (uiop:define-package #:clpm/cli/bundle/common
     (:use #:cl
           #:alexandria
-          #:clpm/cli/entry
+          #:clpm/cli/common-args
+          #:clpm/cli/subcommands
           #:clpm/config)
+  (:import-from #:adopt)
   (:import-from #:cl-ppcre)
-  (:import-from #:net.didierverna.clon
-                #:defsynopsis
-                #:defgroup
-                #:make-context
-                #:getopt
-                #:remainder
-                #:help)
-  (:export #:*bundle-arguments*
-           #:define-bundle-entry))
+  (:export #:*group-bundle*))
 
 (in-package #:clpm/cli/bundle/common)
 
-(defparameter *bundle-arguments*
-  (defgroup (:header "Bundle Common Options")
-    (path :short-name "f"
-          :type :file
-          :default-value #p"clpmfile"
-          :description "Path to the clpmfile")))
+(defparameter *option-file*
+  (adopt:make-option
+   :bundle-file
+   :short #\f
+   :parameter "FILE"
+   :initial-value "clpmfile"
+   :help "The path to the clpmfile"
+   :reduce #'adopt:last))
 
-(defvar *bundle-commands* nil)
+(defparameter *group-bundle*
+  (adopt:make-group
+   :bundle
+   :title "Bundle options"
+   :help "Common options for bundle commands"
+   :options (list *option-file*)))
 
-(defun register-bundle-command (name function)
-  (setf (assoc-value *bundle-commands* name :test 'equal) function))
-
-(defun dispatch-bundle-command (args)
-  (let* ((name (find-if (lambda (x)
-                          (not (eql #\- (aref x 0))))
-                        args))
-         (args (remove name args)))
-    (let ((function (assoc-value *bundle-commands* name :test 'equal)))
-      (cond
-        (function
-         (funcall function args))
-        (t
-         (print-bundle-help)
-         (uiop:quit))))))
-
-(defun print-bundle-help ()
-  (format *standard-output* "CLPM - Lisp Package Manager~%")
-  (when net.didierverna.clon:*context*
-    (help))
-  (format *standard-output*
-          "available bundle commands: ~{~A~^ ~}~%"
-	      (mapcar #'car *bundle-commands*)))
-
-(defun cli-bundle (args)
-  (dispatch-bundle-command args)
-  ;; ;; Before making the context, figure out which subcommand to run!
-  ;; (make-context :cmdline (list* (concatenate 'string (first (uiop:raw-command-line-arguments))
-  ;;                                            " bundle")
-  ;;                               args)
-  ;;               :synopsis *synopsis*)
-  ;; (process-common-arguments)
-
-
-  ;; (let ((packages-to-install (remainder))
-  ;;       (sources (load-sources)))
-  ;;   (dolist (clpm-package-name packages-to-install)
-  ;;     (install-requirement sources
-  ;;                          (make-instance 'requirement :clpm-package-name clpm-package-name)))
-  ;;   t)
-  )
-
-(register-command "bundle" 'cli-bundle)
+(defparameter *default-ui*
+  (adopt:make-interface
+   :name "clpm bundle"
+   :summary "Common Lisp Package Manager Bundle"
+   :usage "bundle [options] subcommand"
+   :help "Bundle commands"
+   :contents (list *group-common*
+                   *group-bundle*)))
 
 (defun merge-git-auth-config ()
   (let* ((env (mapcar (lambda (x)
@@ -102,26 +68,14 @@
                                         :test 'equal)))
                             :test 'equal))))
 
-(defmacro define-bundle-entry (name (synopsis) &body body)
-  (let ((fun-name (intern
-                   (concatenate 'string
-                                (uiop:standard-case-symbol-name :bundle-)
-                                (uiop:standard-case-symbol-name name))))
-        (bundle-name (string-downcase (symbol-name name)))
-        (args (gensym)))
-    `(progn
-       (defun ,fun-name (,args)
-         (make-context :cmdline (list* (concatenate 'string (first (uiop:raw-command-line-arguments))
-                                                    " bundle "
-                                                    ,bundle-name)
-                                       ,args)
-                       :synopsis ,synopsis)
-         (process-common-arguments)
-         (let ((local-config (merge-pathnames ".clpm/bundle.conf"
-                                              (uiop:getcwd))))
-           (when (probe-file local-config)
-             (merge-file-into-config! local-config))
-           (merge-git-auth-config))
-         (unless (progn ,@body)
-           (uiop:quit 1)))
-       (register-bundle-command ,bundle-name ',fun-name))))
+(define-cli-command-folder
+    (("bundle") *default-ui*)
+    (args options)
+    (declare (ignore args))
+    (let* ((clpmfile-path (merge-pathnames (gethash :bundle-file options)
+                                           (uiop:getcwd)))
+           (local-config (merge-pathnames ".clpm/bundle.conf"
+                                          (uiop:pathname-directory-pathname clpmfile-path))))
+      (when (probe-file local-config)
+        (merge-file-into-config! local-config))
+      (merge-git-auth-config)))

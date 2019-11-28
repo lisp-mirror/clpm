@@ -5,6 +5,7 @@
 
 (uiop:define-package #:clpm/cli/bundle
     (:use #:cl
+          #:clpm/cli/bundle/common
           #:clpm/cli/bundle/config
           #:clpm/cli/bundle/exec
           #:clpm/cli/bundle/install

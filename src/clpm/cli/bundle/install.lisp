@@ -6,30 +6,29 @@
 (uiop:define-package #:clpm/cli/bundle/install
     (:use #:cl
           #:clpm/cli/bundle/common
-          #:clpm/cli/entry
+          #:clpm/cli/common-args
+          #:clpm/cli/config/common
+          #:clpm/cli/subcommands
           #:clpm/clpmfile
           #:clpm/install
           #:clpm/log
           #:clpm/resolve
           #:clpm/requirement
           #:clpm/source)
-  (:import-from #:net.didierverna.clon
-                #:defsynopsis
-                #:make-context
-                #:getopt
-                #:remainder
-                #:help)
-  (:export #:cli-bundle-install))
+  (:import-from #:adopt))
 
 (in-package #:clpm/cli/bundle/install)
 
 (setup-logger)
 
-(defparameter *synopsis*
-  (defsynopsis (:make-default nil)
-    (text :contents "bundle install")
-    *bundle-arguments*
-    *common-arguments*))
+(defparameter *bundle-install-ui*
+  (adopt:make-interface
+   :name "clpm bundle install"
+   :summary "Common Lisp Package Manager Bundle Install"
+   :usage "bundle install [options]"
+   :help "Install a bundle"
+   :contents (list *group-common*
+                   *group-bundle*)))
 
 (defun build-lockfile (clpmfile)
   "Given a clpmfile instance, make a lockfile instance for it."
@@ -44,8 +43,8 @@
       (make-lockfile clpmfile (remove-duplicates
                                (mapcar #'system-release/system-file system-releases))))))
 
-(define-bundle-entry install (*synopsis*)
-  (let* ((clpmfile-pathname (merge-pathnames (getopt :short-name "f")
+(define-cli-command (("bundle" "install") *bundle-install-ui*) (args options)
+  (let* ((clpmfile-pathname (merge-pathnames (gethash :bundle-file options)
                                              (uiop:getcwd)))
          (lockfile-pathname (merge-pathnames (make-pathname :type "lock")
                                              clpmfile-pathname))
@@ -58,7 +57,6 @@
         (handler-bind
             ((source-no-such-object
                (lambda (c)
-                 (declare (ignore c))
                  (when (find-restart 'sync-and-retry)
                    (log:info "Syncing source and retrying")
                    (invoke-restart 'sync-and-retry c)))))

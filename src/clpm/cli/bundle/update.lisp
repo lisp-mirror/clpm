@@ -6,30 +6,29 @@
 (uiop:define-package #:clpm/cli/bundle/update
     (:use #:cl
           #:clpm/cli/bundle/common
-          #:clpm/cli/entry
+          #:clpm/cli/common-args
+          #:clpm/cli/config/common
+          #:clpm/cli/subcommands
           #:clpm/clpmfile
           #:clpm/install
           #:clpm/log
           #:clpm/resolve
           #:clpm/requirement
           #:clpm/source)
-  (:import-from #:net.didierverna.clon
-                #:defsynopsis
-                #:make-context
-                #:getopt
-                #:remainder
-                #:help)
   (:export #:cli-bundle-update))
 
 (in-package #:clpm/cli/bundle/update)
 
 (setup-logger)
 
-(defparameter *synopsis*
-  (defsynopsis (:make-default nil)
-    (text :contents "bundle update")
-    *bundle-arguments*
-    *common-arguments*))
+(defparameter *bundle-update-ui*
+  (adopt:make-interface
+   :name "clpm bundle update"
+   :summary "Common Lisp Package Manager Bundle Update"
+   :usage "bundle update [options]"
+   :help "Update a bundle"
+   :contents (list *group-common*
+                   *group-bundle*)))
 
 (defun build-lockfile (clpmfile)
   "Given a clpmfile instance, make a lockfile instance for it."
@@ -46,8 +45,8 @@
       (make-lockfile clpmfile (remove-duplicates
                                (mapcar #'system-release/system-file system-releases))))))
 
-(define-bundle-entry update (*synopsis*)
-  (let* ((clpmfile-pathname (merge-pathnames (getopt :short-name "f")
+(define-cli-command (("bundle" "update") *bundle-update-ui*) (args options)
+  (let* ((clpmfile-pathname (merge-pathnames (gethash :bundle-file options)
                                              (uiop:getcwd)))
          (lockfile-pathname (merge-pathnames (make-pathname :type "lock")
                                              clpmfile-pathname))

@@ -6,36 +6,40 @@
 (uiop:define-package #:clpm/cli/bundle/exec
     (:use #:cl
           #:clpm/cli/bundle/common
-          #:clpm/cli/entry
+          #:clpm/cli/common-args
+          #:clpm/cli/config/common
+          #:clpm/cli/subcommands
           #:clpm/client
           #:clpm/clpmfile
           #:clpm/execvpe
           #:clpm/log
           #:clpm/source
           #:clpm/utils)
-  (:import-from #:net.didierverna.clon
-                #:defsynopsis
-                #:make-context
-                #:getopt
-                #:remainder
-                #:help)
-  (:export #:cli-bundle-exec))
+  (:import-from #:adopt))
 
 (in-package #:clpm/cli/bundle/exec)
 
 (setup-logger)
 
-(defparameter *synopsis*
-  (defsynopsis (:make-default nil
-                :postfix "command")
-    (text :contents "bundle exec")
-    (flag :long-name "with-client"
-          :description "Include the CLPM client in the source registry.")
-    *bundle-arguments*
-    *common-arguments*))
+(defparameter *option-with-client*
+  (adopt:make-option
+   :bundle-exec-with-client
+   :long "with-client"
+   :help "Include the CLPM client in the source registry"
+   :reduce (constantly t)))
 
-(define-bundle-entry exec (*synopsis*)
-  (let* ((clpmfile-pathname (merge-pathnames (getopt :short-name "f")
+(defparameter *bundle-exec-ui*
+  (adopt:make-interface
+   :name "clpm bundle exec"
+   :summary "Common Lisp Package Manager Bundle Exec"
+   :usage "bundle exec [options] [command]"
+   :help "Execute a command in the contet of a bundle"
+   :contents (list *group-common*
+                   *group-bundle*
+                   *option-with-client*)))
+
+(define-cli-command (("bundle" "exec") *bundle-exec-ui*) (args options)
+  (let* ((clpmfile-pathname (merge-pathnames (gethash :bundle-file options)
                                              (uiop:getcwd)))
          (lockfile-pathname (merge-pathnames (make-pathname :type "lock")
                                              clpmfile-pathname))
@@ -43,7 +47,7 @@
          (system-files (lockfile/system-files lockfile))
          (asdf-pathnames (mapcar #'system-file/absolute-asd-pathname system-files))
          (missing-pathnames (remove-if #'probe-file asdf-pathnames))
-         (client-location (when (getopt :long-name "with-client")
+         (client-location (when (gethash :bundle-exec-with-client options)
                             (ensure-client-written)
                             (clpm-client-lib-location)))
          (extra-source-registry (uiop:getenv "CLPM_BUNDLE_EXTRA_SOURCE_REGISTRY"))
@@ -53,7 +57,7 @@
                                            client-location
                                            (mapcar #'uiop:pathname-directory-pathname asdf-pathnames)
                                            extra-source-registry))
-         (command (remainder)))
+         (command args))
     (unless missing-pathnames
       (log:debug "asdf pathnames available in new process:~%~A" asdf-pathnames)
       (execvpe (first command) (rest command)
