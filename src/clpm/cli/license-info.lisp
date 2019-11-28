@@ -5,23 +5,21 @@
 
 (uiop:define-package #:clpm/cli/license-info
     (:use #:cl
-          #:clpm/cli/entry
+          #:clpm/cli/common-args
+          #:clpm/cli/subcommands
           #:clpm-licenses)
   (:import-from #:uiop
-                #:*stdout*)
-  (:import-from #:net.didierverna.clon
-                #:defsynopsis
-                #:make-context
-                #:getopt
-                #:remainder
-                #:help))
+                #:*stdout*))
 
 (in-package #:clpm/cli/license-info)
 
-(defparameter *synopsis*
-  (defsynopsis (:make-default nil)
-    (text :contents "Print the license info of CLPM and all dependencies.")
-    *common-arguments*))
+(defparameter *license-info-ui*
+  (adopt:make-interface
+   :name "clpm license-info"
+   :summary "Common Lisp Package Manager License Info"
+   :usage "license-info [options]"
+   :help "Common Lisp Package Manager"
+   :contents (list *group-common*)))
 
 (defparameter *license-separator*
   "
@@ -48,6 +46,6 @@
                  project-name license))
   (fresh-line stream))
 
-(define-cli-entry license-info (*synopsis*)
+(define-cli-command (("license-info") *license-info-ui*) (arguments options)
   (print-licenses *stdout*)
   t)
