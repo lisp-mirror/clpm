@@ -6,53 +6,68 @@
 (uiop:define-package #:clpm/cli/install
     (:use #:cl
           #:alexandria
-          #:clpm/cli/entry
+          #:clpm/cli/common-args
+          #:clpm/cli/subcommands
           #:clpm/install
           #:clpm/log
           #:clpm/requirement
           #:clpm/resolve
           #:clpm/source
-          #:clpm/version-strings)
-  (:import-from #:net.didierverna.clon
-                #:defsynopsis
-                #:make-context
-                #:getopt
-                #:remainder
-                #:help))
+          #:clpm/version-strings
+          )
+  (:import-from #:adopt))
 
 (in-package #:clpm/cli/install)
 
 (setup-logger)
 
-(defparameter *synopsis*
-  (defsynopsis (:postfix "[PACAKGE-OR-SYSTEM]"
-                :make-default nil)
-    (text :contents "Install a package")
-    (stropt :argument-name "VERSION"
-            :short-name "v"
-            :default-value ">=0"
-            :description "The version of the package to install")
-    (flag :short-name "s"
-          :description "Install a system instead of a package")
-    (flag :short-name "n"
-          :long-name "no-deps"
-          :description "Do not install dependencies.")
-    (flag :short-name "x"
-          :description "For internal use only"
-          :hidden t)
-    (path :argument-name "PROJECT-PATH"
-          :short-name "p"
-          :long-name "project")
-    *common-arguments*))
+(defparameter *option-install-version*
+  (adopt:make-option
+   :install-version
+   :short #\v
+   :help "The version to install"
+   :parameter "VERSION"
+   :initial-value ">=0"
+   :reduce #'adopt:last))
 
-(define-cli-entry install (*synopsis*)
-  ;; Unpack the command line arguments.
-  (let* ((version-string (getopt :short-name "v"))
-         (remainder (remainder))
-         (package-name (first remainder))
-         (install-system-p (getopt :short-name "s"))
-         (no-deps-p (getopt :short-name "n")))
-    (log:debug "Installing version ~S of ~:[project~;system~] ~S" version-string install-system-p package-name)
+(defparameter *option-install-system*
+  (adopt:make-option
+   :install-system
+   :short #\s
+   :help "Install a system instead of a package"
+   :reduce (constantly t)))
+
+(defparameter *option-install-no-deps*
+  (adopt:make-option
+   :install-no-deps
+   :short #\n
+   :long "no-deps"
+   :help "Do not install dependencies"
+   :reduce (constantly t)))
+
+(defparameter *install-ui*
+  (adopt:make-interface
+   :name "clpm install"
+   :summary "Common Lisp Package Manager Install"
+   :usage "install [options] PACKAGE-OR-SYSTEM"
+   :help "Common Lisp Package Manager"
+   :contents (list *group-common*
+                   *option-install-version*
+                   *option-install-system*
+                   *option-install-no-deps*)))
+
+
+(define-cli-command (("install") *install-ui*) (args options)
+  (let* ((version-string (gethash :install-verison options))
+         (package-name (first args))
+         (install-system-p (gethash :install-system options))
+         (no-deps-p (gethash :install-no-deps options)))
+    (unless package-name
+      (error "A package or system name is required"))
+    (log:debug "Installing version ~S of ~:[project~;system~] ~S"
+               version-string
+               install-system-p
+               package-name)
     (let* ((sources (load-sources))
            (version-spec (parse-version-specifier version-string))
            (reqs (mapcar (lambda (vs)
@@ -66,14 +81,15 @@
       (log:debug "Reqs: ~S" reqs)
       (log:debug "releases: ~S" releases-to-install)
       (mapc (rcurry #'install-release :activate-globally t) releases-to-install)
-      (when (and install-system-p
-                 (getopt :short-name "x"))
-        (let* ((releases (reverse releases-to-install))
-               (requested-system-release (release/system-release (first releases) package-name))
-               (system-releases (list* requested-system-release
-                                       (mapcan #'release/system-releases releases))))
-          (format t "~S~%" (remove-duplicates
-                            (mapcar #'system-release/absolute-asd-pathname system-releases)
-                            :from-end t
-                            :test 'uiop:pathname-equal)))))
+      ;; (when (and install-system-p
+      ;;            (getopt :short-name "x"))
+      ;;   (let* ((releases (reverse releases-to-install))
+      ;;          (requested-system-release (release/system-release (first releases) package-name))
+      ;;          (system-releases (list* requested-system-release
+      ;;                                  (mapcan #'release/system-releases releases))))
+      ;;     (format t "~S~%" (remove-duplicates
+      ;;                       (mapcar #'system-release/absolute-asd-pathname system-releases)
+      ;;                       :from-end t
+      ;;                       :test 'uiop:pathname-equal))))
+      )
     t))

@@ -54,6 +54,9 @@
        (defun ,function-name ()
          (multiple-value-bind ,args (adopt:parse-options ,ui)
            (declare (ignorable ,@args))
+           ;; Pop the path from args
+           (dotimes (j ,(length path))
+             (pop ,(first args)))
            (when (gethash :help ,(second args))
              (adopt:print-help-and-exit ,ui))
            ,@body))
