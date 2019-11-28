@@ -1,5 +1,5 @@
 #!/bin/sh
-":" ; exec sbcl --script "$0" "$@"           # -*- mode: common-lisp; -*-
+":" ; exec sbcl --dynamic-space-size 10240 --script "$0" "$@"           # -*- mode: common-lisp; -*-
 ;;;; Script to load in CLPM and run its main method.
 ;;;;
 ;;;; This software is part of CLPM. See README.org for more information. See
