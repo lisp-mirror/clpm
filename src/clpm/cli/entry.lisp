@@ -6,15 +6,11 @@
 (uiop:define-package #:clpm/cli/entry
     (:use #:cl
           #:alexandria
+          #:clpm/cli/common-args
+          #:clpm/cli/subcommands
           #:clpm/log
           #:clpm/version)
-  (:import-from #:net.didierverna.clon
-                #:defsynopsis
-                #:make-context
-                #:getopt
-                #:remainder
-                #:help
-                #:defgroup)
+  (:import-from #:adopt)
   (:export #:*common-arguments*
            #:define-cli-entry
            #:main
@@ -25,85 +21,44 @@
 
 (setup-logger)
 
-(defparameter *common-arguments*
-  (defgroup (:header "Common Options")
-    (flag
-     :long-name "help"
-     :description "Print help and exit")
-    (flag
-     :long-name "version"
-     :description "Print the version and exit")
-    (flag
-     :long-name "verbose"
-     :short-name "V"
-     :description "Make the output more verbose")))
+(defparameter *default-ui*
+  (adopt:make-interface
+   :name "clpm"
+   :summary "Common Lisp Package Manager"
+   :usage "[options] subcommand"
+   :help "Common Lisp Package Manager"
+   :contents (list *group-common*)))
 
-(defparameter *synopsis*
-  (defsynopsis (:postfix "[command] [arguments...]"
-                :make-default nil)
-    *common-arguments*))
+;; (defvar *commands* nil)
 
-(defvar *commands* nil)
+;; (defun register-command (name function)
+;;   (setf (assoc-value *commands* name :test 'equal) function))
 
-(defun register-command (name function)
-  (setf (assoc-value *commands* name :test 'equal) function))
+(defun print-version (options)
+  (if (plusp (gethash :verbose options))
+      (progn
+        (format *standard-output* "CLPM version ~A~%" (clpm-version))
+        (format *standard-output* "~A ~A~%" (lisp-implementation-type) (lisp-implementation-version))
+        (format *standard-output* "ASDF ~A~%" (asdf:asdf-version))
+        (format *standard-output* "Software Type: ~A~%" (software-type))
+        (format *standard-output* "Software Version: ~A~%" (software-version))
+        (with-standard-io-syntax
+          (let ((*print-pretty* t))
+            (format *standard-output* "Features:~%~S~%" *features*))))
+      (format *standard-output* "~A~%" (clpm-version))))
 
-(defun dispatch-command (args)
-  (let* ((name (find-if (lambda (x)
-                          (not (eql #\- (aref x 0))))
-                        args))
-         (args (remove name args)))
-    (let ((function (assoc-value *commands* name :test 'equal)))
-      (cond
-        (function
-         (funcall function args))
-        ((member "--version" args :test #'string=)
-         (print-version)
-         (uiop:quit))
-        (t
-         (print-help)
-         (uiop:quit))))))
-
-(defun print-version ()
-  (format *standard-output* "CLPM version ~A~%" (clpm-version))
-  (format *standard-output* "~A ~A~%" (lisp-implementation-type) (lisp-implementation-version))
-  (format *standard-output* "ASDF ~A~%" (asdf:asdf-version))
-  (format *standard-output* "Software Type: ~A~%" (software-type))
-  (format *standard-output* "Software Version: ~A~%" (software-version))
-  (with-standard-io-syntax
-    (let ((*print-pretty* t))
-      (format *standard-output* "Features:~%~S~%" *features*))))
-
-(defun print-help ()
-  (format *standard-output* "CLPM - Lisp Package Manager~%")
-  (when net.didierverna.clon:*context*
-    (help))
-  (format *standard-output*
-          "available commands: ~{~A~^ ~}~%"
-	      (mapcar #'car *commands*)))
+;; (defun print-help ()
+;;   (format *standard-output* "CLPM - Lisp Package Manager~%")
+;;   (when net.didierverna.clon:*context*
+;;     (help))
+;;   (format *standard-output*
+;;           "available commands: ~{~A~^ ~}~%"
+;; 	      (mapcar #'car *commands*)))
 
 (defun count-flag-occurances (&rest options)
   (loop
     :while (apply #'getopt options)
     :summing 1))
-
-(defun process-common-arguments ()
-  (when (getopt :long-name "help")
-    (print-help)
-    (uiop:quit))
-  (when (getopt :long-name "version")
-    (print-version)
-    (uiop:quit))
-  (case (count-flag-occurances :short-name "V")
-    (0)
-    (1
-     (log:config '(clpm) :info))
-    (2
-     (log:config '(clpm) :debug)
-     (log:debug "Setting log level to debug"))
-    (t
-     (log:config '(clpm) :trace)
-     (log:debug "Setting log level to trace"))))
 
 (defmacro define-cli-entry (name (synopsis) &body body)
   (let ((fun-name (intern
@@ -119,10 +74,47 @@
                                                     ,cli-name)
                                        ,args)
                        :synopsis ,synopsis)
-         (process-common-arguments)
+         ;;(process-common-arguments)
          (unless (progn ,@body)
            (uiop:quit 1)))
-       (register-command ,cli-name ',fun-name))))
+       ;;(register-command ,cli-name ',fun-name)
+       )))
+
+;; (defun dispatch-subcommand (arguments options ui)
+;;   (let* ((subcommand-name (first arguments))
+;;          (function (assoc-value *commands* subcommand-name :test 'equal)))
+;;     (format t "~S~%" function)
+;;     (cond
+;;       (function
+;;        (funcall function))
+;;       ((gethash :help options)
+;;        (adopt:print-help-and-exit ui :exit-code 0))
+;;       (t
+;;        (adopt:print-help-and-exit ui :exit-code 1)))))
 
 (defun main ()
-  (dispatch-command (uiop:command-line-arguments)))
+  (handler-case
+      (handler-bind
+          ((adopt:unrecognized-option #'adopt:discard-option))
+        (multiple-value-bind (arguments options)
+            (adopt:parse-options *default-ui*)
+          (when (gethash :version-flag options)
+            (print-version options)
+            (adopt:exit))
+          ;; Compute verbosity
+          (case (gethash :verbose options)
+            (0)
+            (1
+             (log:config '(clpm) :info)
+             (log:debug "Setting CLPM log level to info"))
+            (2
+             (log:config '(clpm) :debug)
+             (log:debug "Setting CLPM log level to debug"))
+            (t
+             (log:config '(clpm) :trace)
+             (log:debug "Setting CLPM log level to trace")))
+          (dispatch-subcommand *commands* arguments options *default-ui*)
+          ;;(format t "~S~%~S~%" arguments options)
+          ))
+    (error (c)
+      (adopt:print-error-and-exit c))))

@@ -5,30 +5,24 @@
 
 (uiop:define-package #:clpm/cli/config/info
     (:use #:cl
+          #:clpm/cli/common-args
           #:clpm/cli/config/common
-          #:clpm/cli/entry
-          #:clpm/config
-          #:clpm/log)
+          #:clpm/cli/subcommands
+          #:clpm/config)
   (:import-from #:uiop
-                #:*stdout*)
-  (:import-from #:net.didierverna.clon
-                #:defsynopsis
-                #:make-context
-                #:getopt
-                #:remainder
-                #:help))
+                #:*stdout*))
 
 (in-package #:clpm/cli/config/info)
 
-(setup-logger)
+(defparameter *config-info-ui*
+  (adopt:make-interface
+   :name "clpm config info"
+   :summary "Common Lisp Package Manager"
+   :usage "config info [options]"
+   :help "Common Lisp Package Manager"
+   :contents (list *group-common*)))
 
-(defparameter *synopsis*
-  (defsynopsis (:make-default nil)
-    *common-arguments*))
-
-(define-config-entry info (*synopsis*)
-  ;; Unpack the command line arguments.
-  (log:info "Config")
+(define-cli-command (("config" "info") *config-info-ui*) (arguments options)
   (format *stdout* "Config directories: ~A~%~%" *clpm-config-directories*)
   (format *stdout* "Current configuration:~%~A~%---~%" (with-output-to-string (s) (print-config s)))
   t)
