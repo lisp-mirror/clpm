@@ -5,29 +5,28 @@
 
 (uiop:define-package #:clpm/cli/sync
     (:use #:cl
-          #:clpm/cli/entry
+          #:clpm/cli/common-args
+          #:clpm/cli/subcommands
           #:clpm/config
           #:clpm/log
           #:clpm/source)
+  (:import-from #:adopt)
   (:import-from #:uiop
-                #:*stdout*)
-  (:import-from #:net.didierverna.clon
-                #:defsynopsis
-                #:make-context
-                #:getopt
-                #:remainder
-                #:help))
+                #:*stdout*))
 
 (in-package #:clpm/cli/sync)
 
 (setup-logger)
 
-(defparameter *synopsis*
-  (defsynopsis (:make-default nil)
-    *common-arguments*))
+(defparameter *sync-ui*
+  (adopt:make-interface
+   :name "clpm sync"
+   :summary "Common Lisp Package Manager Sync"
+   :usage "sync"
+   :help "Sync sources"
+   :contents (list *group-common*)))
 
-(define-cli-entry sync (*synopsis*)
-  ;; Unpack the command line arguments.
+(define-cli-command (("sync") *sync-ui*) (args options)
   (log:info "Sync")
   (mapc #'sync-source (load-sources))
   t)
