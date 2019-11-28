@@ -22,8 +22,10 @@
 (defvar *commands* (make-hash-table :test 'equal))
 
 (defun ensure-ht-path (ht path &optional default-ui)
-  (let ((next (ensure-gethash (pop path) ht
-                              (make-hash-table :test 'equal))))
+  (let ((next (if path
+                  (ensure-gethash (pop path) ht
+                                  (make-hash-table :test 'equal))
+                  ht)))
     (if path
         (progn
           (unless (hash-table-p next)
@@ -59,6 +61,15 @@
                                                        ',(butlast path)))
              ',function-name))))
 
+(defun available-subcommands (ht)
+  (let ((out nil))
+    (maphash (lambda (k v)
+               (declare (ignore v))
+               (when (stringp k)
+                 (push k out)))
+             ht)
+    (sort out #'string<)))
+
 (defun dispatch-subcommand (working-ht arguments options ui)
   (let* ((subcommand-name (first arguments))
          (dir-or-fun (gethash subcommand-name working-ht)))
@@ -71,6 +82,14 @@
        (let ((default-ui (gethash :ui dir-or-fun)))
          (dispatch-subcommand dir-or-fun (rest arguments) options default-ui)))
       ((gethash :help options)
-       (adopt:print-help-and-exit ui :exit-code 0))
+       (adopt:print-help ui)
+       (terpri)
+       (format *standard-output* "Available subcommands: ~{~A~^ ~}~%"
+               (available-subcommands working-ht))
+       (adopt:exit 0))
       (t
-       (adopt:print-help-and-exit ui :exit-code 1)))))
+       (adopt:print-help ui)
+       (terpri)
+       (format *standard-output* "Available subcommands: ~{~A~^ ~}~%"
+               (available-subcommands working-ht))
+       (adopt:exit 1)))))
