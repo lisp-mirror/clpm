@@ -6,7 +6,7 @@
 (uiop:define-package #:clpm/clpm
     (:use #:cl
           ;;#:clpm/cli/bundle
-          ;;#:clpm/cli/client
+          #:clpm/cli/client
           #:clpm/cli/config
           #:clpm/cli/entry
           #:clpm/cli/install

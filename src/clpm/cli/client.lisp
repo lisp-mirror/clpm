@@ -1,26 +1,25 @@
 (uiop:define-package #:clpm/cli/client
     (:use #:cl
           #:alexandria
-          #:clpm/cli/entry
+          #:clpm/cli/common-args
+          #:clpm/cli/subcommands
           #:clpm/client
           #:clpm/log)
-  (:import-from #:net.didierverna.clon
-                #:defsynopsis
-                #:make-context
-                #:getopt
-                #:remainder
-                #:help))
+  (:import-from #:adopt))
 
 (in-package #:clpm/cli/client)
 
 (setup-logger)
 
-(defparameter *synopsis*
-  (defsynopsis (:make-default nil)
-    (text :contents "Install the client library")
-    *common-arguments*))
+(defparameter *client-ui*
+  (adopt:make-interface
+   :name "clpm client"
+   :summary "Common Lisp Package Manager Client"
+   :usage "client [options]"
+   :help "Install the CLPM client"
+   :contents (list *group-common*)))
 
-(define-cli-entry client (*synopsis*)
+(define-cli-command (("client") *client-ui*) (args options)
   (ensure-client-written)
   (format *standard-output* "Client library located at:~%~A~%" (clpm-client-lib-location))
 
@@ -31,5 +30,4 @@
       (ensure-directories-exist pathname)
       (with-open-file (s pathname :direction :output
                                   :if-exists :supersede)
-        (write-string contents s))))
-  t)
+        (write-string contents s)))))
