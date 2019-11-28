@@ -5,11 +5,13 @@
   :license "BSD-2-Clause"
   :serial t
   :components ((:module "licenses"
-                :components ((:static-file "alexandria")
+                :components ((:static-file "adopt")
+                             (:static-file "alexandria")
                              (:static-file "anaphora")
                              (:static-file "archive")
                              (:static-file "asdf")
                              (:static-file "babel")
+                             (:static-file "bobbin")
                              (:static-file "bordeaux-threads")
                              (:static-file "cffi")
                              (:static-file "chipz")

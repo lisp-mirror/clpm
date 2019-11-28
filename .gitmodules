@@ -139,3 +139,9 @@
 [submodule "ext/static-vectors"]
 	path = ext/static-vectors
 	url = https://github.com/sionescu/static-vectors.git
+[submodule "ext/adopt"]
+	path = ext/adopt
+	url = https://github.com/sjl/adopt.git
+[submodule "ext/bobbin"]
+	path = ext/bobbin
+	url = https://github.com/sjl/bobbin.git
