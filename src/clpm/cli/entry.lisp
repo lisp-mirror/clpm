@@ -29,11 +29,6 @@
    :help "Common Lisp Package Manager"
    :contents (list *group-common*)))
 
-;; (defvar *commands* nil)
-
-;; (defun register-command (name function)
-;;   (setf (assoc-value *commands* name :test 'equal) function))
-
 (defun print-version (options)
   (if (plusp (gethash :verbose options))
       (progn
@@ -46,51 +41,6 @@
           (let ((*print-pretty* t))
             (format *standard-output* "Features:~%~S~%" *features*))))
       (format *standard-output* "~A~%" (clpm-version))))
-
-;; (defun print-help ()
-;;   (format *standard-output* "CLPM - Lisp Package Manager~%")
-;;   (when net.didierverna.clon:*context*
-;;     (help))
-;;   (format *standard-output*
-;;           "available commands: ~{~A~^ ~}~%"
-;; 	      (mapcar #'car *commands*)))
-
-(defun count-flag-occurances (&rest options)
-  (loop
-    :while (apply #'getopt options)
-    :summing 1))
-
-(defmacro define-cli-entry (name (synopsis) &body body)
-  (let ((fun-name (intern
-                   (concatenate 'string
-                                (uiop:standard-case-symbol-name :cli-)
-                                (uiop:standard-case-symbol-name name))))
-        (cli-name (string-downcase (symbol-name name)))
-        (args (gensym)))
-    `(progn
-       (defun ,fun-name (,args)
-         (make-context :cmdline (list* (concatenate 'string (first (uiop:raw-command-line-arguments))
-                                                    " "
-                                                    ,cli-name)
-                                       ,args)
-                       :synopsis ,synopsis)
-         ;;(process-common-arguments)
-         (unless (progn ,@body)
-           (uiop:quit 1)))
-       ;;(register-command ,cli-name ',fun-name)
-       )))
-
-;; (defun dispatch-subcommand (arguments options ui)
-;;   (let* ((subcommand-name (first arguments))
-;;          (function (assoc-value *commands* subcommand-name :test 'equal)))
-;;     (format t "~S~%" function)
-;;     (cond
-;;       (function
-;;        (funcall function))
-;;       ((gethash :help options)
-;;        (adopt:print-help-and-exit ui :exit-code 0))
-;;       (t
-;;        (adopt:print-help-and-exit ui :exit-code 1)))))
 
 (defun main ()
   (handler-case
