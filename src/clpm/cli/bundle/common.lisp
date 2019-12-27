@@ -8,7 +8,8 @@
           #:alexandria
           #:clpm/cli/common-args
           #:clpm/cli/subcommands
-          #:clpm/config)
+          #:clpm/config
+          #:clpm/utils)
   (:import-from #:adopt)
   (:import-from #:cl-ppcre)
   (:export #:*group-bundle*))
@@ -41,13 +42,7 @@
                    *group-bundle*)))
 
 (defun merge-git-auth-config ()
-  (let* ((env (mapcar (lambda (x)
-                        (let* ((split (uiop:split-string (reverse x)
-                                                         :max 2 :separator '(#\=)))
-                               (name (reverse (second split)))
-                               (value (reverse (first split))))
-                          (cons name value)))
-                      (sb-ext:posix-environ)))
+  (let* ((env (posix-environment-alist))
          (git-auth-vars (remove-if-not (curry #'starts-with-subseq "CLPM_BUNDLE_GIT_AUTH_")
                                        env :key #'car))
          (ht (make-hash-table :test 'equal

@@ -27,10 +27,10 @@ strings to pass as the arguments to the executable. ~env~ is an alist of
 variable name (string), variable value (string) pairs. If ~augment-env-p~ is T,
 the environment variables specified by ~env~ are appended with the current
 environment variables."
-    (let* ((env (mapcar (lambda (c)
-                          (concatenate 'string (car c) "=" (cdr c)))
-                        env))
-           (new-env (append env (when augment-env-p (sb-ext:posix-environ)))))
+    (let ((new-env (when augment-env-p (posix-environment-alist))))
+      (dolist (pair env)
+        (destructuring-bind (name . value) pair
+          (setf (assoc-value new-env name :test #'equal) value)))
       (with-foreign-objects ((foreign-args :pointer (+ 2 (length args)))
                              (foreign-env :pointer (+ 1 (length new-env))))
 
@@ -48,7 +48,8 @@ environment variables."
         ;; pack the environment variables into foreign memory
         (loop
           :for i :upfrom 0
-          :for assignment :in new-env
+          :for pair :in new-env
+          :for assignment := (concatenate 'string (car pair) "=" (cdr pair))
           :do
              (setf (mem-aref foreign-env :pointer i)
                    (foreign-string-alloc assignment)))

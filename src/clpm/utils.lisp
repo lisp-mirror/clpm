@@ -5,11 +5,13 @@
 
 (uiop:define-package #:clpm/utils
     (:use #:cl
+          #:alexandria
           #:puri
           #:split-sequence)
   (:export #:*live-script-location*
            #:ensure-uri-scheme-https!
            #:mktemp
+           #:posix-environment-alist
            #:retriable-error
            #:run-program-augment-env-args
            #:uri-to-string
@@ -27,20 +29,34 @@ clpm-live script is located.")
 (uiop:register-image-dump-hook 'clear-live-script-location)
 
 #+sbcl
+(defun posix-environment-alist ()
+  "Returns an alist representing the environemnt variables."
+  (let ((out nil))
+    (dolist (pair-string (sb-ext:posix-environ))
+      (let* ((pos-of-= (position #\= pair-string))
+             (name (subseq pair-string 0 pos-of-=))
+             (value (subseq pair-string (1+ pos-of-=))))
+        (push (cons name value) out)))
+    (nreverse out)))
+
+#-sbcl
+(defun posix-environment-alist ()
+  "Returns an alist representing the environemnt variables."
+  (error "Not implemented"))
+
+#+sbcl
 (defun run-program-augment-env-args (new-env-alist)
   "Given an alist of environment variables, return a list of arguments suitable
 for ~uiop:{launch/run}-program~ to set the augmented environment for the child
 process."
-  (let* ((inherited-env
-           (remove-if (lambda (x)
-                        (let ((name (first (split-sequence #\= x))))
-                          (member name new-env-alist :test #'equal :key #'car)))
-                      (sb-ext:posix-environ)))
-         (env (append (mapcar (lambda (c)
-                                (concatenate 'string (car c) "=" (cdr c)))
-                              new-env-alist)
-                      inherited-env)))
-    (list :environment env)))
+  (let ((env (posix-environment-alist)))
+    (dolist (pair new-env-alist)
+      (destructuring-bind (name . value) pair
+        (setf (assoc-value env name :test #'equal) value)))
+    (list :environment
+          (mapcar (lambda (c)
+                    (concatenate 'string (car c) "=" (cdr c)))
+                  env))))
 
 #+ccl
 (defun run-program-augment-env-args (new-env-alist)
