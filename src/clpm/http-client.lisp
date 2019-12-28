@@ -119,21 +119,22 @@ Returns T if the contents of PATHNAME were modified, NIL otherwise."
                              :want-stream t
                              :additional-headers additional-headers)
              (log:debug "Status code: ~S" status-code)
-             (case status-code
-               (200
-                (with-open-file (file-stream tmp-pathname :direction :output
-                                                          :if-exists :supersede
-                                                          :element-type '(unsigned-byte 8))
-                  ;; Save the data to the file.
-                  (copy-stream http-stream file-stream
-                               :element-type '(unsigned-byte 8)
-                               :buffer-size 8192))
-                (rename-file tmp-pathname pathname)
-                t)
-               (304
-                ;; No changes
-                nil)
-               (t
-                (error "Can't handle HTTP code ~A" status-code)))))
+             (with-open-stream (http-stream http-stream)
+               (case status-code
+                 (200
+                  (with-open-file (file-stream tmp-pathname :direction :output
+                                                            :if-exists :supersede
+                                                            :element-type '(unsigned-byte 8))
+                    ;; Save the data to the file.
+                    (copy-stream http-stream file-stream
+                                 :element-type '(unsigned-byte 8)
+                                 :buffer-size 8192))
+                  (rename-file tmp-pathname pathname)
+                  t)
+                 (304
+                  ;; No changes
+                  nil)
+                 (t
+                  (error "Can't handle HTTP code ~A" status-code))))))
       (when (probe-file tmp-pathname)
         (delete-file tmp-pathname)))))

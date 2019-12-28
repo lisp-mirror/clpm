@@ -13,7 +13,6 @@
           #:clpm/repos/defs
           #:clpm/utils
           #:split-sequence)
-  (:import-from #:bordeaux-threads)
   (:import-from #:puri)
   (:export #:git-repo
            #:git-repo-credentials
@@ -132,15 +131,15 @@ then calls the thunk."
   `(call-with-git-dir ,repo (lambda () ,@body)))
 
 (defun git-archive (ref &key repo)
-  "Calls ~git archive~ with the provided ref and returns the output
-stream. Uses ~uiop:launch-program~ to avoid needing for the process to complete
-before returning. Therefore, it alos spawns a thread to wait on the process
-completion."
+  "Calls ~git archive~ with the provided ref and returns the output stream. Uses
+~uiop:launch-program~ to avoid needing for the process to complete before
+returning. The stream must be CLOSEd when finished to clean up the process info."
   (with-git-dir (repo)
     (let ((proc (uiop:launch-program `("git" "archive" ,ref)
                                      :output :stream)))
-      (bt:make-thread (lambda () (uiop:wait-process proc)))
-      (uiop:process-info-output proc))))
+      (make-instance 'process-stream
+                     :process-info proc
+                     :true-stream (uiop:process-info-output proc)))))
 
 (defun git-cat-file (commit &key ignore-error-status repo)
   "Calls ~git cat-file~ with the provided commit and returns the result,

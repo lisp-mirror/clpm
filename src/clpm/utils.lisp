@@ -7,11 +7,13 @@
     (:use #:cl
           #:alexandria
           #:puri
-          #:split-sequence)
+          #:split-sequence
+          #:trivial-gray-streams)
   (:export #:*live-script-location*
            #:ensure-uri-scheme-https!
            #:mktemp
            #:posix-environment-alist
+           #:process-stream
            #:retriable-error
            #:run-program-augment-env-args
            #:uri-to-string
@@ -117,3 +119,27 @@ other than ~:https~ or ~:http~."))
 
 (defmacro with-retries ((&key (max 3) (sleep 1)) &body body)
   `(call-with-retries (lambda () ,@body) :max ,max :sleep ,sleep))
+
+(defclass process-stream (fundamental-binary-input-stream)
+  ((true-stream
+    :initarg :true-stream
+    :reader process-stream-true-stream)
+   (process-info
+    :initarg :process-info
+    :reader process-stream-process-info)))
+
+(defmethod stream-element-type ((stream process-stream))
+  '(unsigned-byte 8))
+
+(defmethod stream-read-byte ((stream process-stream))
+  (read-byte (process-stream-true-stream stream) nil :eof))
+
+(defmethod close ((stream process-stream) &key abort)
+  "Close the underlying stream and cleanup the process. ABORT is ignored."
+  (declare (ignore abort))
+  (let ((proc (process-stream-process-info stream)))
+    (close (uiop:process-info-input proc))
+    (close (uiop:process-info-output proc))
+    (close (uiop:process-info-error-output proc))
+    (uiop:wait-process proc))
+  (close (process-stream-true-stream stream)))
