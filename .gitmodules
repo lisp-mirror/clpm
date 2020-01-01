@@ -142,3 +142,6 @@
 [submodule "ext/bobbin"]
 	path = ext/bobbin
 	url = https://github.com/sjl/bobbin.git
+[submodule "ext/do-urlencode"]
+	path = ext/do-urlencode
+	url = https://github.com/drdo/do-urlencode.git

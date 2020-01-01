@@ -24,6 +24,7 @@
                              (:static-file "cl-utilities")
                              (:static-file "clon")
                              (:static-file "closer-mop")
+                             (:static-file "do-urlencode")
                              (:static-file "drakma")
                              (:static-file "exit-hooks")
                              (:static-file "fast-http")
