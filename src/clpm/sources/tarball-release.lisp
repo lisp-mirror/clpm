@@ -127,7 +127,7 @@
 (defun source-archive-cache (source)
   "Return a pathname to the directory where ~source~ stores its archives."
   (uiop:resolve-absolute-location
-   `(,(source/cache-directory source)
+   `(,(source-cache-directory source)
      "distfiles")
    :ensure-directory t))
 
@@ -148,21 +148,21 @@ second is the filename of the file located at ~url~."
     (multiple-value-bind (url filename)
         (url-location version-url)
       (let ((archive-pathname (merge-pathnames filename
-                                               (source-archive-cache (release/source release)))))
+                                               (source-archive-cache (release-source release)))))
         (ensure-file-fetched archive-pathname url)
         archive-pathname))))
 
 (defmethod activate-release-globally! ((release tarball-release))
-  (let* ((project (release/project release))
-         (project-name (project/name project))
-         (install-root (release/lib-pathname release)))
+  (let* ((project (release-project release))
+         (project-name (project-name project))
+         (install-root (release-lib-pathname release)))
     (register-project-path-globally! project-name install-root)))
 
 (defmethod install-release ((release tarball-release) &key activate-globally)
-  (let* ((version-string (release/version release))
-         (project (release/project release))
-         (project-name (project/name project))
-         (install-root (release/lib-pathname release)))
+  (let* ((version-string (release-version release))
+         (project (release-project release))
+         (project-name (project-name project))
+         (install-root (release-lib-pathname release)))
     (log:info "Installing ~A version ~A to ~A" project-name version-string
               install-root)
     (unless (uiop:probe-file* install-root)

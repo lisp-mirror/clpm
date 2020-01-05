@@ -32,7 +32,7 @@
                                              clpmfile-pathname))
          (lockfile (read-lockfile lockfile-pathname))
          (system-files (lockfile/system-files lockfile))
-         (asdf-pathnames (mapcar #'system-file/absolute-asd-pathname system-files))
+         (asdf-pathnames (mapcar #'system-file-absolute-asd-pathname system-files))
          (missing-pathnames (remove-if #'probe-file asdf-pathnames)))
     (if missing-pathnames
         (progn

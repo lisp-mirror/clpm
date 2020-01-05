@@ -50,7 +50,7 @@
 (defmethod initialize-instance :after ((source clpi-source) &key &allow-other-keys)
   ;; Load the synced files if they exist.
   (let ((pn (merge-pathnames "clpi-source.conspack"
-                             (source/lib-directory source))))
+                             (source-lib-directory source))))
     (when (probe-file pn)
       (with-open-file (s pn
                          :element-type '(unsigned-byte 8))
@@ -62,7 +62,7 @@
 
 (defun save-clpi-source! (source)
   (let ((pn (merge-pathnames "clpi-source.conspack"
-                             (source/lib-directory source))))
+                             (source-lib-directory source))))
     (ensure-directories-exist pn)
     (with-open-file (s pn
                        :if-exists :supersede
@@ -74,42 +74,42 @@
         (cpk:encode (clpi-source-system-ht source) :stream s)))))
 
 (defun clpi-source-index-url (source)
-  (let* ((base-url (source/url source))
+  (let* ((base-url (source-url source))
          (base-path (or (puri:uri-path base-url)
                         "/"))
          (extended-path (format nil "~A~:[/~;~]package-index/v0.1/index.lisp"
                                 base-path (ends-with #\/ base-path))))
     (puri:copy-uri base-url :path extended-path)))
 
-(defmethod source/cache-directory ((source clpi-source))
+(defmethod source-cache-directory ((source clpi-source))
   "Compute the cache location for this source, based on its canonical url."
   (clpm-cache-pathname
    `("sources"
      "clpi"
-     ,(string-downcase (string (uri-scheme (source/url source))))
-     ,(uri-host (source/url source))
-     ,@(split-sequence #\/ (uri-path (source/url source)) :remove-empty-subseqs t))
+     ,(string-downcase (string (uri-scheme (source-url source))))
+     ,(uri-host (source-url source))
+     ,@(split-sequence #\/ (uri-path (source-url source)) :remove-empty-subseqs t))
    :ensure-directory t))
 
-(defmethod source/lib-directory ((source clpi-source))
+(defmethod source-lib-directory ((source clpi-source))
   "Compute the data location for this source, based on its canonical url."
   (clpm-data-pathname
    `("sources"
      "clpi"
-     ,(string-downcase (string (uri-scheme (source/url source))))
-     ,(uri-host (source/url source))
-     ,@(split-sequence #\/ (uri-path (source/url source)) :remove-empty-subseqs t))
+     ,(string-downcase (string (uri-scheme (source-url source))))
+     ,(uri-host (source-url source))
+     ,@(split-sequence #\/ (uri-path (source-url source)) :remove-empty-subseqs t))
    :ensure-directory t))
 
-(defmethod source/project ((source clpi-source) project-name)
+(defmethod source-project ((source clpi-source) project-name)
   (gethash project-name (clpi-source-project-ht source)))
 
-(defmethod source/system ((source clpi-source) system-name)
+(defmethod source-system ((source clpi-source) system-name)
   (gethash system-name (clpi-source-system-ht source)))
 
 (defmethod source-to-form ((source clpi-source))
-  (list (source/name source)
-        :url (uri-to-string (source/url source))
+  (list (source-name source)
+        :url (uri-to-string (source-url source))
         :type :clpi))
 
 
@@ -119,13 +119,13 @@
   ((source
     :initarg :source
     :reader clpi-project-source
-    :reader project/source
+    :reader project-source
     :documentation
     "The source of the project.")
    (name
     :initarg :name
     :accessor clpi-project-name
-    :reader project/name
+    :reader project-name
     :documentation
     "The name of the project.")
    (repo-type
@@ -153,13 +153,13 @@
   (aprog1 (call-next-method)
     (setf (slot-value it 'source) *active-source*)))
 
-(defmethod project/release ((p clpi-project) (version string))
+(defmethod project-release ((p clpi-project) (version string))
   (gethash version (clpi-project-release-ht p)))
 
-(defmethod project/releases ((p clpi-project))
+(defmethod project-releases ((p clpi-project))
   (hash-table-values (clpi-project-release-ht p)))
 
-(defmethod project/repo ((p clpi-project))
+(defmethod project-repo ((p clpi-project))
   (let ((repo-type (clpi-project-repo-type p))
         (repo-args (clpi-project-repo-args p)))
     (make-repo-from-description (list* repo-type repo-args))))
@@ -172,17 +172,17 @@
   ((source
     :initarg :source
     :accessor clpi-release-source
-    :reader release/source
+    :reader release-source
     :documentation
     "The source of the release.")
    (project
     :initarg :project
     :accessor clpi-release-project
-    :reader release/project
+    :reader release-project
     :documentation
     "The project to which this release corresponds.")
    (version
-    :reader release/version
+    :reader release-version
     :initarg :version
     :documentation
     "The version of this release.")
@@ -212,15 +212,15 @@
   (aprog1 (call-next-method)
     (setf (slot-value it 'source) *active-source*)))
 
-(defmethod release/lib-pathname ((r clpi-release))
+(defmethod release-lib-pathname ((r clpi-release))
   (uiop:resolve-absolute-location
-   (list (source/lib-directory (release/source r))
+   (list (source-lib-directory (release-source r))
          "projects"
-         (project/name (release/project r))
+         (project-name (release-project r))
          (clpi-release-prefix r))
    :ensure-directory t))
 
-(defmethod release/system-releases ((release clpi-release))
+(defmethod release-system-releases ((release clpi-release))
   (hash-table-values (clpi-release-system-release-ht release)))
 
 
@@ -230,12 +230,12 @@
   ((source
     :initarg :source
     :accessor clpi-system-source
-    :reader system/source
+    :reader system-source
     :documentation
     "The source of the system.")
    (name
     :initarg :name
-    :accessor system/name
+    :accessor system-name
     :documentation
     "The name of the system."))
   (:documentation
@@ -255,19 +255,19 @@
   ((source
     :initarg :source
     :accessor clpi-system-release-source
-    :reader system-release/source
+    :reader system-release-source
     :documentation
     "The source of the system release.")
    (release
     :initarg :release
     :accessor clpi-system-release-release
-    :reader system-release/release
+    :reader system-release-release
     :documentation
     "The release to which the system release belongs.")
    (system
     :initarg :system
     :accessor clpi-system-release-system
-    :reader system-release/system
+    :reader system-release-system
     :documentation
     "The system.")
    (system-version
@@ -295,7 +295,7 @@
   (aprog1 (call-next-method)
     (setf (slot-value it 'source) *active-source*)))
 
-(defmethod system-release/requirements ((system-release clpi-system-release))
+(defmethod system-release-requirements ((system-release clpi-system-release))
   (let ((deps (remove-if (rcurry #'member (list "asdf" "uiop") :test #'string-equal)
                          (clpi-system-release-depends-on system-release))))
     (mapcar (lambda (dep-name)
@@ -308,7 +308,7 @@
 
 (defmethod sync-source ((source clpi-source))
   (let ((index-file (merge-pathnames "index.lisp"
-                                     (source/cache-directory source))))
+                                     (source-cache-directory source))))
     (ensure-file-fetched index-file (clpi-source-index-url source))
     (when t ;;(ensure-file-fetched index-file (clpi-source-index-url source))
       (let ((*package* (find-package :clpm/sources/clpi-index-file))

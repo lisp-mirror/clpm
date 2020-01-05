@@ -41,7 +41,7 @@
       (declare (ignore releases-to-install))
       ;; Make the lock file and return it.
       (make-lockfile clpmfile (remove-duplicates
-                               (mapcar #'system-release/system-file system-releases))))))
+                               (mapcar #'system-release-system-file system-releases))))))
 
 (define-cli-command (("bundle" "install") *bundle-install-ui*) (args options)
   (let* ((clpmfile-pathname (merge-pathnames (gethash :bundle-file options)
@@ -73,7 +73,7 @@
             (write-lockfile-to-stream lockfile s))))
 
     (let* ((system-files (lockfile/system-files lockfile))
-           (releases (mapcar #'system-file/release system-files)))
+           (releases (mapcar #'system-file-release system-files)))
       (log:info "Installing releases")
       (mapc #'install-release (remove-if #'release-installed-p releases)))
     t))

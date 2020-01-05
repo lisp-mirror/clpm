@@ -153,7 +153,7 @@ clpmfile is located."
   "Given a list of ~sources~, return the source that has is named ~source-name~
 or raise an error if it does not exist."
   (or (find source-name sources
-            :key #'source/name
+            :key #'source-name
             :test #'string-equal)
       (error "Unable to find source ~S" source-name)))
 
@@ -306,20 +306,20 @@ sources."
 (defmethod parse-system-file-statement (lockfile (type (eql :project))
                                         &key name source version system-files)
   (let* ((source (find source (clpmfile/user-global-sources (lockfile/clpmfile lockfile))
-                       :key #'source/name
+                       :key #'source-name
                        :test #'equal))
-         (release (source/project-release source name version)))
+         (release (source-project-release source name version)))
     (dolist (system-file-name system-files)
-      (push (release/system-file release system-file-name) (lockfile/system-files lockfile)))
+      (push (release-system-file release system-file-name) (lockfile/system-files lockfile)))
     lockfile))
 
 (defmethod parse-system-file-statement (lockfile (type (eql :local-asd))
                                         &key path)
   (fs-source-register-asd (clpmfile/fs-source (lockfile/clpmfile lockfile)) path)
   (let* ((source (clpmfile/fs-source (lockfile/clpmfile lockfile)))
-         (project (source/project source "all"))
-         (release (project/release project "newest"))
-         (system-file (release/system-file release path)))
+         (project (source-project source "all"))
+         (release (project-release project "newest"))
+         (system-file (release-system-file release path)))
     (assert system-file)
     (push system-file (lockfile/system-files lockfile))
     lockfile))
@@ -335,8 +335,8 @@ sources."
         (let* ((source (clpmfile/vcs-source (lockfile/clpmfile lockfile)))
                (repo (make-repo-from-description `(:gitlab :host ,host :path ,path)))
                (project (vcs-source-register-project! source repo name))
-               (release (project/release project `(:commit ,commit)))
-               (system-files (mapcar (curry #'release/system-file release) system-files)))
+               (release (project-release project `(:commit ,commit)))
+               (system-files (mapcar (curry #'release-system-file release) system-files)))
           (setf (lockfile/system-files lockfile)
                 (append system-files (lockfile/system-files lockfile))))))
   lockfile)
@@ -379,25 +379,25 @@ to a file."
     (iter
       (for system-file := (pop all-system-files))
       (while system-file)
-      (for release := (system-file/release system-file))
+      (for release := (system-file-release system-file))
       (for system-files-in-release := (list* system-file
                                              (remove-if-not (lambda (x)
-                                                              (eql release (system-file/release x)))
+                                                              (eql release (system-file-release x)))
                                                             all-system-files)))
       (setf all-system-files (remove-if (lambda (x)
-                                          (eql release (system-file/release x)))
+                                          (eql release (system-file-release x)))
                                         all-system-files))
 
       (cond
         ((typep release 'fs-release)
          (dolist (file system-files-in-release)
            (collect `(:local-asd
-                      :path ,(system-file/asd-enough-namestring file)))))
+                      :path ,(system-file-asd-enough-namestring file)))))
         ;; TODO: Make this handle local vs remote git repos
         ((typep release 'vcs-release)
-         (let* ((version (release/version release))
-                (project (release/project release))
-                (repo (project/repo project)))
+         (let* ((version (release-version release))
+                (project (release-project release))
+                (repo (project-repo project)))
            (assert (listp version))
            (assert (eql :commit (first version)))
            (assert (stringp (second version)))
@@ -405,17 +405,17 @@ to a file."
            (collect `(,(etypecase repo
                          (gitlab-repo
                           :gitlab))
-                      :name ,(project/name (release/project release))
+                      :name ,(project-name (release-project release))
                       :host ,(gitlab-repo-host repo)
                       :path ,(gitlab-repo-path repo)
                       :commit ,(second version)
-                      :system-files ,(mapcar #'system-file/asd-enough-namestring system-files-in-release)))))
+                      :system-files ,(mapcar #'system-file-asd-enough-namestring system-files-in-release)))))
         (t
          (collect `(:project
-                    :name ,(project/name (release/project release))
-                    :version ,(release/version release)
-                    :source ,(source/name (release/source release))
-                    :system-files ,(mapcar #'system-file/asd-enough-namestring system-files-in-release))))))))
+                    :name ,(project-name (release-project release))
+                    :version ,(release-version release)
+                    :source ,(source-name (release-source release))
+                    :system-files ,(mapcar #'system-file-asd-enough-namestring system-files-in-release))))))))
 
 (defun write-lockfile-to-stream (lockfile stream)
   "Write ~lockfile~ to ~stream~."

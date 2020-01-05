@@ -21,7 +21,7 @@
 
 (defun validate-source (source)
   "Ensures that the source has a name, and a type."
-  (let* ((name (source/name source)))
+  (let* ((name (source-name source)))
     (assert (and (stringp name)
                  (not (string-equal "" name))))))
 

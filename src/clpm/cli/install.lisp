@@ -84,11 +84,11 @@
       ;; (when (and install-system-p
       ;;            (getopt :short-name "x"))
       ;;   (let* ((releases (reverse releases-to-install))
-      ;;          (requested-system-release (release/system-release (first releases) package-name))
+      ;;          (requested-system-release (release-system-release (first releases) package-name))
       ;;          (system-releases (list* requested-system-release
-      ;;                                  (mapcan #'release/system-releases releases))))
+      ;;                                  (mapcan #'release-system-releases releases))))
       ;;     (format t "~S~%" (remove-duplicates
-      ;;                       (mapcar #'system-release/absolute-asd-pathname system-releases)
+      ;;                       (mapcar #'system-release-absolute-asd-pathname system-releases)
       ;;                       :from-end t
       ;;                       :test 'uiop:pathname-equal))))
       )

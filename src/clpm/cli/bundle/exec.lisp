@@ -45,7 +45,7 @@
                                              clpmfile-pathname))
          (lockfile (read-lockfile lockfile-pathname))
          (system-files (lockfile/system-files lockfile))
-         (asdf-pathnames (mapcar #'system-file/absolute-asd-pathname system-files))
+         (asdf-pathnames (mapcar #'system-file-absolute-asd-pathname system-files))
          (missing-pathnames (remove-if #'probe-file asdf-pathnames))
          (client-location (when (gethash :bundle-exec-with-client options)
                             (ensure-client-written)

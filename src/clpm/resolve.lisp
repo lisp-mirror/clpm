@@ -129,7 +129,7 @@
   "Find a system object, if it is activated in the search state."
   (find system (search-state-activated-system-releases search-state)
         :test #'string-equal
-        :key (compose #'system/name #'system-release/system)))
+        :key (compose #'system-name #'system-release-system)))
 
 
 ;; * Search nodes
@@ -245,17 +245,17 @@ incompatible, a new one is created."
 
                         (ecase status
                           (:sat
-                           (unless (release-installed-p (system-release/release satisfying-system-release))
-                             (install-release (system-release/release satisfying-system-release)))
+                           (unless (release-installed-p (system-release-release satisfying-system-release))
+                             (install-release (system-release-release satisfying-system-release)))
                            (log:debug "Groveler is missing ~S, but it is already in resolution. Adding it."
                                       missing-system-spec)
                            (invoke-restart 'add-asd-and-retry
-                                           (system-release/absolute-asd-pathname satisfying-system-release)
+                                           (system-release-absolute-asd-pathname satisfying-system-release)
                                            (lambda ()
                                              (log:debug "Groveler successfully added ~S. Adding ~S to search state."
                                                         missing-system-spec
-                                                        (namestring (system-release/absolute-asd-pathname satisfying-system-release)))
-                                             (push (namestring (system-release/absolute-asd-pathname satisfying-system-release))
+                                                        (namestring (system-release-absolute-asd-pathname satisfying-system-release)))
+                                             (push (namestring (system-release-absolute-asd-pathname satisfying-system-release))
                                                    (search-state-groveler-loaded-asds new-search-state)))))
                           (:unsat
                            (return-from compute-child-generator (lambda () (values nil nil))))
@@ -264,27 +264,27 @@ incompatible, a new one is created."
                              (lambda ()
                                (push missing-req (search-state-unresolved-grovel-reqs new-search-state))
                                (values new-search-node nil))))))))))
-             (search-node-load-asd-in-groveler! new-search-node (system-file/absolute-asd-pathname sf))
+             (search-node-load-asd-in-groveler! new-search-node (system-file-absolute-asd-pathname sf))
 
              ;; Groveller is primed. Get the requirements from it.
              (let ((*active-groveler* (search-node-groveler new-search-node))
                    (system-releases nil))
                (if (eql t system-names)
-                   (setf system-releases (system-file/system-releases sf))
+                   (setf system-releases (system-file-system-releases sf))
                    (setf system-releases (mapcar (lambda (sn)
-                                                   (release/system-release (system-file/release sf) sn))
+                                                   (release-system-release (system-file-release sf) sn))
                                                  system-names)))
 
                ;; Remove the SF we just computed the deps for.
                (pop (search-state-system-files-pending-groveling new-search-state))
 
                (dolist (sr system-releases)
-                 (let ((reqs (system-release/requirements sr)))
+                 (let ((reqs (system-release-requirements sr)))
                    ;; Add the deps we just computed.
                    (setf (search-state-unresolved-reqs new-search-state)
                          (append reqs (search-state-unresolved-reqs new-search-state)))))
                ;; activate the system releases
-               (search-state-add-resolution! new-search-state (system-file/release sf)
+               (search-state-add-resolution! new-search-state (system-file-release sf)
                                              system-releases nil)
                (lambda ()
                  (values new-search-node nil)))))))
@@ -306,7 +306,7 @@ incompatible, a new one is created."
                ;; And push its requirements.
                (dolist (sr system-releases)
                  (setf (search-state-unresolved-reqs new-search-state)
-                       (append (system-release/requirements sr)
+                       (append (system-release-requirements sr)
                                (search-state-unresolved-reqs new-search-state))))
                (values new-search-node (not (null resolutions))))))))
       (t
@@ -346,7 +346,7 @@ otherwise."
 by name."
   (loop
     :for source :in *sources*
-    :for s := (source/system source system-name)
+    :for s := (source-system source system-name)
     :when s
       :do (return s)))
 
@@ -355,7 +355,7 @@ by name."
 by name."
   (loop
     :for source :in *sources*
-    :for p := (source/project source project-name)
+    :for p := (source-project source project-name)
     :when p
       :do (return p)))
 
@@ -383,7 +383,7 @@ satisfied. Returns one of :SAT, :UNSAT, or :UNKNOWN."))
     (cond
       ((not system-release)
        :unknown)
-      ((not (eql (system-release/source system-release)
+      ((not (eql (system-release-source system-release)
                  (requirement/source req)))
        :unsat)
       (t
@@ -422,17 +422,17 @@ satisfied. Returns one of :SAT, :UNSAT, or :UNKNOWN."))
   (assert (requirement/source req)))
 
 (defmethod resolve-requirement-source! ((req project-requirement))
-  (let ((source (project/source (find-project-in-sources (requirement/name req)))))
+  (let ((source (project-source (find-project-in-sources (requirement/name req)))))
     (setf (requirement/source req) source))
   req)
 
 (defmethod resolve-requirement-source! ((req vcs-project-requirement))
-  (let ((source (project/source (find-project-in-sources (requirement/name req)))))
+  (let ((source (project-source (find-project-in-sources (requirement/name req)))))
     (setf (requirement/source req) source))
   req)
 
 (defmethod resolve-requirement-source! ((req system-requirement))
-  (let ((source (system/source (find-system-in-sources (requirement/name req)))))
+  (let ((source (system-source (find-system-in-sources (requirement/name req)))))
     (setf (requirement/source req) source))
   req)
 
@@ -456,8 +456,8 @@ objects to a list of system-releases."))
          (commit (requirement/commit req))
          (tag (requirement/tag req))
          (source (requirement/source req))
-         (vcs-project (source/project source project-name))
-         (vcs-release (project/release vcs-project
+         (vcs-project (source-project source project-name))
+         (vcs-release (project-release vcs-project
                                        (cond
                                          (commit
                                           `(:commit ,commit))
@@ -465,7 +465,7 @@ objects to a list of system-releases."))
                                           `(:branch ,branch))
                                          (tag
                                           `(:tag ,tag)))))
-         (release-system-files (release/system-files vcs-release)))
+         (release-system-files (release-system-files vcs-release)))
     (assert (null system-files))
     ;; If the systems are defined, we only need to grovel the files in which
     ;; those systems are defined. Otherwise we need to grovel all systems in
@@ -480,35 +480,35 @@ objects to a list of system-releases."))
                       :for system-file := (find primary-system-name release-system-files
                                                 :test #'equalp
                                                 :key (lambda (x)
-                                                       (pathname-name (system-file/absolute-asd-pathname x))))
+                                                       (pathname-name (system-file-absolute-asd-pathname x))))
                       :do
                          (assert system-file)
                          (push system (assoc-value out system-file))
                       :finally (return out))
                     (mapcar (rcurry #'cons t)
-                            (release/system-files vcs-release)))))))
+                            (release-system-files vcs-release)))))))
 
 (defmethod resolve-requirement ((req project-requirement) search-state)
   (let* ((project-name (requirement/name req))
          (version-spec (requirement/version-spec req))
          (project (find-project-in-sources project-name))
-         (releases (project/releases project))
+         (releases (project-releases project))
          (applicable-releases (remove-if-not (rcurry #'release-satisfies-version-spec-p version-spec)
                                              releases)))
     (mapcar (lambda (x)
-              (list x :system-releases (release/system-releases x)))
+              (list x :system-releases (release-system-releases x)))
             (sort applicable-releases #'release->))))
 
 (defmethod resolve-requirement ((req system-requirement) search-state)
   (let* ((system-name (requirement/name req))
          (version-spec (requirement/version-spec req))
          (system (find-system-in-sources system-name))
-         (system-releases (system/system-releases system))
+         (system-releases (system-system-releases system))
          (applicable-system-releases (remove-if-not (rcurry #'system-release-satisfies-version-spec-p
                                                             version-spec)
                                                     system-releases)))
     (mapcar (lambda (x)
-              (list (system-release/release x)
+              (list (system-release-release x)
                     :system-releases (list x)))
             (sort applicable-system-releases #'system-release->))))
 
@@ -516,18 +516,18 @@ objects to a list of system-releases."))
   ;; Make a release from the file system.
   (let* ((system-name (requirement/name req))
          (fs-source (requirement/source req))
-         (system (source/system fs-source system-name))
-         (releases (system/releases system))
+         (system (source-system fs-source system-name))
+         (releases (system-releases system))
          (release (first releases))
-         (system-release (release/system-release release system-name)))
+         (system-release (release-system-release release system-name)))
     (assert (length= 1 releases))
 
     (list (list release
                 :system-files
-                (list (cons (system-release/system-file system-release) (list system-name)))))
+                (list (cons (system-release-system-file system-release) (list system-name)))))
     ;; (mapcar (lambda (release)
-    ;;           (list release :system-files (list (cons (release/system-release)))(release/system-files release))
-    ;;           ;;(list release :system-releases (list (release/system-release release system-name)))
+    ;;           (list release :system-files (list (cons (release-system-release)))(release-system-files release))
+    ;;           ;;(list release :system-releases (list (release-system-release release system-name)))
     ;;           )
     ;;         releases)
     ))
@@ -537,7 +537,7 @@ objects to a list of system-releases."))
 ;;          (fs-source (requirement/source req))
 ;;          (system-file (fs-source-register-asd fs-source system-pathname)))
 
-;;     (list (cons (system-file/release system-file) (system-file/system-releases system-file)))))
+;;     (list (cons (system-file-release system-file) (system-file-system-releases system-file)))))
 
 
 ;; * Installing VCS requirements
@@ -551,14 +551,14 @@ correct commit."
          (tag (requirement/tag req))
          (source (requirement/source req))
          (repo (or (requirement/repo req)
-                   (project/repo (source/project source project-name)))))
+                   (project-repo (source-project source project-name)))))
     (unless (typep source 'vcs-source)
       ;; We need to rehome this requirement so we get all the groveling
       ;; capabilities.
       (setf source vcs-source)
       (vcs-source-register-project! vcs-source repo project-name))
-    (let* ((vcs-project (source/project source project-name))
-           (vcs-release (project/release vcs-project
+    (let* ((vcs-project (source-project source project-name))
+           (vcs-release (project-release vcs-project
                                          (cond
                                            (commit
                                             `(:commit ,commit))
@@ -614,7 +614,7 @@ list of system-releases. If NO-DEPS is non-NIL, don't resolve dependencies."
                                                            :unresolved-reqs reqs))))
       (assert (not no-deps))
       ;; (when no-deps
-      ;;   (mapcar #'system-release/release
+      ;;   (mapcar #'system-release-release
       ;;           (search-node/activated-system-releases (next-child root-node))))
       (iter
         (with q := (list root-node))

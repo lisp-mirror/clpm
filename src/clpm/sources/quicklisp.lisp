@@ -93,25 +93,25 @@ the base URL is HTTPS, ensure the force-https flag is set (presumably that is
 what the user intends). Last, computes the versions URL."
   (declare (ignore initargs))
   (when (ql-force-https source)
-    (ensure-uri-scheme-https! (source/url source)))
+    (ensure-uri-scheme-https! (source-url source)))
   ;; If the uri is given as https, assume the user wants to fetch everything
   ;; from this source over https.
   (when (and (not (ql-force-https source))
-             (eql (uri-scheme (source/url source)) :https))
+             (eql (uri-scheme (source-url source)) :https))
     (setf (ql-force-https source) t))
   ;; Compute the versions url. Example:
   ;; http://beta.quicklisp.org/dist/quicklisp.txt ->
   ;; http://beta.quicklisp.org/dist/quicklisp-versions.txt
-  (let* ((path (puri:uri-path (source/url source)))
+  (let* ((path (puri:uri-path (source-url source)))
          (file-name (pathname-name path)))
     (setf (ql-versions-url source)
           (merge-uris (namestring
                        (merge-pathnames (concatenate 'string file-name "-versions")
                                         path))
-                      (source/url source))))
+                      (source-url source))))
   ;; Load the synced files if they exist.
   (let ((pn (merge-pathnames "ql-source.conspack"
-                             (source/lib-directory source))))
+                             (source-lib-directory source))))
     (when (probe-file pn)
       (with-open-file (s pn
                          :element-type '(unsigned-byte 8))
@@ -124,7 +124,7 @@ what the user intends). Last, computes the versions URL."
 
 (defun save-ql-source! (source)
   (let ((pn (merge-pathnames "ql-source.conspack"
-                             (source/lib-directory source))))
+                             (source-lib-directory source))))
     (ensure-directories-exist pn)
     (with-open-file (s pn
                        :if-exists :supersede
@@ -136,27 +136,27 @@ what the user intends). Last, computes the versions URL."
         (cpk:encode (ql-source-project-ht source) :stream s)
         (cpk:encode (ql-source-system-ht source) :stream s)))))
 
-(defmethod source/cache-directory ((source quicklisp-source))
+(defmethod source-cache-directory ((source quicklisp-source))
   "Compute the cache location for this source, based on its canonical url."
   (clpm-cache-pathname
    `("sources"
      "quicklisp"
-     ,(string-downcase (string (uri-scheme (source/url source))))
-     ,(uri-host (source/url source))
-     ,@(split-sequence #\/ (uri-path (source/url source)) :remove-empty-subseqs t))
+     ,(string-downcase (string (uri-scheme (source-url source))))
+     ,(uri-host (source-url source))
+     ,@(split-sequence #\/ (uri-path (source-url source)) :remove-empty-subseqs t))
    :ensure-directory t))
 
-(defmethod source/lib-directory ((source quicklisp-source))
+(defmethod source-lib-directory ((source quicklisp-source))
   "Compute the data location for this source, based on its canonical url."
   (clpm-data-pathname
    `("sources"
      "quicklisp"
-     ,(string-downcase (string (uri-scheme (source/url source))))
-     ,(uri-host (source/url source))
-     ,@(split-sequence #\/ (uri-path (source/url source)) :remove-empty-subseqs t))
+     ,(string-downcase (string (uri-scheme (source-url source))))
+     ,(uri-host (source-url source))
+     ,@(split-sequence #\/ (uri-path (source-url source)) :remove-empty-subseqs t))
    :ensure-directory t))
 
-(defun %source/project-release (source project-name version-string
+(defun %source-project-release (source project-name version-string
                                 &optional (error t))
   ;; Make sure the dist release is present.
   (let ((dist-release (ql-source-dist-release source version-string)))
@@ -164,34 +164,34 @@ what the user intends). Last, computes the versions URL."
       (if error
           (error 'quicklisp-version-missing
                  :missing-version version-string)
-          (return-from %source/project-release nil)))
-    (let* ((project (source/project source project-name))
-           (release (project/release project version-string)))
+          (return-from %source-project-release nil)))
+    (let* ((project (source-project source project-name))
+           (release (project-release project version-string)))
       release)))
 
-(defmethod source/project-release ((source quicklisp-source) project-name version-string
+(defmethod source-project-release ((source quicklisp-source) project-name version-string
                                    &optional (error t))
     (restart-case
-        (%source/project-release source project-name version-string error)
+        (%source-project-release source project-name version-string error)
       (sync-and-retry (c)
         :report "Sync source and try again."
         (declare (ignore c))
         (sync-version-list! source)
         (sync-dist-release! (ql-source-dist-release source version-string))
-        (%source/project-release source project-name version-string error))))
+        (%source-project-release source project-name version-string error))))
 
-(defmethod source/project ((source quicklisp-source) project-name)
+(defmethod source-project ((source quicklisp-source) project-name)
   (gethash project-name (ql-source-project-ht source)))
 
-(defmethod source/system ((source quicklisp-source) system-name)
+(defmethod source-system ((source quicklisp-source) system-name)
   (gethash system-name (ql-source-system-ht source)))
 
 (defmethod source-type-keyword ((source quicklisp-source))
   :quicklisp)
 
 (defmethod source-to-form ((source quicklisp-source))
-  (list (source/name source)
-        :url (uri-to-string (source/url source))
+  (list (source-name source)
+        :url (uri-to-string (source-url source))
         :type :quicklisp
         :force-https (ql-force-https source)))
 
@@ -271,11 +271,11 @@ what the user intends). Last, computes the versions URL."
   ((source
     :initarg :source
     :accessor ql-project-source
-    :reader project/source)
+    :reader project-source)
    (name
     :initarg :name
     :accessor ql-project-name
-    :reader project/name
+    :reader project-name
     :documentation
     "The name of the project.")
    (release-ht
@@ -291,10 +291,10 @@ what the user intends). Last, computes the versions URL."
   (aprog1 (call-next-method)
     (setf (slot-value it 'source) *current-source*)))
 
-(defmethod project/release ((self ql-project) version-string)
+(defmethod project-release ((self ql-project) version-string)
   (gethash version-string (ql-project-release-ht self)))
 
-(defmethod project/releases ((p ql-project))
+(defmethod project-releases ((p ql-project))
   (hash-table-values (ql-project-release-ht p)))
 
 
@@ -306,7 +306,7 @@ what the user intends). Last, computes the versions URL."
   ((source
     :initarg :source
     :accessor ql-release-source
-    :reader release/source)
+    :reader release-source)
    (project
     :initarg :project
     :accessor ql-release-project)
@@ -358,30 +358,30 @@ what the user intends). Last, computes the versions URL."
     ;;(break)
     (setf (slot-value it 'source) *current-source*)))
 
-(defmethod release/system-file ((release ql-release) system-file-namestring)
+(defmethod release-system-file ((release ql-release) system-file-namestring)
   (gethash system-file-namestring (ql-release-system-file-ht release)))
 
-(defmethod release/system-release ((release ql-release) system-name)
+(defmethod release-system-release ((release ql-release) system-name)
   (gethash system-name (ql-release-system-release-ht release)))
 
-(defmethod release/system-releases ((release ql-release))
+(defmethod release-system-releases ((release ql-release))
   (hash-table-values (ql-release-system-release-ht release)))
 
-(defmethod release/project ((release ql-release))
+(defmethod release-project ((release ql-release))
   (ql-release-project release))
 
-(defmethod release/lib-pathname ((r ql-release))
+(defmethod release-lib-pathname ((r ql-release))
   (uiop:resolve-absolute-location
-   (list (source/lib-directory (release/source r))
+   (list (source-lib-directory (release-source r))
          "projects"
-         (project/name (release/project r))
+         (project-name (release-project r))
          (ql-release-prefix r))
    :ensure-directory t))
 
 (defmethod tarball-release/url ((release ql-release))
   (aprog1
       (parse-uri (ql-release-url release))
-    (when (ql-force-https (release/source release))
+    (when (ql-force-https (release-source release))
       (ensure-uri-scheme-https! it))))
 
 
@@ -391,11 +391,11 @@ what the user intends). Last, computes the versions URL."
   ((source
     :initarg :source
     :accessor ql-system-source
-    :reader system/source)
+    :reader system-source)
    (name
     :initarg :name
     :accessor ql-system-name
-    :accessor system/name
+    :accessor system-name
     :documentation
     "The name of the system.")
    (releases-ht
@@ -413,7 +413,7 @@ what the user intends). Last, computes the versions URL."
   (aprog1 (call-next-method)
     (setf (slot-value it 'source) *current-source*)))
 
-(defmethod system/system-releases ((system ql-system))
+(defmethod system-system-releases ((system ql-system))
   (hash-table-values (ql-system-system-releases-ht system)))
 
 
@@ -423,17 +423,17 @@ what the user intends). Last, computes the versions URL."
   ((source
     :initarg :source
     :accessor ql-system-release-source
-    :reader system-release/source)
+    :reader system-release-source)
    (release
     :initarg :release
     :accessor ql-system-release-release
-    :reader system-release/release
+    :reader system-release-release
     :documentation
     "The release to which this system release belongs.")
    (system
     :initarg :system
     :accessor ql-system-release-system
-    :reader system-release/system
+    :reader system-release-system
     :documentation
     "The system.")
    (system-file
@@ -458,13 +458,13 @@ what the user intends). Last, computes the versions URL."
   (aprog1 (call-next-method)
     (setf (slot-value it 'source) *current-source*)))
 
-(defmethod system-release/system-file ((system-release ql-system-release))
-  (release/system-file (system-release/release system-release)
+(defmethod system-release-system-file ((system-release ql-system-release))
+  (release-system-file (system-release-release system-release)
                        (ql-system-release-system-file system-release)))
 
-(defmethod system-release/absolute-asd-pathname ((system-release ql-system-release))
-  (system-file/absolute-asd-pathname
-   (release/system-file (system-release/release system-release)
+(defmethod system-release-absolute-asd-pathname ((system-release ql-system-release))
+  (system-file-absolute-asd-pathname
+   (release-system-file (system-release-release system-release)
                         (ql-system-release-system-file system-release))))
 
 (defmethod system-release-satisfies-version-spec-p ((system-release ql-system-release) version-spec)
@@ -473,9 +473,9 @@ what the user intends). Last, computes the versions URL."
   t)
 
 (defmethod system-release-> ((sr-1 ql-system-release) (sr-2 ql-system-release))
-  (release-> (system-release/release sr-1) (system-release/release sr-2)))
+  (release-> (system-release-release sr-1) (system-release-release sr-2)))
 
-(defmethod system-release/requirements ((system-release ql-system-release))
+(defmethod system-release-requirements ((system-release ql-system-release))
   (let ((deps (remove-if (rcurry #'member (list "asdf" "uiop") :test #'string-equal)
                          (ql-system-release-dependencies system-release))))
     (mapcar (lambda (dep-name)
@@ -489,17 +489,17 @@ what the user intends). Last, computes the versions URL."
 (defclass ql-system-file ()
   ((source
     :initarg :source
-    :reader system-file/source
+    :reader system-file-source
     :documentation
     "The source for this system file.")
    (namestring
     :initarg :namestring
-    :reader system-file/asd-enough-namestring
+    :reader system-file-asd-enough-namestring
     :documentation
     "The namestring for the file.")
    (release
     :initarg :release
-    :reader system-file/release
+    :reader system-file-release
     :documentation
     "The release to which the system-file belongs."))
   (:documentation
@@ -512,10 +512,10 @@ what the user intends). Last, computes the versions URL."
   (aprog1 (call-next-method)
     (setf (slot-value it 'source) *current-source*)))
 
-(defmethod system-file/absolute-asd-pathname ((system-file ql-system-file))
-  (let* ((release (system-file/release system-file)))
-    (merge-pathnames (system-file/asd-enough-namestring system-file)
-                     (release/lib-pathname release))))
+(defmethod system-file-absolute-asd-pathname ((system-file ql-system-file))
+  (let* ((release (system-file-release system-file)))
+    (merge-pathnames (system-file-asd-enough-namestring system-file)
+                     (release-lib-pathname release))))
 
 
 ;;; * Syncing!
@@ -524,7 +524,7 @@ what the user intends). Last, computes the versions URL."
   "Fetch the latest versions for a source. Returns an alist mapping version
 strings to distinfo.txt urls."
   (let ((versions-pathname (merge-pathnames "metadata/distinfo-versions.txt"
-                                            (source/cache-directory source))))
+                                            (source-cache-directory source))))
     (ensure-file-fetched versions-pathname (ql-versions-url source))
     (let ((versions-lines (uiop:read-file-lines versions-pathname)))
       (mapcar (lambda (l)
@@ -550,7 +550,7 @@ strings to distinfo.txt urls."
   (let ((release-index-pathname (merge-pathnames (uiop:strcat "metadata/"
                                                               (ql-dist-release-version self)
                                                               "/releases.txt")
-                                                 (source/cache-directory source)))
+                                                 (source-cache-directory source)))
         (release-index-url (ql-dist-release-release-index-url self)))
     (ensure-file-fetched release-index-pathname release-index-url)
 
@@ -587,7 +587,7 @@ local database."
   (let ((system-index-pathname (merge-pathnames (uiop:strcat "metadata/"
                                                              (ql-dist-release-version self)
                                                              "/systems.txt")
-                                                (source/cache-directory source)))
+                                                (source-cache-directory source)))
         (system-index-url (ql-dist-release-system-index-url self)))
     (ensure-file-fetched system-index-pathname system-index-url)
 
@@ -600,7 +600,7 @@ local database."
                                          (make-instance 'ql-system
                                                         :name system-name
                                                         :source source)))
-                 (release (project/release (source/project source project-name) dist-version-id))
+                 (release (project-release (source-project source project-name) dist-version-id))
                  (system-release (make-instance 'ql-system-release
                                                 :source source
                                                 :system system
@@ -623,7 +623,7 @@ local database."
          (distinfo-pathname (merge-pathnames (uiop:strcat "metadata/"
                                                           (ql-dist-release-version self)
                                                           "/distinfo.txt")
-                                             (source/cache-directory source))))
+                                             (source-cache-directory source))))
     (ensure-file-fetched distinfo-pathname distinfo-url)
     (let* ((distinfo-contents (uiop:read-file-string distinfo-pathname))
            (distinfo-plist (parse-distinfo distinfo-contents)))
