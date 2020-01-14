@@ -145,3 +145,12 @@
 [submodule "ext/do-urlencode"]
 	path = ext/do-urlencode
 	url = https://github.com/drdo/do-urlencode.git
+[submodule "ext/deploy"]
+	path = ext/deploy
+	url = https://github.com/Shinmera/deploy.git
+[submodule "ext/documentation-utils"]
+	path = ext/documentation-utils
+	url = https://github.com/Shinmera/documentation-utils.git
+[submodule "ext/trivial-indent"]
+	path = ext/trivial-indent
+	url = https://github.com/Shinmera/trivial-indent.git
