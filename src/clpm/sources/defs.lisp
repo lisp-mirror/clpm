@@ -16,8 +16,8 @@
            #:clpm-system-release
            #:clpm-source
            #:clpm-system
-           #:init-source-cache
            #:project
+           #:project-missing-version
            #:project-name
            #:project-release
            #:project-releases
@@ -35,6 +35,7 @@
            #:release-systems
            #:release-version
            #:release-installed-p
+           #:release-missing-system-release
            #:release-satisfies-version-spec-p
            #:repo
            #:source
@@ -49,6 +50,8 @@
            #:source-systems
            #:source-url
            #:source-context-pathname
+           #:source-missing-project
+           #:source-missing-system
            #:source-no-such-object
            #:source-source-registry-cache-pathname
            #:source-to-form
@@ -84,7 +87,28 @@
 ;; * Conditions
 
 (define-condition source-no-such-object ()
-  ())
+  ((source
+    :initarg :source)))
+
+(define-condition source-missing-project (source-no-such-object)
+  ((project-name
+    :initarg :project-name)))
+
+(define-condition source-missing-system (source-no-such-object)
+  ((system-name
+    :initarg :system-name)))
+
+(define-condition project-missing-version (source-no-such-object)
+  ((project
+    :initarg :project)
+   (version
+    :initarg :version)))
+
+(define-condition release-missing-system-release (source-no-such-object)
+  ((release
+    :initarg :release)
+   (system-name
+    :initarg :system-name)))
 
 
 ;; * Sources
@@ -106,12 +130,6 @@ systems."))
   "Ensure that the URL field on a CLPM-SOURCE instance is a puri URL."
   (declare (ignore initargs))
   (setf (source-url self) (parse-uri url)))
-
-(defgeneric init-source-cache (source)
-  (:documentation "A source can register a function here to set up its cache
-directory on the file system.")
-  (:method (source)
-    (values)))
 
 (defgeneric source-cache-directory (source)
   (:documentation "The source's cache directory."))
@@ -141,19 +159,25 @@ metadata. Returns T if the local data has changed, NIL otherwise."))
 inclusion in the sources.conf file. Consists of the URL followed by a plist of
 initargs and a :type as a keyword."))
 
-(defgeneric source-project (source project-name)
-  (:documentation "Return an instance of CLPM-PROJECT or NIL if the project is
-not located in the source."))
+(defgeneric source-project (source project-name &optional error)
+  (:documentation "Return an instance of CLPM-PROJECT. If the project is not in
+the source and ERROR is T (default), an error condition of type
+SOURCE-MISSING-PROJECT is signaled. Otherwise, NIL is returned."))
 
 (defgeneric source-project-release (source project-name version-string &optional error)
   (:documentation
    "Return a release object for the specified project and version. If error is
 t (default), a ~source-no-such-object~ error is signaled. If possible, the
-source implementation should provide a ~sync-and-retry~ restart."))
+source implementation should provide a ~sync-and-retry~ restart.")
+  (:method (source project-name version-string &optional (error t))
+    (let ((project (source-project source project-name error)))
+      (when project
+        (project-release project version-string error)))))
 
-(defgeneric source-system (source system-name)
-  (:documentation "Return an instance of CLPM-SYSTEM or NIL if the system is not
-located in the source."))
+(defgeneric source-system (source system-name &optional error)
+  (:documentation "Return an instance of CLPM-SYSTEM. If the system is not
+located in the source and ERROR is T (default), signals an error of type
+SOURCE-MISSING-SYSTEM. Otherwise, returns NIL."))
 
 (defgeneric source-projects (source)
   (:documentation "Return a list of all projects (as CLPM-PROJECT instances)
@@ -205,8 +229,10 @@ instances) that provide this system."))
 many systems and the list of provided systems can change over time as new
 releases are made."))
 
-(defgeneric project-release (project version-string)
-  (:documentation "Return a release matching the given version string."))
+(defgeneric project-release (project version-string &optional error)
+  (:documentation "Return a release matching the given version string. If ERROR
+is T (default) and there is no such version of the project, signals an error of
+type PROJECT-MISSING-VERSION."))
 
 (defgeneric project-releases (project)
   (:documentation "Return a list of releases (as CLPM-RELEASE instances) of this
@@ -275,10 +301,11 @@ located at system-file-namestring."))
 (defgeneric release-system-files (release)
   (:documentation "Return all system files part of this release."))
 
-(defgeneric release-system-release (release system-name)
+(defgeneric release-system-release (release system-name &optional error)
   (:documentation "Given a release and the name of a system provided by the
-release, return the corresponding CLPM-SYSTEM-RELEASE object. Return NIL if
-release does not provide the system."))
+release, return the corresponding CLPM-SYSTEM-RELEASE object. If these is no
+such system release and ERROR is T (default), signals an error of type
+RELEASE-MISSING-SYSTEM-RELEASE. Otherwise, returns NIL."))
 
 (defgeneric release-> (release-1 release-2)
   (:documentation "Returns T if release-1 is a greater version than

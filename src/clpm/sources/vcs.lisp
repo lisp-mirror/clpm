@@ -51,17 +51,25 @@
                                    :source vcs-source
                                    :name project-name))))
 
-(defmethod source-project ((source vcs-source) project-name)
-  (gethash project-name (vcs-source-projects-by-name source)))
+(defmethod source-project ((source vcs-source) project-name &optional (error t))
+  (or (gethash project-name (vcs-source-projects-by-name source))
+      (when error
+        (error 'source-missing-project
+               :source source
+               :project-name project-name))))
 
-(defmethod source-system ((source vcs-source) system-name)
+(defmethod source-system ((source vcs-source) system-name &optional (error t))
   (or (gethash system-name (vcs-source-systems-by-name source))
       (some (lambda (project)
               (some (lambda (release)
                       (when-let ((system-release (release-system-release release system-name)))
                         (system-release-system system-release)))
                     (project-releases project)))
-            (hash-table-values (vcs-source-projects-by-name source)))))
+            (hash-table-values (vcs-source-projects-by-name source)))
+      (when error
+        (error 'source-missing-system
+               :source source
+               :system-name system-name))))
 
 
 ;; * projects
@@ -74,13 +82,15 @@
 (defmethod project-releases ((project vcs-project))
   (hash-table-values (vcs-project-releases-by-spec project)))
 
-(defmethod project-release ((project vcs-project) (version string))
+(defmethod project-release ((project vcs-project) (version string) &optional (error t))
   "A release named by a string is assumed to refer to a commit."
-  (project-release project `(:commit ,version)))
+  (project-release project `(:commit ,version) error))
 
-(defmethod project-release ((project vcs-project) (version list))
+(defmethod project-release ((project vcs-project) (version list) &optional (error t))
   "The version can be one of (:tag TAG-NAME), (:branch BRANCH-NAME), or (:commit
   COMMIT-STRING)"
+  ;; TODO: This is likely not right...
+  (declare (ignore error))
   (destructuring-bind (version-type version-string)
       version
     (check-type version-type (member :tag :branch :commit))
@@ -173,7 +183,7 @@ already created."
   (let* ((system-files (release-system-files release)))
     (apply #'append (mapcar #'system-file-system-releases system-files))))
 
-(defmethod release-system-release ((release vcs-release) system-name)
+(defmethod release-system-release ((release vcs-release) system-name &optional (error t))
   (unless (gethash system-name (vcs-release-system-releases-by-name release))
     (let* ((system-file (gethash (asdf:primary-system-name system-name)
                                  (vcs-release-system-files-by-primary-name release))))
@@ -193,7 +203,13 @@ already created."
                 system-release)
           (setf (gethash system-name (vcs-release-system-releases-by-name release))
                 system-release)))))
-  (gethash system-name (vcs-release-system-releases-by-name release)))
+  (or
+   (gethash system-name (vcs-release-system-releases-by-name release))
+   (when error
+     (error 'release-missing-system-release
+            :source (release-source release)
+            :release release
+            :system-name system-name))))
 
 (defmethod release-version ((release remote-vcs-release))
   (acond

@@ -180,11 +180,19 @@ what the user intends). Last, computes the versions URL."
         (sync-dist-release! (ql-source-dist-release source version-string))
         (%source-project-release source project-name version-string error))))
 
-(defmethod source-project ((source quicklisp-source) project-name)
-  (gethash project-name (ql-source-project-ht source)))
+(defmethod source-project ((source quicklisp-source) project-name &optional (error t))
+  (or (gethash project-name (ql-source-project-ht source))
+      (when error
+        (error 'source-missing-project
+               :source source
+               :project-name project-name))))
 
-(defmethod source-system ((source quicklisp-source) system-name)
-  (gethash system-name (ql-source-system-ht source)))
+(defmethod source-system ((source quicklisp-source) system-name &optional (error t))
+  (or (gethash system-name (ql-source-system-ht source))
+      (when error
+        (error 'source-missing-system
+               :source source
+               :system-name system-name))))
 
 (defmethod source-type-keyword ((source quicklisp-source))
   :quicklisp)
@@ -291,8 +299,13 @@ what the user intends). Last, computes the versions URL."
   (aprog1 (call-next-method)
     (setf (slot-value it 'source) *current-source*)))
 
-(defmethod project-release ((self ql-project) version-string)
-  (gethash version-string (ql-project-release-ht self)))
+(defmethod project-release ((self ql-project) version-string &optional (error t))
+  (or (gethash version-string (ql-project-release-ht self))
+      (when error
+        (error 'project-missing-version
+               :source (project-source self)
+               :project self
+               :version version-string))))
 
 (defmethod project-releases ((p ql-project))
   (hash-table-values (ql-project-release-ht p)))
@@ -361,8 +374,13 @@ what the user intends). Last, computes the versions URL."
 (defmethod release-system-file ((release ql-release) system-file-namestring)
   (gethash system-file-namestring (ql-release-system-file-ht release)))
 
-(defmethod release-system-release ((release ql-release) system-name)
-  (gethash system-name (ql-release-system-release-ht release)))
+(defmethod release-system-release ((release ql-release) system-name &optional (error t))
+  (or (gethash system-name (ql-release-system-release-ht release))
+      (when error
+        (error 'release-missing-system-release
+               :source (release-source release)
+               :release release
+               :system-name system-name))))
 
 (defmethod release-system-releases ((release ql-release))
   (hash-table-values (ql-release-system-release-ht release)))

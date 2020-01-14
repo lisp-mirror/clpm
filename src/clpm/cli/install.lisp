@@ -5,16 +5,11 @@
 
 (uiop:define-package #:clpm/cli/install
     (:use #:cl
-          #:alexandria
           #:clpm/cli/common-args
           #:clpm/cli/subcommands
-          #:clpm/install
+          #:clpm/interface
           #:clpm/log
-          #:clpm/requirement
-          #:clpm/resolve
-          #:clpm/source
-          #:clpm/version-strings
-          )
+          #:clpm/version-strings)
   (:import-from #:adopt))
 
 (in-package #:clpm/cli/install)
@@ -58,7 +53,7 @@
 
 
 (define-cli-command (("install") *install-ui*) (args options)
-  (let* ((version-string (gethash :install-verison options))
+  (let* ((version-string (gethash :install-version options))
          (package-name (first args))
          (install-system-p (gethash :install-system options))
          (no-deps-p (gethash :install-no-deps options)))
@@ -68,28 +63,7 @@
                version-string
                install-system-p
                package-name)
-    (let* ((sources (load-sources))
-           (version-spec (parse-version-specifier version-string))
-           (reqs (mapcar (lambda (vs)
-                           (make-instance (if install-system-p
-                                              'system-requirement
-                                              'project-requirement)
-                                          :version-spec vs
-                                          :name package-name))
-                         version-spec))
-           (releases-to-install (resolve-requirements reqs sources :no-deps no-deps-p)))
-      (log:debug "Reqs: ~S" reqs)
-      (log:debug "releases: ~S" releases-to-install)
-      (mapc (rcurry #'install-release :activate-globally t) releases-to-install)
-      ;; (when (and install-system-p
-      ;;            (getopt :short-name "x"))
-      ;;   (let* ((releases (reverse releases-to-install))
-      ;;          (requested-system-release (release-system-release (first releases) package-name))
-      ;;          (system-releases (list* requested-system-release
-      ;;                                  (mapcan #'release-system-releases releases))))
-      ;;     (format t "~S~%" (remove-duplicates
-      ;;                       (mapcar #'system-release-absolute-asd-pathname system-releases)
-      ;;                       :from-end t
-      ;;                       :test 'uiop:pathname-equal))))
-      )
+    (if install-system-p
+        (install-project package-name (parse-version-specifier version-string) :no-deps-p no-deps-p)
+        (install-system package-name (parse-version-specifier version-string) :no-deps-p no-deps-p))
     t))

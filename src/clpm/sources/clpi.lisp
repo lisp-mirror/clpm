@@ -101,11 +101,19 @@
      ,@(split-sequence #\/ (uri-path (source-url source)) :remove-empty-subseqs t))
    :ensure-directory t))
 
-(defmethod source-project ((source clpi-source) project-name)
-  (gethash project-name (clpi-source-project-ht source)))
+(defmethod source-project ((source clpi-source) project-name &optional (error t))
+  (or (gethash project-name (clpi-source-project-ht source))
+      (when error
+        (error 'source-missing-project
+               :source source
+               :project-name project-name))))
 
-(defmethod source-system ((source clpi-source) system-name)
-  (gethash system-name (clpi-source-system-ht source)))
+(defmethod source-system ((source clpi-source) system-name &optional (error t))
+  (or (gethash system-name (clpi-source-system-ht source))
+      (when error
+        (error 'source-missing-system
+               :source source
+               :system-name system-name))))
 
 (defmethod source-to-form ((source clpi-source))
   (list (source-name source)
@@ -153,8 +161,13 @@
   (aprog1 (call-next-method)
     (setf (slot-value it 'source) *active-source*)))
 
-(defmethod project-release ((p clpi-project) (version string))
-  (gethash version (clpi-project-release-ht p)))
+(defmethod project-release ((p clpi-project) (version string) &optional (error t))
+  (or (gethash version (clpi-project-release-ht p))
+      (when error
+        (error 'project-missing-version
+               :source (project-source p)
+               :project p
+               :version version))))
 
 (defmethod project-releases ((p clpi-project))
   (hash-table-values (clpi-project-release-ht p)))

@@ -67,13 +67,20 @@ objects.")
     (setf (fs-project-release project) release)
     (setf (fs-source-project source) project)))
 
-(defmethod source-project ((source fs-source) project-name)
+(defmethod source-project ((source fs-source) project-name &optional (error t))
   "If the project name is \"all\", return the singleton project. Otherwise
 return nil. "
-  (when (equal "all" project-name)
-    (fs-source-project source)))
+  (cond
+    ((equal "all" project-name)
+     (fs-source-project source))
+    (error
+     (error 'source-missing-project
+            :source source
+            :project-name project-name))
+    (t
+     nil)))
 
-(defmethod source-system ((source fs-source) system-name)
+(defmethod source-system ((source fs-source) system-name &optional (error t))
   "If this system already exists, return it. Otherwise see if we have an asd
 file with the same primary name and construct a new system for it."
   (unless (gethash system-name (fs-source-systems-by-name source))
@@ -92,7 +99,11 @@ file with the same primary name and construct a new system for it."
         (setf (fs-system-system-release system) system-release)
         (setf (gethash system-name (fs-source-systems-by-name source))
               system))))
-  (gethash system-name (fs-source-systems-by-name source)))
+  (or (gethash system-name (fs-source-systems-by-name source))
+      (when error
+        (error 'source-missing-system
+               :source source
+               :system-name system-name))))
 
 (defun fs-source-register-asd (fs-source asd-pathname)
   "Given a pathname to an asd file, register it with the source. asd-pathname
@@ -119,11 +130,18 @@ can be relative (to the source's root dir) or absolute."
   (:documentation "A project on the filesystem. Contains a singleton
 release (that is constructed by the source.)"))
 
-(defmethod project-release ((project fs-project) version-string)
+(defmethod project-release ((project fs-project) version-string &optional (error t))
   "If the version string is \"newest\", return our singleton release, otherwise
 nil."
-  (when (equal version-string "newest")
-    (fs-project-release project)))
+  (cond
+    ((equal version-string "newest")
+     (fs-project-release project))
+    (error
+     (error 'project-missing-version
+            :source (project-source project)
+            :project project
+            :version version-string))
+    (t nil)))
 
 (defmethod project-releases ((project fs-project))
   (list (fs-project-release project)))
@@ -148,11 +166,11 @@ of this created upon instantiation."))
          (ht (fs-source-system-files-by-namestring source)))
     (hash-table-values ht)))
 
-(defmethod release-system-release ((release fs-release) system-name)
+(defmethod release-system-release ((release fs-release) system-name &optional (error t))
   "Get the system object from the source and look up its singleton system
 release."
   (let* ((source (release-source release))
-         (system (source-system source system-name)))
+         (system (source-system source system-name error)))
     (fs-system-system-release system)))
 
 (defmethod release-system-releases ((release fs-release))

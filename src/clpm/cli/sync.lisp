@@ -28,5 +28,5 @@
 
 (define-cli-command (("sync") *sync-ui*) (args options)
   (log:info "Sync")
-  (mapc #'sync-source (load-sources))
+  (mapc #'sync-source (sources))
   t)

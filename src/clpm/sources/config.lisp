@@ -9,6 +9,7 @@
           #:clpm/config
           #:clpm/sources/clpi
           #:clpm/sources/defs
+          #:clpm/sources/ql-flat
           #:clpm/sources/quicklisp
           #:clpm/utils)
   (:import-from #:uiop
@@ -30,7 +31,7 @@
     (:clpi
      'clpi-source)
     (:quicklisp
-     'quicklisp-source)))
+     'ql-flat-source)))
 
 (defun load-source-from-form (f)
   (destructuring-bind (name &rest args &key type url &allow-other-keys)

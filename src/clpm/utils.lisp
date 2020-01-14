@@ -17,6 +17,7 @@
            #:retriable-error
            #:run-program-augment-env-args
            #:uri-to-string
+           #:url-port
            #:with-retries))
 
 (in-package #:clpm/utils)
@@ -97,6 +98,14 @@ other than ~:https~ or ~:http~."))
     (error "Refusing to change scheme ~S to HTTPS" (uri-scheme uri)))
   (setf (uri-scheme uri) :https)
   uri)
+
+(defun url-port (url)
+  (or (puri:uri-port url)
+      (ecase (puri:uri-scheme url)
+        (:https
+         443)
+        (:http
+         80))))
 
 (define-condition retriable-error (error)
   ())

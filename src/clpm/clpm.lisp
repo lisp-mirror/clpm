@@ -11,6 +11,7 @@
           #:clpm/cli/entry
           #:clpm/cli/install
           #:clpm/cli/license-info
-          #:clpm/cli/sync))
+          #:clpm/cli/sync
+          #:clpm/interface))
 
 (in-package #:clpm/clpm)
