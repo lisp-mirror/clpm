@@ -15,7 +15,7 @@
   :license "BSD-2-Clause"
   :pathname "src/clpm/"
   :class :package-inferred-system
-  :defsystem-depends-on (#:cffi-toolchain)
+  :defsystem-depends-on (#:cffi-toolchain #:clpm-build)
   :entry-point "clpm/cli/entry:main"
   :build-operation :program-op
   :depends-on (#:clpm/clpm)
