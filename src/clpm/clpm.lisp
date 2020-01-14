@@ -8,10 +8,15 @@
           ;;#:clpm/cli/bundle
           ;;#:clpm/cli/client
           ;;#:clpm/cli/config
-          ;;#:clpm/cli/entry
+          #:clpm/cli/entry
           ;;#:clpm/cli/install
           #:clpm/cli/license-info
           #:clpm/cli/sync
-          #:clpm/interface))
+          #:clpm/interface)
+  (:import-from #:deploy))
 
 (in-package #:clpm/clpm)
+
+(uiop:register-clear-configuration-hook
+ (lambda ()
+   (setf deploy:*status-output* nil)))
