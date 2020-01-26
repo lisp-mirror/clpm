@@ -21,3 +21,12 @@
   :build-pathname "clpm"
   :depends-on (#:clpm/clpm)
   :in-order-to ((prepare-op (build-op :clpm-client))))
+
+(defmethod asdf:output-files ((o deploy:deploy-op) (c (eql (find-system "clpm"))))
+  (let ((file (print (merge-pathnames (asdf/system:component-build-pathname c)
+                                      (merge-pathnames (uiop:ensure-directory-pathname "build/bin")
+                                                       (asdf:system-source-directory c))))))
+    (values (list file
+                  (merge-pathnames (uiop:ensure-directory-pathname "lib/clpm")
+                                   (uiop:pathname-parent-directory-pathname file)))
+            T)))
