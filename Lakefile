@@ -19,8 +19,81 @@
   (asdf:component-version (asdf:find-system :clpm)))
 
 (defun git-tag ()
-  (uiop:run-program '("git" "describe" "--exact-match" "--tags" "HEAD")
+  (uiop:run-program '("git" "describe" "--tags" "HEAD")
                     :output '(:string :stripped t)))
+
+(defun docker-build (path
+                     &key tag dockerfile context
+                       iid-file)
+  (uiop:run-program
+   `("docker"
+     ,@(when context
+         `(#?"--context=${context}"))
+     "build"
+     ,@(when tag
+         `("-t" ,tag))
+     ,@(when dockerfile
+         `("-f" ,dockerfile))
+     ,@(when iid-file
+         `("--iidfile" ,iid-file))
+     ,path)
+   :output :interactive
+   :error-output :interactive
+   :input :interactive))
+
+(defun docker-create (image
+                      &key cid-file context)
+  (uiop:run-program
+   `("docker"
+     ,@(when context
+         `(,#?"--context=${context}"))
+     "create"
+     ,@(when cid-file
+         `("--cidfile" ,cid-file))
+     ,image)
+   :output :interactive
+   :error-output :interactive
+   :input :interactive))
+
+(defun docker-cp (source-container source-path destination-path
+                  &key context)
+  (uiop:run-program
+   `("docker"
+     ,@(when context
+         `(#?"--context=${context}"))
+     "cp"
+     ,#?"${source-container}:${source-path}"
+     ,destination-path)
+   :output :interactive
+   :error-output :interactive
+   :input :interactive))
+
+(defun docker-rm (container
+                  &key context)
+  (uiop:run-program
+   `("docker"
+     ,@(when context
+         `(#?"--context=${context}"))
+     "rm"
+     ,container)
+   :output :interactive
+   :error-output :interactive
+   :input :interactive))
+
+(defun build-clpm-with-docker (dockerfile destination)
+  (uiop:with-temporary-file (:pathname iid-pn)
+    (uiop:with-temporary-file (:pathname cid-pn)
+      (uiop:delete-file-if-exists iid-pn)
+      (uiop:delete-file-if-exists cid-pn)
+      (docker-build "."
+                    :dockerfile dockerfile
+                    :iid-file (namestring iid-pn))
+      (let ((iid (uiop:read-file-string iid-pn)))
+        (docker-create iid
+                       :cid-file (namestring cid-pn))
+        (let ((cid (uiop:read-file-string cid-pn)))
+          (docker-cp cid "/clpm/build/clpm.tar.gz" destination)
+          (docker-rm cid))))))
 
 (namespace "docker-build"
   (task "all" ("glibc" "musl"))
@@ -31,17 +104,21 @@
   (task "musl-builder" ()
     (sh "docker build -f docker/Dockerfile.build-alpine -t clpm/clpm-build:alpine docker"))
 
-  (task "glibc" ("glibc-builder")
-    (sh #?"docker run -i -t --rm -v ${(uiop:pathname-directory-pathname *lakefile-truename*)}:/clpm:ro -v ${(uiop:pathname-directory-pathname *lakefile-truename*)}/build/docker/debian:/clpm/build clpm/clpm-build:debian sbcl --script /clpm/scripts/build-dynamic.lisp")
-    (sh #?"docker run -i -t --rm -v ${(uiop:pathname-directory-pathname *lakefile-truename*)}:/clpm:ro -v ${(uiop:pathname-directory-pathname *lakefile-truename*)}/build/docker/debian:/clpm/build clpm/clpm-build:debian sbcl --script /clpm/scripts/build-static.lisp")
-    (sh "cp build/docker/debian/bin/dynamic/clpm build/bin/clpm-x86_64-linux-gnu-dynamic")
-    (sh "cp build/docker/debian/bin/static/clpm build/bin/clpm-x86_64-linux-gnu-static"))
+  (task "glibc" ()
+    (let ((output-dir (merge-pathnames "build/tarballs/"
+                                       (uiop:getcwd))))
+      (ensure-directories-exist output-dir)
+      (build-clpm-with-docker "docker/Dockerfile.ubuntu"
+                              (namestring (merge-pathnames #?"clpm-linux-gnu-${(git-tag)}.tar.gz"
+                                                           output-dir)))))
 
-  (task "musl" ("musl-builder")
-    (sh #?"docker run -i -t --rm -v ${(uiop:pathname-directory-pathname *lakefile-truename*)}:/clpm:ro -v ${(uiop:pathname-directory-pathname *lakefile-truename*)}/build/docker/alpine:/clpm/build clpm/clpm-build:alpine sbcl --script /clpm/scripts/build-dynamic.lisp")
-    (sh #?"docker run -i -t --rm -v ${(uiop:pathname-directory-pathname *lakefile-truename*)}:/clpm:ro -v ${(uiop:pathname-directory-pathname *lakefile-truename*)}/build/docker/alpine:/clpm/build clpm/clpm-build:alpine sbcl --script /clpm/scripts/build-static.lisp")
-    (sh "cp build/docker/alpine/bin/dynamic/clpm build/bin/clpm-x86_64-linux-musl-dynamic")
-    (sh "cp build/docker/alpine/bin/static/clpm build/bin/clpm-x86_64-linux-musl-static")))
+  (task "musl" ()
+    (let ((output-dir (merge-pathnames "build/tarballs/"
+                                       (uiop:getcwd))))
+      (ensure-directories-exist output-dir)
+      (build-clpm-with-docker "docker/Dockerfile.alpine"
+                              (namestring (merge-pathnames #?"clpm-linux-msul-${(git-tag)}.tar.gz"
+                                                           output-dir))))))
 
 (namespace "release"
   (task "all" ("files")
@@ -51,29 +128,44 @@
     (ensure-directories-exist (merge-pathnames #?"build/releases/${(git-tag)}/"
                                                (uiop:getcwd))))
 
-  (task "files" (":docker-build" "dir")
+  (task "files" ("dir")
     (uiop:delete-file-if-exists #?"build/releases/${(git-tag)}/clpm-${(git-tag)}.DIGESTS")
-    (with-open-file (s #?"build/releases/${(git-tag)}/clpm-${(git-tag)}.DIGESTS"
-                       :direction :output)
-      (write-line "The SHA512 checksums of the following files are:" s)
-      (terpri s))
-    (flet ((insert-version (s)
-             (concatenate 'string "clpm-" (git-tag) (subseq s 4))))
-      (dolist (f '("clpm-x86_64-linux-gnu-dynamic" "clpm-x86_64-linux-gnu-static"
-                   "clpm-x86_64-linux-musl-dynamic" "clpm-x86_64-linux-musl-static"))
-        (sh #?"cp build/bin/${f} build/releases/${(git-tag)}/${(insert-version f)}")
-        (uiop:with-current-directory (#?"build/releases/${(git-tag)}/")
-          (sh #?"sha512sum ${(insert-version f)} >> clpm-${(git-tag)}.DIGESTS"))))))
+    (let ((files (uiop:directory* (merge-pathnames #?"build/tarballs/clpm-*-${(git-tag)}.tar.gz")))
+          (release-dir (merge-pathnames #?"build/releases/${(git-tag)}/"
+                                        (uiop:getcwd))))
+      (loop
+        :for file :in files
+        :do (uiop:copy-file file (merge-pathnames (uiop:make-pathname*
+                                                   :name (pathname-name file)
+                                                   :type (pathname-type file))
+                                                  release-dir)))
+      (with-open-file (s #?"build/releases/${(git-tag)}/clpm-${(git-tag)}.DIGESTS"
+                         :direction :output)
+        (write-line "The SHA512 checksums of the following files are:" s)
+        (terpri s))
+      (loop
+        :for file :in files
+        :do
+           (uiop:with-current-directory (#?"build/releases/${(git-tag)}/")
+             (uiop:run-program (list "sha512sum"
+                                     (namestring (uiop:make-pathname*
+                                                  :name (pathname-name file)
+                                                  :type (pathname-type file))))
+                               :output #?"clpm-${(git-tag)}.DIGESTS"
+                               :if-output-exists :append
+                               :error-output :interactive
+                               :input :interactive))))))
 
-(task ("release" version) ("release:all"))
+(task ("release") ("release:all"))
 
 (task "docker-build" ("docker-build:all"))
 
 (task "build" ()
-  (sh "scripts/clpm-build")
-  (sh "cp build/bin/dynamic/clpm build/bin/clpm-dynamic")
-  (sh "cp build/bin/static/clpm build/bin/clpm-static"))
+  (sh "sbcl --load scripts/build.lisp"))
 
-(task "all" ("build" "docker-build"))
+(task "package" ()
+  (sh "/bin/sh package.sh"))
+
+(task "all" ("build"))
 
 (task "default" ("all"))
