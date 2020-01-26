@@ -14,9 +14,17 @@
     :clpm-curl
     :clpm))
 
+(defparameter *default-windows-feature-set*
+  '(:clpm-curl
+    :clpm))
+
 #+:linux
 (defun default-features ()
   (copy-list *default-linux-feature-set*))
+
+#+:win32
+(defun default-features ()
+  (copy-list *default-windows-feature-set*))
 
 (defun validate-features! (clpm-features)
   (flet ((present (feature)
