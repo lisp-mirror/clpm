@@ -5,7 +5,5 @@
            (pushnew x list))
          (disable (x)
            (setf list (remove x list))))
-    (enable :sb-core-compression)
-    (enable :sb-dynamic-core)
-    (enable :sb-linkable-runtime))
+    (enable :sb-core-compression))
   list)
