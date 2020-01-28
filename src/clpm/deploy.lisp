@@ -25,11 +25,3 @@
                "Unable to find CLPM_HOME. Please set CLPM_HOME environment variable.~%")
        (uiop:quit 1))))
  nil)
-
-;; Add search paths for libraries on arm architectures.
-#+:arm64
-(push #p"/usr/lib/aarch64-linux-gnu/" deploy:*system-source-directories*)
-#+:arm
-(push #p"/usr/lib/arm-linux-gnueabihf/" deploy:*system-source-directories*)
-#+:arm
-(push #p"/usr/lib/arm-linux-gnueabi/" deploy:*system-source-directories*)
