@@ -22,16 +22,13 @@
 (define-string *help-text*
   "Sync all sources.")
 
-(define-string *manual-text*
-  "Slightly longer sync all sources.")
-
 (defparameter *sync-ui*
   (adopt:make-interface
    :name "clpm-sync"
    :summary "Common Lisp Package Manager Sync"
    :usage "sync"
    :help *help-text*
-   :manual *manual-text*
+   :manual *help-text*
    :contents (list *group-common*)))
 
 (define-cli-command (("sync") *sync-ui*) (args options)

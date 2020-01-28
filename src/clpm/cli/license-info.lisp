@@ -18,7 +18,7 @@
    :name "clpm license-info"
    :summary "Common Lisp Package Manager License Info"
    :usage "license-info [options]"
-   :help "Common Lisp Package Manager"
+   :help "Display the license info for CLPM and its dependencies."
    :contents (list *group-common*)))
 
 (defparameter *license-separator*
