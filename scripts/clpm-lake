@@ -52,7 +52,10 @@
    :arg-parser #'parse-integer)
   (:name :verbose-p
    :description "Verbose mode"
-   :short #\v))
+   :short #\v)
+  (:name :list
+   :description "List the available tasks"
+   :short #\l))
 
 
 (defun main ()
@@ -69,6 +72,9 @@
                                   `(:jobs ,jobs))
                               ,@(when lakefile
                                   `(:pathname ,lakefile)))))
+      (when (getf opts :list)
+        (lake:display-tasks)
+        (uiop:quit))
       (if free-args
           (dolist (target free-args)
             (apply #'lake:lake :target target params))

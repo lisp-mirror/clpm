@@ -18,7 +18,7 @@
   :defsystem-depends-on (#:cffi-toolchain #:clpm-build #:deploy)
   :entry-point "clpm/cli/entry:main"
   :build-operation "deploy-op"
-  :build-pathname "clpm"
+  :build-pathname #+win32 "clpm.exe" #-win32 "clpm"
   :depends-on (#:clpm/clpm)
   :in-order-to ((prepare-op (build-op :clpm-client))))
 

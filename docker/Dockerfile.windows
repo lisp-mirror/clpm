@@ -1,0 +1,36 @@
+# Builds a Docker image to build CLPM with Windows
+#
+# This software is part of CLPM. See README.org for more information. See
+# LICENSE for license information.
+
+FROM daewok/sbcl:2.0.0-windowsservercore-ltsc2019
+
+WORKDIR "C:/"
+
+# Switch to powershell and make sure it exits on error
+SHELL ["powershell", "-Command", "$ErrorActionPreference = 'Stop';"]
+
+# First, install chocolatey
+RUN $chocourl = 'https://chocolatey.org/install.ps1'; \
+    Set-ExecutionPolicy Bypass -Scope Process -Force; \
+    iex ((New-Object System.Net.WebClient).DownloadString($chocourl));
+
+# Install git so that we can determine release version.
+RUN choco install -y git;
+
+# Install WIX. We don't install it through chocolatey because dotnet35 seems to
+# be broken in chocolatey
+RUN Write-Host "Starting download"; \
+    cmd /c curl -o wix311-binaries.zip -L "https://github.com/wixtoolset/wix3/releases/download/wix3112rtm/wix311-binaries.zip"; \
+    Write-Host "Download done"; \
+    choco install -y unzip; \
+    mkdir wix/bin; \
+    cd wix/bin; \
+    unzip ../../wix311-binaries.zip;
+
+WORKDIR C:/clpm
+COPY . C:/clpm
+
+RUN sbcl --load scripts/build.lisp; \
+    C:\wix\bin\candle clpm.wxs; \
+    C:\wix\bin\light clpm.wixobj -ext C:\wix\bin\WixUIExtension.dll -cultures:en-us -out build\clpm.msi;
