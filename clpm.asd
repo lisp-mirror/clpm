@@ -30,3 +30,12 @@
                   (merge-pathnames (uiop:ensure-directory-pathname "lib/clpm")
                                    (uiop:pathname-parent-directory-pathname file)))
             T)))
+
+(defmethod asdf:perform ((o deploy:deploy-op) (c (eql (find-system "clpm"))))
+  (let* ((bin-pathname (first (asdf:output-files o c)))
+         (man-dir-pathname (merge-pathnames (uiop:make-pathname*
+                                             :directory '(:relative :up "man" "man1"))
+                                            (uiop:pathname-directory-pathname bin-pathname))))
+    (uiop:call-function (uiop:find-symbol* :output-manual :clpm/man)
+                        man-dir-pathname))
+  (call-next-method))

@@ -11,6 +11,7 @@
           #:clpm/version)
   (:import-from #:adopt)
   (:export #:*commands*
+           #:*uis*
            #:define-cli-command
            #:define-cli-command-folder
            #:dispatch-subcommand))
@@ -20,6 +21,7 @@
 (setup-logger)
 
 (defvar *commands* (make-hash-table :test 'equal))
+(defvar *uis* (make-hash-table :test 'equal))
 
 (defun ensure-ht-path (ht path &optional default-ui thunk)
   (let ((next (if path
@@ -65,7 +67,8 @@
            ,@body))
        (setf (gethash ,(last-elt path) (ensure-ht-path *commands*
                                                        ',(butlast path)))
-             ',function-name))))
+             ',function-name)
+       (setf (gethash ',(ensure-list path) *uis*) ,ui))))
 
 (defun available-subcommands (ht)
   (let ((out nil))

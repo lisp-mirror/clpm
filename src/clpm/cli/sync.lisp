@@ -6,6 +6,7 @@
 (uiop:define-package #:clpm/cli/sync
     (:use #:cl
           #:clpm/cli/common-args
+          #:clpm/cli/defs
           #:clpm/cli/subcommands
           #:clpm/config
           #:clpm/log
@@ -18,12 +19,19 @@
 
 (setup-logger)
 
+(define-string *help-text*
+  "Sync all sources.")
+
+(define-string *manual-text*
+  "Slightly longer sync all sources.")
+
 (defparameter *sync-ui*
   (adopt:make-interface
-   :name "clpm sync"
+   :name "clpm-sync"
    :summary "Common Lisp Package Manager Sync"
    :usage "sync"
-   :help "Sync sources"
+   :help *help-text*
+   :manual *manual-text*
    :contents (list *group-common*)))
 
 (define-cli-command (("sync") *sync-ui*) (args options)

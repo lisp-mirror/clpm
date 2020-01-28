@@ -13,6 +13,7 @@
           #:clpm/cli/license-info
           #:clpm/cli/sync
           #:clpm/deploy
-          #:clpm/interface))
+          #:clpm/interface
+          #:clpm/man))
 
 (in-package #:clpm/clpm)
