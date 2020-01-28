@@ -32,51 +32,77 @@
 
 (let ((*standard-output* (make-broadcast-stream))
       (*error-output* (make-broadcast-stream)))
-  (asdf:load-system :unix-opts)
+  (asdf:load-system :adopt)
   (asdf:load-system :lake))
 
-(opts:define-opts
-  (:name :help
-   :description "Print this help text and exit"
+(defparameter *option-help*
+  (adopt:make-option
+   :help
+   :help "Print this help text and exit"
    :short #\h
-   :long "help")
-  (:name :file
-   :description "Use FILE as a Lakefile"
-   :short #\f
-   :metavar "FILE"
-   :arg-parser #'identity)
-  (:name :parallel
-   :description "Run N tasks in parallel"
-   :short #\j
-   :metavar "N"
-   :arg-parser #'parse-integer)
-  (:name :verbose-p
-   :description "Verbose mode"
-   :short #\v)
-  (:name :list
-   :description "List the available tasks"
-   :short #\l))
+   :long "help"
+   :reduce (constantly t)))
 
+(defparameter *option-file*
+  (adopt:make-option
+   :file
+   :help "Use FILE as a Lakefile"
+   :short #\f
+   :parameter "FILE"
+   :reduce #'adopt:last))
+
+(defparameter *option-parallel*
+  (adopt:make-option
+   :parallel
+   :help "Run N tasks in parallel"
+   :short #\j
+   :parameter "N"
+   :reduce #'adopt:last
+   :key #'parse-integer))
+
+(defparameter *option-verbose*
+  (adopt:make-option
+   :verbose-p
+   :help "Run in verbose mode"
+   :short #\v
+   :reduce (constantly t)))
+
+(defparameter *option-list*
+  (adopt:make-option
+   :list
+   :help "List the available tasks"
+   :short #\l
+   :reduce (constantly t)))
+
+(defparameter *ui*
+  (adopt:make-interface
+   :name "clpm-lake"
+   :summary "Run Lake using the bundled libraries"
+   :help "Run Lake using the bundled libraries"
+   :usage "[options] [target*]"
+   :contents (list *option-help*
+                   *option-file*
+                   *option-parallel*
+                   *option-verbose*
+                   *option-list*)))
 
 (defun main ()
-  (multiple-value-bind (opts free-args)
-      (opts:get-opts)
-    (when (getf opts :help)
-      (write-line "Usage: clpm-lake [options] [target] ...")
-      (opts:describe)
-      (uiop:quit))
-    (let* ((lakefile (getf opts :file))
-           (jobs (getf opts :parallel 1))
-           (params `(:verbose ,(getf opts :verbose-p)
-                              ,@(when :jobs
+  (multiple-value-bind (arguments options)
+      (adopt:parse-options *ui*)
+    (when (gethash :help options)
+      (adopt:print-help-and-exit *ui* :program-name "clpm-lake"))
+    (let* ((lakefile (gethash :file options))
+           (jobs (gethash :parallel options))
+           (params `(:verbose ,(gethash :verbose-p options)
+                              ,@(when jobs
                                   `(:jobs ,jobs))
                               ,@(when lakefile
                                   `(:pathname ,lakefile)))))
-      (when (getf opts :list)
+      (when (gethash :list options)
         (lake:display-tasks)
         (uiop:quit))
-      (if free-args
-          (dolist (target free-args)
+      (if arguments
+          (dolist (target arguments)
             (apply #'lake:lake :target target params))
           (apply #'lake:lake params)))))
 
