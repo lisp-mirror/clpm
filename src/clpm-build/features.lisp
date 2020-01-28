@@ -16,7 +16,8 @@
 
 (defparameter *default-windows-feature-set*
   '(:clpm-curl
-    :clpm))
+    :clpm
+    :deploy-console))
 
 #+:linux
 (defun default-features ()

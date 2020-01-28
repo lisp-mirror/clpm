@@ -17,14 +17,4 @@
         *root-pathname*
         *build-root-pathname*)
 
-;; Special handling for Windows builds.
-(when (uiop:os-windows-p)
-  (pushnew :deploy-console *features*)
-  ;; CL-PLUS-SSL requires sb-bsd-socket be loaded (it uses an internal package
-  ;; loaded by that contrib), but it doesn't declare a dependency on it.
-  ;; (require :sb-bsd-sockets)
-  ;; By default, openssl is ~useless on Windows. Don't build it until we can
-  ;; figure out how to make it use the OS' certificate store.
-  (pushnew :drakma-no-ssl *features*))
-
 (asdf:make :clpm)
