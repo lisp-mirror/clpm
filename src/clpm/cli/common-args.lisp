@@ -9,8 +9,7 @@
   (:import-from #:adopt)
   (:export #:*group-common*
            #:*option-help*
-           #:*option-verbose*
-           #:*option-version*))
+           #:*option-verbose*))
 
 (in-package #:clpm/cli/common-args)
 
@@ -28,16 +27,9 @@
                      :initial-value 0
                      :reduce #'1+))
 
-(defparameter *option-version*
-  (adopt:make-option :version-flag
-                     :long "version"
-                     :help "Print the version and exit"
-                     :reduce (constantly t)))
-
 (defparameter *group-common*
   (adopt:make-group :common
                     :title "Common"
                     :help "Options common to all CLPM operations"
                     :options (list *option-help*
-                                   *option-version*
                                    *option-verbose*)))

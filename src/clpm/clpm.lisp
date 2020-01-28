@@ -12,6 +12,7 @@
           ;;#:clpm/cli/install
           #:clpm/cli/license-info
           #:clpm/cli/sync
+          #:clpm/cli/version
           #:clpm/deploy
           #:clpm/interface
           #:clpm/man))
