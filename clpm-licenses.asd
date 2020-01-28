@@ -54,7 +54,6 @@
                              (:static-file "trivial-gray-streams")
                              (:static-file "trivial-indent")
                              (:static-file "trivial-utf-8")
-                             (:static-file "unix-opts")
                              (:static-file "usocket")
                              (:static-file "xsubseq")))
                (:file "src/clpm-licenses/main")))

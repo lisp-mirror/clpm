@@ -79,9 +79,6 @@
 [submodule "ext/exit-hooks"]
 	path = ext/exit-hooks
 	url = https://github.com/ailisp/exit-hooks.git
-[submodule "ext/unix-opts"]
-	path = ext/unix-opts
-	url = https://github.com/libre-man/unix-opts.git
 [submodule "ext/lake"]
 	path = ext/lake
 	url = https://github.com/takagi/lake.git
