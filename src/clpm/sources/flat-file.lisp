@@ -18,7 +18,10 @@
            #:flat-file-source
            #:flat-file-source-project-class
            #:flat-file-source-release-class
-           #:flat-file-source-root-pathname))
+           #:flat-file-source-root-pathname
+           #:flat-file-system-release
+           #:flat-file-system-release-dependencies
+           #:flat-file-source-system-release-class))
 
 (in-package #:clpm/sources/flat-file)
 
@@ -173,7 +176,7 @@
 
 ;; * Releases
 
-(defclass flat-file-release ()
+(defclass flat-file-release (clpm-release)
   ((source
     :initarg :source
     :reader release-source
@@ -272,7 +275,7 @@
 
 ;; * System releases
 
-(defclass flat-file-system-release ()
+(defclass flat-file-system-release (clpm-system-release)
   ((source
     :initarg :source
     :reader system-release-source
@@ -300,7 +303,8 @@
     :reader system-release-asd-pathname)
    (dependencies
     :initarg :dependencies
-    :initform nil)
+    :initform nil
+    :reader flat-file-system-release-dependencies)
    (system-file
     :reader system-release-system-file)))
 

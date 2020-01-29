@@ -242,23 +242,30 @@ project."))
 ;; * Releases
 
 (defclass clpm-release ()
-  ((source
-    :initarg :source
-    :accessor release-source)
-   (project
-    :initarg :project
-    :accessor release-project)
-   (version
-    :initarg :version
-    :accessor release-version))
+  ()
   (:documentation "The base class for all CLPM releases. A release is a
 versioned snapshot of a project. A release provides systems."))
 
 (defmethod print-object ((r clpm-release) stream)
-  (print-unreadable-object (r stream :type t :identity t)
-    (format stream "project: ~A, version: ~A"
-            (project-name (release-project r))
-            (release-version r))))
+  (pprint-logical-block (stream nil)
+    (print-unreadable-object (r stream :type t :identity t)
+      (pprint-newline :linear stream)
+      ;; Project
+      (prin1 :project stream)
+      (write-char #\Space stream)
+      (pprint-newline :miser stream)
+      (write (project-name (release-project r))
+             :stream stream)
+      ;; Version
+      (write-char #\Space stream)
+      (pprint-newline :linear stream)
+      (prin1 :version stream)
+      (write-char #\Space stream)
+      (pprint-newline :miser stream)
+      (write (release-version r)
+             :stream stream)
+      ;; ID
+      (pprint-newline :linear stream))))
 
 (defgeneric release-satisfies-version-spec-p (release version-spec)
   (:documentation "Returns T if the release satisfies the VERSION-SPEC."))
@@ -336,22 +343,7 @@ release-2."))
 ;; * System releases
 
 (defclass clpm-system-release ()
-  ((source
-    :initarg :source
-    :accessor system-release-source
-    :documentation "The source that provides this system release.")
-   (release
-    :initarg :release
-    :accessor system-release-release
-    :documentation "The release that provides this release of the system.")
-   (system
-    :initarg :system
-    :accessor system-release-system
-    :documentation "The system.")
-   (system-version
-    :initarg :system-version
-    :accessor system-release-system-version
-    :documentation "The version of the system in this release."))
+  ()
   (:documentation "Base class to represent a specific release of a system."))
 
 (defmethod print-object ((sr clpm-system-release) stream)

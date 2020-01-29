@@ -8,6 +8,7 @@
           #:clpm/version)
   (:import-from #:adopt)
   (:export #:*group-common*
+           #:*option-context*
            #:*option-help*
            #:*option-verbose*))
 
@@ -33,3 +34,11 @@
                     :help "Options common to all CLPM operations"
                     :options (list *option-help*
                                    *option-verbose*)))
+
+(defparameter *option-context*
+  (adopt:make-option :context
+                     :long "context"
+                     :short #\c
+                     :help "Set the context in which to operate"
+                     :parameter "CONTEXT"
+                     :reduce #'adopt:last))

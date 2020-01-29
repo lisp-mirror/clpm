@@ -10,6 +10,7 @@
           #:anaphora
           #:clpm/cache
           #:clpm/data
+          #:clpm/requirement
           #:clpm/sources/defs
           #:clpm/sources/flat-file
           #:clpm/ql
@@ -76,6 +77,11 @@
 (defclass ql-flat-release (flat-file-release tarball-mixin)
   ())
 
+;; ** System Release
+
+(defclass ql-flat-system-release (flat-file-system-release)
+  ())
+
 
 ;; * Quicklisp specific methods
 
@@ -116,6 +122,11 @@
 
 ;; * Basic source methods
 
+(defmethod release-> ((release-1 ql-flat-release)
+                      (release-2 ql-flat-release))
+  (string> (second (release-version release-1))
+           (second (release-version release-2))))
+
 (defmethod source-cache-directory ((source ql-flat-source))
   "Compute the cache location for this source, based on its canonical url."
   (let ((url (ql-flat-source-url source)))
@@ -153,6 +164,23 @@
         :type :quicklisp
         :force-https (ql-flat-source-force-https source)))
 
+(defmethod system-release-> ((sr-1 ql-flat-system-release) (sr-2 ql-flat-system-release))
+  (release-> (system-release-release sr-1) (system-release-release sr-2)))
+
+(defmethod system-release-requirements ((system-release ql-flat-system-release))
+  (let ((deps (remove-if (rcurry #'member (list "asdf" "uiop") :test #'string-equal)
+                         (flat-file-system-release-dependencies system-release))))
+    (mapcar (lambda (dep-name)
+              (make-instance 'system-requirement
+                             :name dep-name))
+            deps)))
+
+(defmethod system-release-satisfies-version-spec-p ((system-release ql-flat-system-release)
+                                                    version-spec)
+  "There is currently no good way to reasonably get the system version from the
+  metadata alone, so say everything is satisfied."
+  t)
+
 
 ;; * Flat file methods
 
@@ -162,6 +190,9 @@
 
 (defmethod flat-file-source-release-class ((source ql-flat-source))
   'ql-flat-release)
+
+(defmethod flat-file-source-system-release-class ((source ql-flat-source))
+  'ql-flat-system-release)
 
 (defmethod source-project :around ((source ql-flat-source) project-name &optional (error t))
   (declare (ignore error))

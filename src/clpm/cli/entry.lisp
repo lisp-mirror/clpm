@@ -31,7 +31,8 @@
 (defun main ()
   (handler-case
       (handler-bind
-          ((adopt:unrecognized-option #'adopt:discard-option))
+          ((adopt:unrecognized-option #'adopt:discard-option)
+           (error (lambda (c) (uiop:print-condition-backtrace c))))
         (multiple-value-bind (arguments options)
             (adopt:parse-options *default-ui*)
           ;; Compute verbosity

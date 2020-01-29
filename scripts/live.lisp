@@ -12,15 +12,6 @@
 
 (setup-asdf "live")
 
-;; Special handling for Windows builds.
-(when (uiop:os-windows-p)
-  ;; CL-PLUS-SSL requires sb-bsd-socket be loaded (it uses an internal package
-  ;; loaded by that contrib), but it doesn't declare a dependency on it.
-  ;; (require :sb-bsd-sockets)
-  ;; By default, openssl is ~useless on Windows. Don't build it until we can
-  ;; figure out how to make it use the OS' certificate store.
-  (pushnew :drakma-no-ssl *features*))
-
 ;; Load CLPM
 (flet ((load-clpm ()
          (let* ((compilation-visible-p (equal (uiop:getenv "CLPM_LIVE_COMPILATION_VISIBLE") "true"))
@@ -47,4 +38,7 @@
   (sb-impl::toplevel-repl nil))
 
 (let ((clpm-sys (asdf:find-system :clpm)))
-  (uiop:call-function (asdf::component-entry-point clpm-sys)))
+  (handler-bind ((error (lambda (c)
+                          (uiop:print-condition-backtrace c))))
+    (let ((result (uiop:call-function (asdf::component-entry-point clpm-sys))))
+      (uiop:quit (if result 0 1)))))

@@ -13,6 +13,7 @@
            #:requirement/branch
            #:requirement/commit
            #:requirement/name
+           #:requirement/no-deps-p
            #:requirement/pathname
            #:requirement/repo
            #:requirement/source
@@ -20,9 +21,11 @@
            #:requirement/system-files
            #:requirement/tag
            #:requirement/version-spec
+           #:requirement/why
            #:system-requirement
            #:vcs-project-requirement
-           #:vcs-requirement))
+           #:vcs-requirement
+           #:versioned-requirement))
 
 (in-package #:clpm/requirement)
 
@@ -39,7 +42,19 @@ objects (like pathnames).")
     :accessor requirement/source
     :documentation
     "If non-NIL, the requirement must be satisfied using releases provided by
-this source."))
+this source.")
+   (no-deps-p
+    :initarg :no-deps-p
+    :initform nil
+    :accessor requirement/no-deps-p
+    :documentation
+    "If non-NIL, the requirement's dependencies do not need to be satisfied.")
+   (why
+    :initarg :why
+    :initform nil
+    :accessor requirement/why
+    :documentation
+    "The reason this requirement was generated."))
   (:documentation
    "Base class for all requirements."))
 
@@ -91,6 +106,13 @@ this source."))
   (:documentation
    "A requirement on the presence of a system."))
 
+(defclass system-release-requirement (versioned-requirement)
+  ()
+  (:documentation
+   "A requirement on the presence of a system that is satisfied by taking the
+system from a release specified by the project name and version. The name is
+specified as a cons cell with the system name in the."))
+
 (defclass vcs-project-requirement (vcs-requirement)
   ((systems
     :initarg :systems
@@ -125,18 +147,33 @@ local filesystem."))
    "Requirement stating that all systems from an asd file located on the local
 filesystem must be included. NAME is the pathname to the asd file."))
 
-
 (defmethod print-object ((req requirement) stream)
-  (print-unreadable-object (req stream :type t :identity t)
-    (format stream "~S ~S" :name (requirement/name req))))
-
-(defmethod print-object ((req versioned-requirement) stream)
-  (print-unreadable-object (req stream :type t :identity t)
-    (format stream "~S ~S" :name (requirement/name req))
-    (when (requirement/version-spec req)
+  (pprint-logical-block (stream nil)
+    (print-unreadable-object (req stream :type t :identity t)
+      (pprint-newline :linear stream)
+      (prin1 :name stream)
       (write-char #\Space stream)
-      (pprint-newline :fill stream)
-      (format stream "~S ~S" :version-spec (requirement/version-spec req)))))
+      (pprint-newline :miser stream)
+      (write (requirement/name req) :stream stream)
+      ;; version
+      (when (and (typep req 'versioned-requirement)
+                 (requirement/version-spec req))
+        (write-char #\Space stream)
+        (pprint-newline :linear stream)
+        (prin1 :version stream)
+        (write-char #\Space stream)
+        (pprint-newline :miser stream)
+        (write (requirement/version-spec req) :stream stream))
+      ;; why
+      (when (requirement/why req)
+        (write-char #\Space stream)
+        (pprint-newline :linear stream)
+        (prin1 :why stream)
+        (write-char #\Space stream)
+        (pprint-newline :miser stream)
+        (write (requirement/why req) :stream stream))
+      ;; ID
+      (pprint-newline :linear stream))))
 
 (defgeneric convert-asd-system-spec-to-req (dep)
   (:documentation
