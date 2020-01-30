@@ -36,7 +36,10 @@
    (force-https
     :initarg :force-https
     :initform nil
-    :accessor ql-flat-source-force-https)))
+    :accessor ql-flat-source-force-https)
+   (enforce-version-constraints-p
+    :initform t
+    :accessor ql-flat-source-enforce-version-constraints-p)))
 
 (defmethod initialize-instance :after ((source ql-flat-source)
                                        &rest initargs
@@ -62,6 +65,27 @@
        (setf (puri:uri-scheme url) :https)))
     (setf (ql-flat-source-url source) url)))
 
+;; ** Project
+
+(defclass ql-flat-project (flat-file-project)
+  ((snapshot-to-ql-version-map
+    :accessor ql-flat-project-snapshot-to-ql-version-map)))
+
+(defmethod slot-unbound (class (project ql-flat-project) (slot-name (eql 'snapshot-to-ql-version-map)))
+  (let ((map (make-hash-table :test 'equal)))
+    (uiop:with-safe-io-syntax ()
+      (with-open-file (s (merge-pathnames
+                          (make-pathname :directory (list :relative "projects" (project-name project))
+                                         :name "dist-to-snapshot")
+                          (flat-file-source-root-pathname (project-source project))))
+        (loop
+          (let ((form (read s nil :eof)))
+            (when (eql form :eof)
+              (return))
+            (push (car form) (gethash (cdr form) map))))))
+    (setf (slot-value project slot-name) map)
+    map))
+
 ;; ** Release
 
 (defclass tarball-mixin ()
@@ -84,6 +108,11 @@
 
 
 ;; * Quicklisp specific methods
+
+(defun ql-flat-release-quicklisp-versions (release)
+  (let ((project (release-project release)))
+    (gethash (second (release-version release))
+             (ql-flat-project-snapshot-to-ql-version-map project))))
 
 (defun ql-flat-source-metadata (source)
   (let ((metadata-pathname (merge-pathnames "metadata.sexp"
@@ -116,7 +145,26 @@
     existing-metadata))
 
 (defun ql-flat-source-latest-version-synced (source)
-  (getf (ql-flat-source-metadata source) :latest-version-synced))
+  (assoc-value (ql-flat-source-metadata source) :latest-version-synced))
+
+(defun intersection-non-empty-p (set1 set2 &key test)
+  (some (rcurry #'member set2 :test test) set1))
+
+(defun ql-system-release-overlapping-snapshots (system-release system)
+  "Given a system-release, return a list of versions of system that are present
+in the same Quicklisp distribution versions as system-release."
+  ;; First find all Quicklisp distribution versions containing the
+  ;; system-release. Then, iterate over all releases of the system to find the
+  ;; ones that are also present in at least one of the same distribution
+  ;; versions.
+  (let* ((release (system-release-release system-release))
+         (quicklisp-versions (ql-flat-release-quicklisp-versions release))
+         (potential-releases (system-releases system)))
+    (mapcar #'release-version (remove-if-not (rcurry #'intersection-non-empty-p
+                                                     quicklisp-versions
+                                                     :test #'equal)
+                                             potential-releases
+                                             :key #'ql-flat-release-quicklisp-versions))))
 
 
 ;; * Basic source methods
@@ -168,17 +216,55 @@
 
 (defmethod system-release-requirements ((system-release ql-flat-system-release))
   (let ((deps (remove-if (rcurry #'member (list "asdf" "uiop") :test #'string-equal)
-                         (flat-file-system-release-dependencies system-release))))
+                         (flat-file-system-release-dependencies system-release)))
+        (source (system-release-source system-release)))
     (mapcar (lambda (dep-name)
-              (make-instance 'system-requirement
-                             :name dep-name))
+              (if (ql-flat-source-enforce-version-constraints-p source)
+                  (let ((satisfying-versions
+                          (ql-system-release-overlapping-snapshots system-release
+                                                                   (source-system source dep-name))))
+                    (setf satisfying-versions (sort satisfying-versions #'string<
+                                                    :key #'second))
+                    (make-instance 'system-requirement
+                                   :name dep-name
+                                   :version-spec (if (length= 1 satisfying-versions)
+                                                     `((= . ,(first satisfying-versions)))
+                                                     `((>= . ,(first satisfying-versions))
+                                                       (<= . ,(last-elt satisfying-versions))))))
+                  (make-instance 'system-requirement
+                                 :name dep-name)))
             deps)))
+
+(defun %system-release-satisfies-version-spec-p-1 (system-release version-spec)
+  "A string refers to the system version currently, whereas a snapshot refers to
+the release..."
+  (destructuring-bind (direction . version) version-spec
+    (or
+     ;; There is currently no good way to reasonably get the system version from the
+     ;; metadata alone, so say everything is satisfied.
+     (stringp version)
+     ;; Look at release version
+     (and (listp version)
+          (eql (first version) :snapshot)
+          (let ((snapshot (second version))
+                (release-version (release-version (system-release-release system-release))))
+            (ecase direction
+              (=
+               (equal release-version version))
+              (<=
+               (string<= (second release-version) snapshot))
+              (<
+               (string< (second release-version) snapshot))
+              (>=
+               (string>= (second release-version) snapshot))
+              (>
+               (string> (second release-version) snapshot))))))))
 
 (defmethod system-release-satisfies-version-spec-p ((system-release ql-flat-system-release)
                                                     version-spec)
   "There is currently no good way to reasonably get the system version from the
   metadata alone, so say everything is satisfied."
-  t)
+  (every (curry #'%system-release-satisfies-version-spec-p-1 system-release) version-spec))
 
 
 ;; * Flat file methods
@@ -186,6 +272,9 @@
 (defmethod flat-file-source-root-pathname ((source ql-flat-source))
   (merge-pathnames "repo/"
                    (source-lib-directory source)))
+
+(defmethod flat-file-source-project-class ((source ql-flat-source))
+  'ql-flat-project)
 
 (defmethod flat-file-source-release-class ((source ql-flat-source))
   'ql-flat-release)
@@ -214,6 +303,12 @@
    :read-only t)
   (system-detail-map (make-hash-table :test 'equal)
    :read-only t)
+  ;; Maps project names to the last snapshot version.
+  (last-snapshot-seen-map (make-hash-table :test 'equal)
+   :read-only t)
+  ;; Maps project names to an alist that maps quicklisp dist versions to the
+  ;; corresponding snapshot of the project.
+  (dist-to-snapshot-map (make-hash-table :test 'equal))
   (previous-dist-version nil))
 
 (defun ql-sync-version (sync-state repo version)
@@ -246,7 +341,13 @@
                            (gethash project-name (ql-sync-state-project-detail-map sync-state)))
                      (push project-version
                            (getf (gethash project-name (ql-sync-state-project-index-map sync-state))
-                                 :releases))))))
+                                 :releases))
+                     (setf (gethash project-name (ql-sync-state-last-snapshot-seen-map sync-state))
+                           project-version)))
+                 ;; Map this quicklisp dist version to the latest known snapshot
+                 (setf (assoc-value (gethash project-name (ql-sync-state-dist-to-snapshot-map sync-state))
+                                    version :test 'equal)
+                       (second (gethash project-name (ql-sync-state-last-snapshot-seen-map sync-state))))))
              release-map)
 
         (maphash (lambda (system-name system)
@@ -287,7 +388,7 @@
           (prin1 (list key (gethash key map)) s)
           (terpri s))))))
 
-(defun write-project-details (map pathname)
+(defun write-project-details (map dist-to-snapshot-map pathname)
   (ensure-directories-exist pathname)
   (uiop:with-safe-io-syntax ()
     (let ((*print-right-margin* nil)
@@ -303,7 +404,20 @@
                      (dolist (detail (reverse details))
                        (prin1 detail s)
                        (terpri s)))))
-               map))))
+               map)
+      (maphash (lambda (project-name dist-to-snapshot-alist)
+                 (let ((dist-to-snapshot-pathname
+                         (merge-pathnames (concatenate 'string project-name "/dist-to-snapshot")
+                                          pathname)))
+                   (ensure-directories-exist dist-to-snapshot-pathname)
+                   (with-open-file (s dist-to-snapshot-pathname
+                                      :direction :output
+                                      :if-exists :append
+                                      :if-does-not-exist :create)
+                     (dolist (pair (reverse dist-to-snapshot-alist))
+                       (prin1 pair s)
+                       (terpri s)))))
+               dist-to-snapshot-map))))
 
 (defun write-system-details (map pathname)
   (ensure-directories-exist pathname)
@@ -342,16 +456,22 @@
          (repo (make-instance 'ql-repo
                               :url (ql-flat-source-url source)
                               :force-https (ql-flat-source-force-https source)
-                              :cache-pathname sync-cache-pathname)))
+                              :cache-pathname sync-cache-pathname))
+         (project-index-map (ql-flat-load-existing-project-index source)))
     (ensure-directories-exist sync-cache-pathname)
     (ensure-directories-exist sync-lib-pathname)
     (let ((latest-version-synced (ql-flat-source-latest-version-synced source))
           (sync-state (make-ql-sync-state
-                       :project-index-map (ql-flat-load-existing-project-index source)))
+                       :project-index-map project-index-map))
           (projects-pathname (merge-pathnames "project-index.txt" sync-lib-pathname)))
       (when latest-version-synced
         (setf (ql-sync-state-previous-dist-version sync-state)
-              (ql-repo-dist-version repo latest-version-synced)))
+              (ql-repo-dist-version repo latest-version-synced))
+        ;; Save the latest snapshot version for each project.
+        (maphash (lambda (project-name index)
+                   (setf (gethash project-name (ql-sync-state-last-snapshot-seen-map sync-state))
+                         (first (getf index :releases))))
+                 project-index-map))
       ;; Loop over every version of this repo
       (let ((versions (ql-repo-versions repo)))
         (dolist (version versions)
@@ -362,6 +482,7 @@
       (write-project-index (ql-sync-state-project-index-map sync-state)
                            projects-pathname)
       (write-project-details (ql-sync-state-project-detail-map sync-state)
+                             (ql-sync-state-dist-to-snapshot-map sync-state)
                              (merge-pathnames "projects/" sync-lib-pathname))
       (write-system-details (ql-sync-state-system-detail-map sync-state)
                             (merge-pathnames "systems/" sync-lib-pathname))

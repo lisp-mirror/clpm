@@ -106,13 +106,6 @@ this source.")
   (:documentation
    "A requirement on the presence of a system."))
 
-(defclass system-release-requirement (versioned-requirement)
-  ()
-  (:documentation
-   "A requirement on the presence of a system that is satisfied by taking the
-system from a release specified by the project name and version. The name is
-specified as a cons cell with the system name in the."))
-
 (defclass vcs-project-requirement (vcs-requirement)
   ((systems
     :initarg :systems
