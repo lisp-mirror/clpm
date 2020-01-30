@@ -173,7 +173,8 @@
 
 (defun populate-ql-dist-version! (dist-version)
   (let ((distinfo-pathname (ql-dist-version-pathname dist-version "distinfo.txt")))
-    (ensure-file-fetched distinfo-pathname (ql-dist-version-url dist-version))
+    (ensure-file-fetched distinfo-pathname (ql-dist-version-url dist-version)
+                         :hint :immutable)
     (let ((plist (parse-distinfo distinfo-pathname)))
       (let ((system-index-url (puri:parse-uri (getf plist :system-index-url)))
             (release-index-url (puri:parse-uri (getf plist :release-index-url))))
@@ -196,7 +197,8 @@
 (defun populate-ql-dist-version-releases! (dist-version)
   (let ((ht (make-hash-table :test 'equal))
         (releases-pathname (ql-dist-version-pathname dist-version "releases.txt")))
-    (ensure-file-fetched releases-pathname (ql-dist-version-release-index-url dist-version))
+    (ensure-file-fetched releases-pathname (ql-dist-version-release-index-url dist-version)
+                         :hint :immutable)
     (with-open-file (s releases-pathname)
       (loop
         (let ((line (read-line s nil :eof)))
@@ -230,7 +232,8 @@
   (let ((ht-by-system-name (make-hash-table :test 'equal))
         (ht-by-project (make-hash-table :test 'equal))
         (systems-pathname (ql-dist-version-pathname dist-version "systems.txt")))
-    (ensure-file-fetched systems-pathname (ql-dist-version-system-index-url dist-version))
+    (ensure-file-fetched systems-pathname (ql-dist-version-system-index-url dist-version)
+                         :hint :immutable)
     (with-open-file (s systems-pathname)
       (loop
         (let ((line (read-line s nil :eof)))

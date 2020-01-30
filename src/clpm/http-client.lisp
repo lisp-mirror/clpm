@@ -91,50 +91,57 @@ the request."
                                             (puri:uri-host url)
                                             (puri:uri-scheme url))))))
 
-(defun ensure-file-fetched (pathname url &key force)
+(defun ensure-file-fetched (pathname url &key force hint)
   "Given a pathname, make sure it exists. If it does not exist, fetch it from
 URL (string or puri URI).
 
 If force is non-NIL, fetches the file without sending an If-Modified-Since
 header.
 
+HINT provides some hints to use when fetching the file. It supports:
+
++ :IMMUTABLE :: If the destination file is present, no HTTP requests are sent at
+all.
+
 Returns T if the contents of PATHNAME were modified, NIL otherwise."
-  (setf url (puri:parse-uri url))
-  (log:debug "Fetching ~A" url)
-  ;; Base the tmp pathname off the pathname pathname to try and ensure that
-  ;; they are on the same filesystem.
-  (let ((tmp-pathname (uiop:tmpize-pathname pathname))
-        (additional-headers (get-additional-headers-for-hostname
-                             (puri:uri-host url)
-                             (puri:uri-scheme url))))
-    (when (and (not force)
+  (unless (and (eql hint :immutable)
                (probe-file pathname))
-      (push (cons :if-modified-since (universal-time-to-http-date (file-write-date pathname)))
-            additional-headers))
-    (ensure-directories-exist pathname)
-    (unwind-protect
-         (progn
-           (multiple-value-bind (http-stream status-code)
-               (http-request url
-                             :want-stream t
-                             :additional-headers additional-headers)
-             (log:debug "Status code: ~S" status-code)
-             (with-open-stream (http-stream http-stream)
-               (case status-code
-                 (200
-                  (with-open-file (file-stream tmp-pathname :direction :output
-                                                            :if-exists :supersede
-                                                            :element-type '(unsigned-byte 8))
-                    ;; Save the data to the file.
-                    (copy-stream http-stream file-stream
-                                 :element-type '(unsigned-byte 8)
-                                 :buffer-size 8192))
-                  (rename-file tmp-pathname pathname)
-                  t)
-                 (304
-                  ;; No changes
-                  nil)
-                 (t
-                  (error "Can't handle HTTP code ~A" status-code))))))
-      (when (probe-file tmp-pathname)
-        (delete-file tmp-pathname)))))
+    (setf url (puri:parse-uri url))
+    (log:debug "Fetching ~A" url)
+    ;; Base the tmp pathname off the pathname pathname to try and ensure that
+    ;; they are on the same filesystem.
+    (let ((tmp-pathname (uiop:tmpize-pathname pathname))
+          (additional-headers (get-additional-headers-for-hostname
+                               (puri:uri-host url)
+                               (puri:uri-scheme url))))
+      (when (and (not force)
+                 (probe-file pathname))
+        (push (cons :if-modified-since (universal-time-to-http-date (file-write-date pathname)))
+              additional-headers))
+      (ensure-directories-exist pathname)
+      (unwind-protect
+           (progn
+             (multiple-value-bind (http-stream status-code)
+                 (http-request url
+                               :want-stream t
+                               :additional-headers additional-headers)
+               (log:debug "Status code: ~S" status-code)
+               (with-open-stream (http-stream http-stream)
+                 (case status-code
+                   (200
+                    (with-open-file (file-stream tmp-pathname :direction :output
+                                                              :if-exists :supersede
+                                                              :element-type '(unsigned-byte 8))
+                      ;; Save the data to the file.
+                      (copy-stream http-stream file-stream
+                                   :element-type '(unsigned-byte 8)
+                                   :buffer-size 8192))
+                    (rename-file tmp-pathname pathname)
+                    t)
+                   (304
+                    ;; No changes
+                    nil)
+                   (t
+                    (error "Can't handle HTTP code ~A" status-code))))))
+        (when (probe-file tmp-pathname)
+          (delete-file tmp-pathname))))))
