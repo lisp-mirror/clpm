@@ -90,20 +90,18 @@
                                             (source-lib-directory source))))
     (when (probe-file metadata-pathname)
       (uiop:with-safe-io-syntax ()
-        (uiop:read-file-form metadata-pathname)))))
+        (uiop:read-file-forms metadata-pathname)))))
 
 (defun ql-flat-source-update-metadata (source &rest args &key &allow-other-keys)
   (let ((metadata-pathname (merge-pathnames "metadata.sexp"
                                             (source-lib-directory source)))
-        (existing-metadata nil))
-    (when (probe-file metadata-pathname)
-      (uiop:with-safe-io-syntax ()
-        (setf existing-metadata (uiop:read-file-form metadata-pathname))))
+        (existing-metadata (or (ql-flat-source-metadata source)
+                               (list (cons :api-version "0.1")))))
     (loop
       :for key :in args :by #'cddr
       :for value :in (rest args) :by #'cddr
       :do
-         (setf (getf existing-metadata key) value))
+         (setf (assoc-value existing-metadata key) value))
     (uiop:with-safe-io-syntax ()
       (with-open-file (s metadata-pathname
                          :direction :output
@@ -111,8 +109,9 @@
                          :if-does-not-exist :create)
         (let ((*print-right-margin* nil)
               (*print-case* :downcase))
-          (prin1 existing-metadata s)
-          (terpri s))))
+          (dolist (pair existing-metadata)
+            (prin1 pair s)
+            (terpri s)))))
 
     existing-metadata))
 
