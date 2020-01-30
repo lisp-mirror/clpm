@@ -15,7 +15,7 @@
   :license "BSD-2-Clause"
   :pathname "src/clpm/"
   :class :package-inferred-system
-  :defsystem-depends-on (#:cffi-toolchain #:clpm-build #:deploy)
+  :defsystem-depends-on (#:clpm-build #:deploy)
   :entry-point "clpm/cli/entry:main"
   :build-operation "deploy-op"
   :build-pathname #+win32 "clpm.exe" #-win32 "clpm"
