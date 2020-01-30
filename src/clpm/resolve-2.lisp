@@ -635,6 +635,8 @@ the requirements."
                                                          :unresolved-reqs reqs)))
          (final-node (perform-search root-node)))
     (setf (context-releases out-context)
+          (mapcar #'car (search-state-activated-releases (search-node-state final-node))))
+    (setf (context-reverse-dependencies out-context)
           (sort (copy-alist (search-state-activated-releases (search-node-state final-node)))
                 #'string< :key (compose #'project-name #'release-project #'car)))
     (setf (context-system-releases out-context) (search-state-activated-system-releases
