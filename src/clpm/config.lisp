@@ -89,6 +89,27 @@ directory in ~*clpm-config-directories*~."
      :documentation
      "The tar implementation to use.")
 
+    ((:context)
+     :type string
+     :default "default"
+     :documentation
+     "The name of the default context.")
+
+    ((:contexts)
+     :type hash-table)
+    ((:contexts :*)
+     :wildcard-types (string)
+     :type hash-table)
+    ((:contexts :* :source-registry.d-files)
+     :wildcard-types (string)
+     :type (list (or string pathname))
+     :documentation
+     "Used to inform ASDF where to find systems for this context. Outputs the same contents to every file in a format suitable for inclusion in a source-registry.d directory (see ASDF manual).")
+    ((:contexts :* :source-registry-files)
+     :wildcard-types (string)
+     :type (list (or string pathname))
+     "Used to inform ASDF where to find systems for this context. Outputs the same contents to every file in a source-registry.conf format (see ASDF manual).")
+
     ((:curl)
      :type hash-table)
     ((:curl :path)
@@ -236,8 +257,7 @@ overwrites the value from ~default-ht~."
 (defmethod parse-config-value ((value t))
   value)
 
-(defmethod parse-config-value ((table-form list))
-  (assert (eql 'table (first table-form)))
+(defun parse-config-table (table-form)
   (pop table-form)
   (let ((out (make-hash-table :test 'equal)))
     (loop
@@ -246,6 +266,11 @@ overwrites the value from ~default-ht~."
       :for value := (parse-config-value raw-value)
       :do (setf (gethash key out) value))
     out))
+
+(defmethod parse-config-value ((form list))
+  (if (eql 'table (first form))
+      (parse-config-table form)
+      form))
 
 (defun parse-toplevel-config-form (form table)
   (destructuring-bind (path &rest values) form
