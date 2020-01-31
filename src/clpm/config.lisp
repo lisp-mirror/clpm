@@ -10,9 +10,8 @@
           #:iterate)
   (:export #:*clpm-config-directories*
            #:clpm-config-pathname
+           #:config-table-keys
            #:config-value
-           #:merge-file-into-config!
-           #:merge-ht-into-config!
            #:print-config))
 
 (in-package #:clpm/config)
@@ -79,28 +78,119 @@ directory in ~*clpm-config-directories*~."
 
 ;; * Configuration variables and merging configs
 
-(defparameter *default-config*
-  '(progn
-    (version "0.1")
+(defparameter *config-info*
+  '(((:archives)
+     :type hash-table)
+    ((:archives :tar)
+     :type hash-table)
+    ((:archives :tar :type)
+     :type (member :auto :tar)
+     :default :auto
+     :documentation
+     "The tar implementation to use.")
 
-    ((table :grovel :sandbox)
-     :method :auto)
+    ((:curl)
+     :type hash-table)
+    ((:curl :path)
+     :type (or string pathname)
+     :default "curl"
+     :documentation
+     "The path to the curl executable.")
 
-    ((table :archives)
-     :tar-method :auto)
+    ((:git)
+     :type hash-table)
+    ((:git :path)
+     :type (or string pathname)
+     :default "git"
+     :documentation
+     "The path to the git executable.")
+    ((:git :remotes)
+     :type hash-table)
+    ((:git :remotes :*)
+     :wildcard-types (hostname)
+     :type hash-table)
+    ((:git :remotes :* :type)
+     :wildcard-types (hostname)
+     :type (member :gitlab)
+     :documentation
+     "The type of git server hosted at this hostname.")
+    ((:git :remotes :* :method)
+     :wildcard-types (hostname)
+     :type (member :ssh :https)
+     :documentation
+     "The preferred method of connecting to this server.")
+    ((:git :remotes :* :username)
+     :wildcard-types (hostname)
+     :type string
+     :default "git"
+     :documentation
+     "The username to use when connecting to this server.")
+    ((:git :remotes :* :password)
+     :wildcard-types (hostname)
+     :type string
+     :documentation
+     "The password to use when connecting to this server. Only used in HTTPS method.")
 
-    ((table :archives :tar)
-     :path "tar")
+    ((:http)
+     :type hash-table)
+    ((:http :headers)
+     :type hash-table)
+    ((:http :headers :*)
+     :wildcard-types (hostname)
+     :type hash-table)
+    ((:http :headers :* :*)
+     :wildcard-types (hostname header)
+     :type hash-table)
+    ((:http :headers :* :* :secure-only-p)
+     :wildcard-types (hostname header)
+     :type boolean
+     :default nil
+     :documentation
+     "If non-NIL, then the specified header should only be sent to hostname if the connection is secure.")
+    ((:http :headers :* :* :contents)
+     :wildcard-types (hostname header)
+     :type (or string pathname)
+     :default nil
+     :documentation
+     "If set, the contents of this file are sent as the header value.")
+    ((:http :headers :* :* :exec)
+     :wildcard-types (hostname header)
+     :type (or string pathname)
+     :documentation
+     "If set, it must name a program that must print the value of the header to stdout.")
+    ((:http :headers :* :* :value)
+     :wildcard-types (hostname header)
+     :type string
+     :documentation
+     "If set, the value of the header to send.")
 
-    ((table :http-client)
-     :method :auto)
+    ((:http-client)
+     :type hash-table)
+    ((:http-client :type)
+     :type (member :auto #+clpm-drakma :drakma #+clpm-curl :curl)
+     :default :auto
+     :documentation
+     "The HTTP client implementation to use.")
 
-    ((table :http-client :curl)
-     :path "curl"))
-  "Default configuration of clpm.")
+    ((:tar)
+     :type hash-table)
+    ((:tar :path)
+     :type (or string pathname)
+     :default "tar"
+     :documentation
+     "The path to the tar executable.")))
 
-(defvar *config* nil
-  "Active configuration. Computed at program execution time.")
+(defun get-config-entry (path)
+  (let ((canonical-path (mapcar (lambda (x)
+                                  (etypecase x
+                                    (keyword
+                                     x)
+                                    (string
+                                     :*)))
+                                path)))
+    (assoc canonical-path *config-info* :test #'equal)))
+
+(defvar *config-sources* nil)
 
 (defun merge-hts (new-ht default-ht)
   "Recursively merge two hash tables. If a key is present in ~new-ht~ its value
@@ -138,10 +228,6 @@ overwrites the value from ~default-ht~."
      new-ht)
     out))
 
-(defun merge-ht-into-config! (new-ht)
-  "Merge a hash table into the active config."
-  (setf *config* (merge-hts new-ht *config*)))
-
 
 ;; * Parsing configs
 
@@ -150,58 +236,83 @@ overwrites the value from ~default-ht~."
 (defmethod parse-config-value ((value t))
   value)
 
-(defmethod parse-config-value ((value list))
-  (assert (eql 'table (first value)))
-  (parse-config-form value))
+(defmethod parse-config-value ((table-form list))
+  (assert (eql 'table (first table-form)))
+  (pop table-form)
+  (let ((out (make-hash-table :test 'equal)))
+    (loop
+      :for key :in table-form :by #'cddr
+      :for raw-value :in (rest table-form) :by #'cddr
+      :for value := (parse-config-value raw-value)
+      :do (setf (gethash key out) value))
+    out))
 
-(defgeneric %parse-config-form (first rest table))
-
-(defmethod %parse-config-form ((first (eql 'table)) rest table)
-  (loop
-    :for key :in rest :by #'cddr
-    :for value :in (rest rest) :by #'cddr
-    :do (setf (gethash key table) (parse-config-value value))))
-
-(defmethod %parse-config-form ((first list) rest table)
-  (destructuring-bind (first &rest path) first
-    (assert (eql 'table first))
-    (let ((sub-table (make-hash-table :test 'equalp)))
-      (%parse-config-form 'table rest sub-table)
-      (setf (gethashes* table path) sub-table))))
-
-(defmethod %parse-config-form ((first (eql 'progn)) rest table)
-  (mapc (rcurry #'parse-config-form table) rest)
+(defun parse-toplevel-config-form (form table)
+  (destructuring-bind (path &rest values) form
+    ;; VALUES may have a single element or have multiple elements. If it has
+    ;; multiple elements, it is treated as a table.
+    (let ((value (if (length= 1 values)
+                     (parse-config-value (first values))
+                     (parse-config-value (list* 'table values)))))
+      (multiple-value-bind (orig-value orig-value-exists-p) (gethashes* table path)
+        (if orig-value-exists-p
+            (cond
+              ((and (hash-table-p orig-value) (hash-table-p value))
+               (setf (gethashes* table path) (merge-hts value orig-value)))
+              ((or (hash-table-p orig-value) (hash-table-p value))
+               (error "Unable to merge a table with a value at ~S" path))
+              (t
+               (setf (gethashes* table path) value)))
+            (setf (gethashes* table path) value)))))
   table)
 
-(defmethod %parse-config-form ((first (eql 'version)) rest table)
-  (assert (equal (first rest) "0.1")))
+(defun parse-toplevel-config-forms (forms)
+  (let ((out (make-hash-table :test 'equal)))
+    (mapcar (rcurry #'parse-toplevel-config-form out) forms)
+    out))
 
-(defun parse-config-form (form &optional (table (make-hash-table :test 'equalp)))
-  "Given a top level config represented as a ~(clpm-config plist)~, return a
-hash table representing the config."
-  (assert (listp form))
-  (%parse-config-form (first form) (rest form) table)
-  table)
+(defun call-with-forms-from-stream (stream thunk)
+  (let ((sentinel (gensym)))
+    (loop
+      (let ((f (read stream nil sentinel)))
+        (when (eq f sentinel)
+          (return))
+        (funcall thunk f)))))
 
-(defun merge-file-into-config! (pathname)
-  "Read a config form from ~pathname~ and merge it into the currently active
-config."
-  (uiop:with-safe-io-syntax (:package :clpm/config)
-    (dolist (subform (uiop:read-file-forms pathname))
-      (merge-ht-into-config! (parse-config-form subform)))))
+(defmacro with-forms-from-stream ((stream form-binding) &body body)
+  `(call-with-forms-from-stream ,stream (lambda (,form-binding) ,@body)))
+
+(defun load-config-from-stream (stream)
+  "Given a stream containing CLPM config forms, return a hash table representing
+it."
+  (let ((out (make-hash-table :test 'equal))
+        (version-checked-p nil))
+    (uiop:with-safe-io-syntax (:package :clpm/config)
+      (with-forms-from-stream (stream f)
+        (if version-checked-p
+            (parse-toplevel-config-form f out)
+            (if (equal f '(version "0.2"))
+                (setf version-checked-p t)
+                (error "Unknown config version statement: ~S" f)))))
+    out))
+
+(defun load-config-from-file (pn)
+  (with-open-file (s pn)
+    (load-config-from-stream s)))
 
 (defun load-global-config ()
-  "Seed ~*config*~ with ~*default-config*~ and merge the primary CLPM config
-file (clpm.conf) into ~*active*~."
-  (setf *config* (parse-config-form *default-config*))
-  (let* ((config-file (clpm-config-pathname '("clpm.conf"))))
-    (when config-file
-      (merge-file-into-config! config-file)))
-  *config*)
+  "Seed *config-sources* with the default config and primary CLPM config
+file (clpm.conf)."
+  (let ((config-file (clpm-config-pathname '("clpm.conf"))))
+    (setf *config-sources*
+          (list (if config-file
+                    (load-config-from-file config-file)
+                    (make-hash-table :test 'equal)))))
+  *config-sources*)
 
 (defun clear-global-config ()
-  "Clear the ~*config*~ variable."
-  (setf *config* nil))
+  "Clear the *config-sources* variable."
+  (setf *config-sources* nil))
 
 
 ;; * Querying the config
@@ -211,8 +322,10 @@ file (clpm.conf) into ~*active*~."
   "Given a hash table and a list of keys, look up the value in the hash table."
   (if keys
       (when hash-table-or-value
-        (gethashes* (gethash (first keys) hash-table-or-value) (rest keys)))
-      hash-table-or-value))
+        (multiple-value-bind (next-table exists-p) (gethash (first keys) hash-table-or-value)
+          (when exists-p
+            (gethashes* next-table (rest keys)))))
+      (values hash-table-or-value t)))
 
 (defun (setf gethashes*) (value hash-table keys)
   "Modify the value in ~hash-table~ addressed by the list of ~keys~."
@@ -231,9 +344,90 @@ file (clpm.conf) into ~*active*~."
   "Modify the value in ~hash-table~ addressed by the list of ~keys~."
   (setf (gethashes* hash-table keys) value))
 
+(defun path-to-env-var (path config-info)
+  "Given a config path, return the environment variable which would contain its
+value."
+  (let* ((wildcard-types (getf (cdr config-info) :wildcard-types))
+         (canonical-path (car config-info))
+         (type (getf (cdr config-info) :type))
+         (hash-table-p (eql type 'hash-table)))
+    (format nil "CLPM_~{~A~^_~}~:[~;_~]"
+            (mapcar (lambda (x)
+                      (if (eql (pop canonical-path) :*)
+                          (ecase (pop wildcard-types)
+                            (header
+                             (string-upcase
+                              (cl-ppcre:regex-replace-all "-" x "_")))
+                            (hostname
+                             (uiop:strcat
+                              (string-upcase
+                               (cl-ppcre:regex-replace-all #\. (cl-ppcre:regex-replace-all "-" x "_") "__"))
+                              "_")))
+                          x))
+                    path)
+            hash-table-p)))
+
+(defun parse-env-value (value type)
+  (cond
+    ((eql type 'string)
+     value)
+    ((eql type 'boolean)
+     (let ((value (string-downcase value))
+           (orig-value value))
+       (cond
+         ((or (equal value "0")
+              (equal value "n")
+              (equal value "no")
+              (equal value "false"))
+          nil)
+         ((or (equal value "1")
+              (equal value "y")
+              (equal value "yes")
+              (equal value "true"))
+          t)
+         (t
+          (error "Unable to parse ~S as a boolean." orig-value)))))
+    ((and (listp type)
+          (eql (first type) 'member)
+          (every #'keywordp (rest type)))
+     (let ((kw (make-keyword (uiop:standard-case-symbol-name value))))
+       (unless (typep kw type)
+         (error "Unknown value ~S for type ~S" kw type))
+       kw))
+    ((equal type '(or string pathname))
+     (uiop:parse-native-namestring value))
+    (t
+     (error "Unknown type ~S to parse from a string." type))))
+
+(defun config-table-keys (&rest path)
+  "Return a list of keys in the table rooted at PATH. This currently does not
+look at default-config and environment variables."
+  (let* ((config-info (get-config-entry path))
+         (type (getf (cdr config-info) :type)))
+    (assert config-info)
+    (assert (eql type 'hash-table))
+    (let ((tables (mapcar (rcurry #'gethashes* path) *config-sources*)))
+      (remove-duplicates (mapcan #'hash-table-keys (remove nil tables))
+                         :test #'equal))))
+
 (defun config-value (&rest path)
-  "Get the configuration value located at ~path~."
-  (gethashes* *config* path))
+  "Get the configuration value located at path. First search environment
+variables, then the config file, then the default config."
+  (let* ((config-info (get-config-entry path))
+         (type (getf (cdr config-info) :type)))
+    (assert config-info)
+    (assert (and type (not (eql type 'hash-table))))
+    (let ((env-var-name (path-to-env-var path config-info)))
+      (if-let ((env-value (uiop:getenv env-var-name)))
+        (parse-env-value env-value type)
+        (loop
+          :for config-source :in *config-sources*
+          :for (value exists-p) := (multiple-value-list (gethashes* config-source path))
+          :until exists-p
+          :finally
+             (if exists-p
+                 (return value)
+                 (return (getf (cdr config-info) :default))))))))
 
 (defun flatten-hts (ht)
   "Given a hash table ~ht~, recursively flatten it into a plist."
@@ -274,13 +468,13 @@ file (clpm.conf) into ~*active*~."
     (dolist (sub-table tables)
       (print-table (cdr sub-table) (car sub-table) stream))))
 
-(defun print-config (stream)
-  "Print the configuration to ~stream~."
-  (format stream "(version \"0.1\")~%~%")
-  (maphash (lambda (k v)
-             (assert (hash-table-p v))
-             (print-table v (list k) stream))
-           *config*))
+;; (defun print-config (stream)
+;;   "Print the configuration to ~stream~."
+;;   (format stream "(version \"0.2\")~%~%")
+;;   (maphash (lambda (k v)
+;;              (assert (hash-table-p v))
+;;              (print-table v (list k) stream))
+;;            *config*))
 
 (uiop:register-clear-configuration-hook 'clear-global-config)
 (uiop:register-image-restore-hook 'load-global-config)

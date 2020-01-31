@@ -64,23 +64,22 @@ headers."
   "Given a ~hostname~ and ~scheme~ used (~:http~ or ~:https~), return an alist
 mapping header names (as keywords) to values that should be included as part of
 the request."
-  (let ((headers-ht (config-value :http :headers hostname)))
-    (when headers-ht
-      (iter
-        (for (key value) :in-hashtable headers-ht)
-        (when (or (eql scheme :https)
-                  (not (gethash :secure-only-p value)))
-          (let ((value (gethash :value value))
-                (exec (gethash :exec value))
-                (contents (gethash :contents value)))
-            (cond
-              (value
-               (assert (stringp value))
-               (collect (cons key value)))
-              (exec
-               (collect (cons key (uiop:run-program (namestring exec) :output '(:string :stripped t)))))
-              (contents
-               (collect (cons key (uiop:read-file-string contents)))))))))))
+  (let ((header-names (config-table-keys :http :headers hostname)))
+    (iter
+      (for header-name :in header-names)
+      (when (or (eql scheme :https)
+                (not (config-value :http :headers hostname :secure-only-p)))
+        (let ((value (config-value :http :headers hostname :value))
+              (exec (config-value :http :headers hostname :exec))
+              (contents (config-value :http :headers hostname :contents)))
+          (cond
+            (value
+             (collect (cons header-name value)))
+            (exec
+             (collect (cons header-name (uiop:run-program (list (namestring exec))
+                                                          :output '(:string :stripped t)))))
+            (contents
+             (collect (cons header-name (uiop:read-file-string contents))))))))))
 
 (defun fetch-url (url)
   "Given a URL, return a string with the contents of the file located at ~url~."
