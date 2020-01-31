@@ -51,9 +51,6 @@
       source)))
 
 (defun load-sources ()
-  (let ((sources-table (config-value :sources))
-        (source-forms nil))
-    (maphash (lambda (k v)
-               (push (cons k (hash-table-plist v)) source-forms))
-             sources-table)
-    (mapcar #'load-source-from-form source-forms)))
+  (let ((pn (clpm-config-pathname '("sources.conf"))))
+    (uiop:with-safe-io-syntax ()
+      (mapcar #'load-source-from-form (uiop:read-file-forms pn)))))
