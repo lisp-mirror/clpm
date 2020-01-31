@@ -79,9 +79,8 @@
   (:documentation
    "Add ~release~ to the global list of installed and activated releases."))
 
-(defgeneric install-release (release &key activate-globally)
+(defgeneric install-release (release)
   (:documentation "Install a ~release~ and optinally activate it globally."))
 
-(defmethod install-release ((release vcs-release) &key activate-globally)
-  (assert (null activate-globally))
+(defmethod install-release ((release vcs-release))
   (ensure-vcs-release-installed! release))

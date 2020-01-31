@@ -37,18 +37,25 @@
             (adopt:parse-options *default-ui*)
           ;; Compute verbosity
           (case (gethash :verbose options)
-            (0)
+            (0
+             (log:config '(clpm) :warn
+                         :this :stream *error-output* :immediate-flush :own
+                         :pattern "%;<;;>;5p [%g{}{}{:downcase}] - %m%n"))
             (1
-             (log:config '(clpm) :info)
+             (log:config '(clpm) :info
+                         :this :stream *error-output* :immediate-flush :own
+                         :pattern "%;<;;>;5p [%g{}{}{:downcase}] - %m%n")
              (log:debug "Setting CLPM log level to info"))
             (2
-             (log:config '(clpm) :debug)
+             (log:config '(clpm) :debug
+                         :this :stream *error-output* :immediate-flush :own
+                         :pattern "%;<;;>;5p [%g{}{}{:downcase}] - %m%n")
              (log:debug "Setting CLPM log level to debug"))
             (t
-             (log:config '(clpm) :trace)
+             (log:config '(clpm) :trace
+                         :this :stream *error-output* :immediate-flush :own
+                         :pattern "%;<;;>;5p [%g{}{}{:downcase}] - %m%n")
              (log:debug "Setting CLPM log level to trace")))
-          (dispatch-subcommand *commands* arguments options *default-ui*)
-          ;;(format t "~S~%~S~%" arguments options)
-          ))
+          (dispatch-subcommand *commands* arguments options *default-ui*)))
     (error (c)
       (adopt:print-error-and-exit c))))

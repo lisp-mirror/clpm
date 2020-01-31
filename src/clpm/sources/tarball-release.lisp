@@ -5,6 +5,7 @@
 
 (uiop:define-package #:clpm/sources/tarball-release
     (:use #:cl
+          #:anaphora
           #:clpm/archives
           #:clpm/http-client
           #:clpm/install
@@ -17,6 +18,7 @@
   (:export #:tarball-release
            #:tarball-release/desired-md5
            #:tarball-release/desired-size
+           #:tarball-release/prefix
            #:tarball-release/url
            #:tarball-release-with-md5
            #:tarball-release-with-size))
@@ -45,9 +47,17 @@
   (:report (lambda (condition stream)
              (format stream "The file ~A is missing." (invalid-tarball-pathname condition)))))
 
+(defgeneric tarball-release/prefix (release)
+  (:documentation
+   "A string giving the prefix of all files in the tarball or NIL.")
+  (:method (release)
+    nil))
+
 (defgeneric tarball-release/url (release)
   (:documentation
-   "Returns a puri URL where the tarball is located."))
+   "Returns a puri URL where the tarball is located.")
+  (:method :around (release)
+    (puri:parse-uri (call-next-method))))
 
 (defgeneric validate-tarball (release pn)
   (:documentation
@@ -125,7 +135,7 @@
 
 
 (defun source-archive-cache (source)
-  "Return a pathname to the directory where ~source~ stores its archives."
+  "Return a pathname to the directory where ~source~ caches its archives."
   (uiop:resolve-absolute-location
    `(,(source-cache-directory source)
      "distfiles")
@@ -149,16 +159,11 @@ second is the filename of the file located at ~url~."
         (url-location version-url)
       (let ((archive-pathname (merge-pathnames filename
                                                (source-archive-cache (release-source release)))))
-        (ensure-file-fetched archive-pathname url)
+        (ensure-file-fetched archive-pathname url
+                             :hint :immutable)
         archive-pathname))))
 
-(defmethod activate-release-globally! ((release tarball-release))
-  (let* ((project (release-project release))
-         (project-name (project-name project))
-         (install-root (release-lib-pathname release)))
-    (register-project-path-globally! project-name install-root)))
-
-(defmethod install-release ((release tarball-release) &key activate-globally)
+(defmethod install-release ((release tarball-release))
   (let* ((version-string (release-version release))
          (project (release-project release))
          (project-name (project-name project))
@@ -173,6 +178,6 @@ second is the filename of the file located at ~url~."
                                         :direction :input
                                         :element-type '(unsigned-byte 8))
           (unarchive 'gzipped-tar-archive
-                     archive-stream (uiop:pathname-parent-directory-pathname install-root)))))
-    (when activate-globally
-      (activate-release-globally! release))))
+                     archive-stream install-root
+                     :strip-components (awhen (tarball-release/prefix release)
+                                         (1+ (count #\/ it)))))))))

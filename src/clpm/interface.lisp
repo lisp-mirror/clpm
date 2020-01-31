@@ -30,7 +30,7 @@
          (releases-to-install (resolve-requirements reqs (sources) :no-deps no-deps-p)))
     (log:debug "Requirements: ~S" reqs)
     (log:debug "Releases: ~S" releases-to-install)
-    (mapc (rcurry #'install-release :activate-globally t) releases-to-install)))
+    (mapc #'install-release releases-to-install)))
 
 (defun install-system (system-name version-spec &key no-deps-p)
   (let* ((reqs (mapcar (lambda (vs)
@@ -41,4 +41,4 @@
          (releases-to-install (resolve-requirements reqs (sources) :no-deps no-deps-p)))
     (log:debug "Requirements: ~S" reqs)
     (log:debug "Releases: ~S" releases-to-install)
-    (mapc (rcurry #'install-release :activate-globally t) releases-to-install)))
+    (mapc #'install-release releases-to-install)))

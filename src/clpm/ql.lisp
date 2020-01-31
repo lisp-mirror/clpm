@@ -212,6 +212,7 @@
               (setf url (puri:parse-uri url))
               (when (eql t (ql-repo-force-https (ql-dist-version-repo dist-version)))
                 (setf (puri:uri-scheme url) :https))
+              (setf size (parse-integer size))
               (setf (gethash project ht)
                     (make-instance 'ql-release
                                    :dist-version dist-version

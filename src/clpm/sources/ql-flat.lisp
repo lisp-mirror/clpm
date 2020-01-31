@@ -13,6 +13,7 @@
           #:clpm/requirement
           #:clpm/sources/defs
           #:clpm/sources/flat-file
+          #:clpm/sources/tarball-release
           #:clpm/ql
           #:clpm/utils
           #:do-urlencode
@@ -77,7 +78,7 @@
       (with-open-file (s (merge-pathnames
                           (make-pathname :directory (list :relative "projects" (project-name project))
                                          :name "dist-to-snapshot")
-                          (flat-file-source-root-pathname (project-source project))))
+                          (flat-file-source-repo-pathname (project-source project))))
         (loop
           (let ((form (read s nil :eof)))
             (when (eql form :eof)
@@ -88,18 +89,21 @@
 
 ;; ** Release
 
-(defclass tarball-mixin ()
+(defclass ql-flat-release (flat-file-release
+                           tarball-release-with-md5
+                           tarball-release-with-size)
   ((url
-    :initarg :url)
+    :initarg :url
+    :reader tarball-release/url)
    (tar-prefix
-    :initarg :tar-prefix)
+    :initarg :tar-prefix
+    :reader tarball-release/prefix)
    (size
-    :initarg :size)
+    :initarg :size
+    :reader tarball-release/desired-size)
    (file-md5
-    :initarg :file-md5)))
-
-(defclass ql-flat-release (flat-file-release tarball-mixin)
-  ())
+    :initarg :file-md5
+    :reader tarball-release/desired-md5)))
 
 ;; ** System Release
 
@@ -115,15 +119,13 @@
              (ql-flat-project-snapshot-to-ql-version-map project))))
 
 (defun ql-flat-source-metadata (source)
-  (let ((metadata-pathname (merge-pathnames "metadata.sexp"
-                                            (source-lib-directory source))))
+  (let ((metadata-pathname (flat-file-source-repo-metadata-pathname source)))
     (when (probe-file metadata-pathname)
       (uiop:with-safe-io-syntax ()
         (uiop:read-file-forms metadata-pathname)))))
 
 (defun ql-flat-source-update-metadata (source &rest args &key &allow-other-keys)
-  (let ((metadata-pathname (merge-pathnames "metadata.sexp"
-                                            (source-lib-directory source)))
+  (let ((metadata-pathname (flat-file-source-repo-metadata-pathname source))
         (existing-metadata (or (ql-flat-source-metadata source)
                                (list (cons :api-version "0.1")))))
     (loop
@@ -269,7 +271,7 @@ the release..."
 
 ;; * Flat file methods
 
-(defmethod flat-file-source-root-pathname ((source ql-flat-source))
+(defmethod flat-file-source-repo-pathname ((source ql-flat-source))
   (merge-pathnames "repo/"
                    (source-lib-directory source)))
 
@@ -298,6 +300,8 @@ the release..."
 
 (defstruct ql-sync-state
   (project-index-map nil
+   :read-only t)
+  (system-index-map nil
    :read-only t)
   (project-detail-map (make-hash-table :test 'equal)
    :read-only t)
@@ -360,13 +364,23 @@ the release..."
                                                              (equal (pathname-name full-name)
                                                                     short-system-file))
                                                            release-system-files)))
+                           ;; This madness is because releases.txt and
+                           ;; systems.txt give different strings for the system files...
                            (unless long-system-file
                              (error "Unable to determine system file path for system"))
 
+                           (pushnew project-name
+                                    (getf (gethash system-name
+                                                   (ql-sync-state-system-index-map sync-state))
+                                          :projects)
+                                    :test #'equal)
+                           (push (list (ql-system-project system)
+                                       (list :snapshot version))
+                                 (getf (gethash system-name
+                                                (ql-sync-state-system-index-map sync-state))
+                                       :releases))
                            (push (list* (list (ql-system-project system)
                                               (list :snapshot version))
-                                        ;; TODO: releases.txt and systems.txt give
-                                        ;; different file names...
                                         :system-file long-system-file
                                         (awhen (ql-system-dependencies system)
                                           (list :dependencies it)))
@@ -375,7 +389,8 @@ the release..."
 
     (setf (ql-sync-state-previous-dist-version sync-state) dv)))
 
-(defun write-project-index (map pathname)
+(defun write-index (map pathname)
+  (ensure-directories-exist pathname)
   (uiop:with-safe-io-syntax ()
     (let ((keys (sort (hash-table-keys map) #'string<))
           (*print-right-margin* nil)
@@ -385,17 +400,17 @@ the release..."
                          :if-exists :supersede
                          :if-does-not-exist :create)
         (dolist (key keys)
-          (prin1 (list key (gethash key map)) s)
+          (prin1 (list* key (gethash key map)) s)
           (terpri s))))))
 
-(defun write-project-details (map dist-to-snapshot-map pathname)
-  (ensure-directories-exist pathname)
+(defun write-project-details (map dist-to-snapshot-map source)
   (uiop:with-safe-io-syntax ()
     (let ((*print-right-margin* nil)
           (*print-case* :downcase))
       (maphash (lambda (project-name details)
                  (let ((releases-pathname
-                         (merge-pathnames (concatenate 'string project-name "/releases") pathname)))
+                         (merge-pathnames "releases"
+                                          (flat-file-source-repo-project-pathname source project-name))))
                    (ensure-directories-exist releases-pathname)
                    (with-open-file (s releases-pathname
                                       :direction :output
@@ -407,8 +422,8 @@ the release..."
                map)
       (maphash (lambda (project-name dist-to-snapshot-alist)
                  (let ((dist-to-snapshot-pathname
-                         (merge-pathnames (concatenate 'string project-name "/dist-to-snapshot")
-                                          pathname)))
+                         (merge-pathnames "dist-to-snapshot"
+                                          (flat-file-source-repo-project-pathname source project-name))))
                    (ensure-directories-exist dist-to-snapshot-pathname)
                    (with-open-file (s dist-to-snapshot-pathname
                                       :direction :output
@@ -419,23 +434,25 @@ the release..."
                        (terpri s)))))
                dist-to-snapshot-map))))
 
-(defun write-system-details (map pathname)
-  (ensure-directories-exist pathname)
+(defun write-system-details (map source)
   (uiop:with-safe-io-syntax ()
     (let ((*print-right-margin* nil)
           (*print-case* :downcase))
       (maphash (lambda (system-name details)
-                 (with-open-file (s (merge-pathnames (urlencode system-name) pathname)
+                 (let ((pn (merge-pathnames "releases"
+                                            (flat-file-source-repo-system-pathname source system-name))))
+                   (ensure-directories-exist pn)
+                   (with-open-file (s pn
                                     :direction :output
                                     :if-exists :append
                                     :if-does-not-exist :create)
-                   (dolist (detail (reverse details))
-                     (prin1 detail s)
-                     (terpri s))))
+                     (dolist (detail (reverse details))
+                       (prin1 detail s)
+                       (terpri s)))))
                map))))
 
 (defun ql-flat-load-existing-project-index (source)
-  (let ((pathname (merge-pathnames "repo/project-index.txt" (source-lib-directory source)))
+  (let ((pathname (flat-file-source-repo-project-index-pathname source))
         (out (make-hash-table :test 'equal)))
     (when (probe-file pathname)
       (uiop:with-safe-io-syntax ()
@@ -444,26 +461,39 @@ the release..."
             (let ((form (read s nil :eof)))
               (when (eql form :eof)
                 (return))
-              (setf (gethash (first form) out) (second form)))))))
+              (setf (gethash (first form) out) (rest form)))))))
+    out))
+
+(defun ql-flat-load-existing-system-index (source)
+  (let ((pathname (flat-file-source-repo-system-index-pathname source))
+        (out (make-hash-table :test 'equal)))
+    (when (probe-file pathname)
+      (uiop:with-safe-io-syntax ()
+        (with-open-file (s pathname)
+          (loop
+            (let ((form (read s nil :eof)))
+              (when (eql form :eof)
+                (return))
+              (setf (gethash (first form) out) (rest form)))))))
     out))
 
 (defmethod sync-source ((source ql-flat-source))
   ;; Create an object to interact with the remote repo.
   (let* ((sync-cache-pathname (merge-pathnames "remote-repo/"
                                                (source-cache-directory source)))
-         (sync-lib-pathname (merge-pathnames "repo/"
-                                             (source-lib-directory source)))
          (repo (make-instance 'ql-repo
                               :url (ql-flat-source-url source)
                               :force-https (ql-flat-source-force-https source)
                               :cache-pathname sync-cache-pathname))
-         (project-index-map (ql-flat-load-existing-project-index source)))
+         (project-index-map (ql-flat-load-existing-project-index source))
+         (system-index-map (ql-flat-load-existing-system-index source)))
     (ensure-directories-exist sync-cache-pathname)
-    (ensure-directories-exist sync-lib-pathname)
     (let ((latest-version-synced (ql-flat-source-latest-version-synced source))
           (sync-state (make-ql-sync-state
-                       :project-index-map project-index-map))
-          (projects-pathname (merge-pathnames "project-index.txt" sync-lib-pathname)))
+                       :project-index-map project-index-map
+                       :system-index-map system-index-map))
+          (project-index-pathname (flat-file-source-repo-project-index-pathname source))
+          (system-index-pathname (flat-file-source-repo-system-index-pathname source)))
       (when latest-version-synced
         (setf (ql-sync-state-previous-dist-version sync-state)
               (ql-repo-dist-version repo latest-version-synced))
@@ -479,13 +509,15 @@ the release..."
                        (string<= version latest-version-synced))
             (ql-sync-version sync-state repo version))))
 
-      (write-project-index (ql-sync-state-project-index-map sync-state)
-                           projects-pathname)
+      (write-index (ql-sync-state-project-index-map sync-state)
+                   project-index-pathname)
+      (write-index (ql-sync-state-system-index-map sync-state)
+                   system-index-pathname)
       (write-project-details (ql-sync-state-project-detail-map sync-state)
                              (ql-sync-state-dist-to-snapshot-map sync-state)
-                             (merge-pathnames "projects/" sync-lib-pathname))
+                             source)
       (write-system-details (ql-sync-state-system-detail-map sync-state)
-                            (merge-pathnames "systems/" sync-lib-pathname))
+                            source)
       (let ((prev-latest-version-synced latest-version-synced)
             (latest-version-synced (ql-dist-version-version
                                     (ql-sync-state-previous-dist-version sync-state))))

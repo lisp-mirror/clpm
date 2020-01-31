@@ -28,13 +28,19 @@ its version can be successfully queried."
    (zerop (nth-value 2 (uiop:run-program `(,(tar-path client) "--version")
                                          :ignore-error-status t)))))
 
-(defmethod unarchive-tar ((client tar-client) archive-stream destination-pathname)
+(defmethod unarchive-tar ((client tar-client) archive-stream destination-pathname
+                          &key strip-components)
   "Ensures ~destination-pathname~ exists and the executes the tar program to
 extract the contents of ~archive-stream~ to ~destination-pathname~."
   (ensure-directories-exist destination-pathname)
   (uiop:run-program `(,(tar-path client)
                       "-C" ,(uiop:native-namestring destination-pathname)
+                      ,@(when strip-components
+                          (list (format nil "--strip-components=~d" strip-components)))
                       "-x" "-f" "-")
+                    ;; Ignore errors on windows because a number of Quicklisp
+                    ;; tarballs have symlinks in them which Windows does not
+                    ;; like.
                     :ignore-error-status #+win32 t #-win32 nil
                     :input `(,archive-stream :element-type (unsigned-byte 8))
                     :output nil

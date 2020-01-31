@@ -16,8 +16,10 @@ should be implemented in chipz itself."
 
   '(unsigned-byte 8))
 
-(defmethod unarchive :around ((archive-type gzipped-archive) archive-stream destination-pathname)
+(defmethod unarchive :around ((archive-type gzipped-archive) archive-stream destination-pathname
+                              &key strip-components)
   "If an archive is gzipped, make a decompressing stream using chipz and then
 call the next method with that stream instead of ~archive-stream~."
   (with-open-stream (s (chipz:make-decompressing-stream 'chipz:gzip archive-stream))
-    (call-next-method archive-type s destination-pathname)))
+    (call-next-method archive-type s destination-pathname
+                      :strip-components strip-components)))

@@ -8,6 +8,7 @@
           #:clpm/cli/common-args
           #:clpm/cli/subcommands
           #:clpm/context
+          #:clpm/install
           ;; #:clpm/interface
           #:clpm/log
           #:clpm/requirement
@@ -76,7 +77,7 @@
          (no-deps-p (gethash :install-no-deps options))
          (context-name (or (gethash :context options)
                            "default"))
-         (original-context (load-context-from-fs context-name))
+         (original-context (load-global-context context-name nil))
          (new-context (copy-context original-context)))
     (unless package-name
       (error "A package or system name is required"))
@@ -97,8 +98,14 @@
                                   :no-deps-p no-deps-p
                                   :why t))))
       (push req (context-requirements new-context))
-      (format t "~S~%~S~%~S~%~%~%" req original-context new-context)
-      (serialize-context-to-stream (resolve-requirements new-context) *standard-output*)
+      (let ((new-context (resolve-requirements new-context)))
+        (mapc #'install-release (context-releases new-context))
+        (print (format nil "~S" (context-to-asdf-source-registry new-context)))
+        (terpri)
+        (save-global-context new-context)
+        ;;(format t "~%~%~S~%" (multiple-value-list (context-diff original-context new-context)))
+        )
+      ;;(serialize-context-to-stream (resolve-requirements new-context) *standard-output*)
       ;; (format t "~A~%" )
       ;; (format t "~S~S~S~S")
       ;; (write-context-to-stream )

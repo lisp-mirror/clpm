@@ -7,10 +7,8 @@
     (:use #:cl
           #:alexandria
           #:clpm/config
-          #:clpm/sources/clpi
           #:clpm/sources/defs
           #:clpm/sources/ql-flat
-          #:clpm/sources/quicklisp
           #:clpm/utils)
   (:import-from #:uiop
                 #:read-file-form

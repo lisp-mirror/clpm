@@ -18,7 +18,14 @@
            #:flat-file-source
            #:flat-file-source-project-class
            #:flat-file-source-release-class
-           #:flat-file-source-root-pathname
+           #:flat-file-source-repo-metadata-pathname
+           #:flat-file-source-repo-pathname
+           #:flat-file-source-repo-project-index-pathname
+           #:flat-file-source-repo-project-pathname
+           #:flat-file-source-repo-projects-pathname
+           #:flat-file-source-repo-system-index-pathname
+           #:flat-file-source-repo-system-pathname
+           #:flat-file-source-repo-systems-pathname
            #:flat-file-system-release
            #:flat-file-system-release-dependencies
            #:flat-file-source-system-release-class))
@@ -60,19 +67,36 @@
 (defmethod flat-file-source-release-class ((source flat-file-source))
   'flat-file-release)
 
-(defgeneric flat-file-source-root-pathname (source))
+(defgeneric flat-file-source-repo-pathname (source))
 
-(defun %projects-root-pathname (source)
-  (merge-pathnames "projects/" (flat-file-source-root-pathname source)))
+(defun flat-file-source-repo-project-index-pathname (source)
+  (merge-pathnames "project-index" (flat-file-source-repo-pathname source)))
 
-(defun %systems-root-pathname (source)
-  (merge-pathnames "systems/" (flat-file-source-root-pathname source)))
+(defun flat-file-source-repo-project-pathname (source project-name)
+  (merge-pathnames (make-pathname :directory (list :relative (urlencode project-name)))
+                   (flat-file-source-repo-projects-pathname source)))
+
+(defun flat-file-source-repo-projects-pathname (source)
+  (merge-pathnames "projects/" (flat-file-source-repo-pathname source)))
+
+(defun flat-file-source-repo-system-index-pathname (source)
+  (merge-pathnames "system-index" (flat-file-source-repo-pathname source)))
+
+(defun flat-file-source-repo-system-pathname (source system-name)
+  (merge-pathnames (make-pathname :directory (list :relative (urlencode system-name)))
+                   (flat-file-source-repo-systems-pathname source)))
+
+(defun flat-file-source-repo-systems-pathname (source)
+  (merge-pathnames "systems/" (flat-file-source-repo-pathname source)))
+
+(defun flat-file-source-repo-metadata-pathname (source)
+  (merge-pathnames "metadata" (flat-file-source-repo-pathname source)))
 
 (defmethod source-project ((source flat-file-source) project-name &optional (error t))
   (ensure-gethash
    project-name (flat-file-source-projects-map source)
 
-   (let ((pathname (merge-pathnames project-name (%projects-root-pathname source))))
+   (let ((pathname (merge-pathnames project-name (flat-file-source-repo-projects-pathname source))))
      (unless (uiop:probe-file* pathname)
        (if error
            (error 'source-missing-project
@@ -88,7 +112,8 @@
   (ensure-gethash
    system-name (flat-file-source-systems-map source)
 
-   (let ((pathname (merge-pathnames (urlencode system-name) (%systems-root-pathname source))))
+   (let ((pathname (merge-pathnames "releases"
+                                    (flat-file-source-repo-system-pathname source system-name))))
      (unless (probe-file pathname)
        (if error
            (error 'source-missing-system
@@ -102,20 +127,15 @@
 
 (defmethod source-projects ((source flat-file-source))
   (let ((dir (directory (merge-pathnames (make-pathname :directory '(:relative :wild))
-                                         (%projects-root-pathname source)))))
+                                         (flat-file-source-repo-projects-pathname source)))))
     (mapcar (lambda (pn)
               (source-project source (last-elt (pathname-directory pn))))
             dir)))
 
 (defmethod source-systems ((source flat-file-source))
-  (let ((dir (directory (uiop:wilden (%systems-root-pathname source)))))
+  (let ((dir (directory (uiop:wilden (flat-file-source-repo-systems-pathname source)))))
     (mapcar (lambda (pn)
-              (source-system source (urldecode (if (pathname-type pn)
-                                                   (concatenate 'string
-                                                                (pathname-name pn)
-                                                                "."
-                                                                (pathname-type pn))
-                                                   (pathname-name pn)))))
+              (source-system source (urldecode (last-elt (pathname-directory pn)))))
             dir)))
 
 
@@ -157,7 +177,7 @@
 (defun %project-root-pathname (project)
   (uiop:ensure-directory-pathname
    (merge-pathnames (project-name project)
-                    (%projects-root-pathname (project-source project)))))
+                    (flat-file-source-repo-projects-pathname (project-source project)))))
 
 (defun %project-releases-pathname (project)
   (merge-pathnames "releases" (%project-root-pathname project)))
@@ -249,8 +269,10 @@
 
   (let ((map (make-hash-table :test 'equal)))
     (uiop:with-safe-io-syntax ()
-      (with-open-file (s (merge-pathnames (urlencode (system-name system))
-                                          (%systems-root-pathname (system-source system))))
+      (with-open-file (s (merge-pathnames "releases"
+                                          (flat-file-source-repo-system-pathname
+                                           (system-source system)
+                                           (system-name system))))
         (loop
           (let ((form (read s nil :eof)))
             (when (eql form :eof)
@@ -329,7 +351,7 @@
 
 ;; * System files
 
-(defclass flat-system-file ()
+(defclass flat-file-system-file ()
   ((source
     :initarg :source
     :reader system-file-source
@@ -343,5 +365,9 @@
     :reader system-file-asd-enough-namestring
     :documentation "The namestring pointing to the asd file within the release.")))
 
-(defmethod system-file-system-releases ((system-file flat-system-file))
+(defmethod system-file-system-releases ((system-file flat-file-system-file))
   (release-system-releases (system-file-release system-file)))
+
+(defmethod system-file-absolute-asd-pathname ((system-file flat-file-system-file))
+  (merge-pathnames (system-file-asd-enough-namestring system-file)
+                   (release-lib-pathname (system-file-release system-file))))

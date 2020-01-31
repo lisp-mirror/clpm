@@ -17,11 +17,3 @@
 used."
   `(eval-when (:compile-toplevel :load-toplevel :execute)
      (log:package-options :category-separator "/")))
-
-(defun configure-logger ()
-  "Configure the root logger."
-  (log:config (log:category '(clpm))
-              :tricky-console :stream *error-output* :immediate-flush :own :notime
-              :warn))
-
-(uiop:register-image-restore-hook 'configure-logger nil)

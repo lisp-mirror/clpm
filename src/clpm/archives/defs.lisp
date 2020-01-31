@@ -84,7 +84,8 @@ Instantiate all registered tar clients, then remove the ones where
   (:documentation
    "Returns T iff ~client~ is able to be used to extract tar files."))
 
-(defgeneric unarchive-tar (client archive-stream destination-pathname)
+(defgeneric unarchive-tar (client archive-stream destination-pathname
+                           &key strip-components)
   (:documentation
    "Given a tar archive in ~archive-stream~, extract its contents to
 ~destination-pathname~ using ~client~."))
@@ -107,19 +108,24 @@ Instantiate all registered tar clients, then remove the ones where
   (:documentation
    "A gzipped tar archive."))
 
-(defgeneric unarchive (archive-type archive-stream destination-pathname)
+(defgeneric unarchive (archive-type archive-stream destination-pathname
+                       &key strip-components)
   (:documentation
    "Given an archive contained in ~archive-stream~, extract its contents to
 ~destination-pathname~. ~archive-type~ is used to dispatch to the correct
 methods (this does *not* look at ~archive-stream~ to guess what the correct
 archive type is)"))
 
-(defmethod unarchive ((archive-type symbol) archive-stream destination-pathname)
+(defmethod unarchive ((archive-type symbol) archive-stream destination-pathname
+                      &key strip-components)
   "If ~archive-type~ is a symbol, instantiate the class it names and call
 again."
-  (unarchive (make-instance archive-type) archive-stream destination-pathname))
+  (unarchive (make-instance archive-type) archive-stream destination-pathname
+             :strip-components strip-components))
 
-(defmethod unarchive ((archive-type tar-archive) archive-stream destination-pathname)
+(defmethod unarchive ((archive-type tar-archive) archive-stream destination-pathname
+                      &key strip-components)
   "If ~archive-type~ is a ~tar-archive~, dispatch to ~unarchive-tar~ using the
 preferred tar client."
-  (unarchive-tar (get-preferred-tar-client) archive-stream destination-pathname))
+  (unarchive-tar (get-preferred-tar-client) archive-stream destination-pathname
+                 :strip-components strip-components))
