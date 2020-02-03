@@ -12,7 +12,8 @@
            #:clpm-config-pathname
            #:config-table-keys
            #:config-value
-           #:print-config))
+           #:print-config)
+  (:import-from #:cl-ppcre))
 
 (in-package #:clpm/config)
 
@@ -108,6 +109,7 @@ directory in ~*clpm-config-directories*~."
     ((:contexts :* :source-registry-files)
      :wildcard-types (string)
      :type (list (or string pathname))
+     :documentation
      "Used to inform ASDF where to find systems for this context. Outputs the same contents to every file in a source-registry.conf format (see ASDF manual).")
 
     ((:curl)
@@ -390,7 +392,7 @@ value."
             (mapcar (lambda (x)
                       (if (eql (pop canonical-path) :*)
                           (ecase (pop wildcard-types)
-                            (header
+                            ((header string)
                              (string-upcase
                               (cl-ppcre:regex-replace-all "-" x "_")))
                             (hostname

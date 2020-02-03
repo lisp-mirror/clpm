@@ -73,7 +73,7 @@ the ones where ~http-client-available-p~ returns NIL."
 
 (defun get-preferred-http-client (url)
   "Return the HTTP client instance that is available and most preferred."
-  (let* ((client-key (config-value :http-client :method))
+  (let* ((client-key (config-value :http-client :type))
          (available-http-clients (available-http-clients))
          (client (if (eql :auto client-key)
                      (iter
