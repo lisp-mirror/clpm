@@ -9,14 +9,15 @@
 (in-package #:clpm-build/features)
 
 (defparameter *default-linux-feature-set*
-  '(:clpm-openssl
-    :clpm-drakma
+  '(:clpm
     :clpm-curl
-    :clpm))
+    :clpm-drakma
+    :clpm-firejail
+    :clpm-openssl))
 
 (defparameter *default-windows-feature-set*
-  '(:clpm-curl
-    :clpm
+  '(:clpm
+    :clpm-curl
     :deploy-console))
 
 #+:linux

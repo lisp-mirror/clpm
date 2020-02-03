@@ -63,7 +63,7 @@ remove the ones where ~sandbox-client-available-p~ returns NIL."
 
 (defun get-preferred-sandbox-client ()
   "Return the sandbox client instance that is available and most preferred."
-  (let* ((client-key (config-value :grovel :sandbox :method))
+  (let* ((client-key (config-value :grovel :sandbox :type))
          (available-sandbox-clients (available-sandbox-clients))
          (client (if (eql :auto client-key)
                      (cdr (first available-sandbox-clients))

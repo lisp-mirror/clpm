@@ -152,6 +152,16 @@ directory in ~*clpm-config-directories*~."
      :documentation
      "The password to use when connecting to this server. Only used in HTTPS method.")
 
+    ((:grovel)
+     :type hash-table)
+    ((:grovel :sandbox)
+     :type hash-table)
+    ((:grovel :sandbox :type)
+     :type (member :auto :firejail)
+     :default :auto
+     :documentation
+     "The sandbox type to use when groveling.")
+
     ((:http)
      :type hash-table)
     ((:http :headers)
