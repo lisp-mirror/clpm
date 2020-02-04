@@ -123,6 +123,9 @@ directory in ~*clpm-config-directories*~."
      :documentation
      "The path to the curl executable.")
 
+    ((:drakma)
+     :type hash-table)
+
     ((:git)
      :type hash-table)
     ((:git :path)

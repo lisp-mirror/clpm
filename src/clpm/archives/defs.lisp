@@ -47,7 +47,7 @@ by the user's config."
   (destructuring-bind (key . class)
       pair
     (apply #'make-instance class
-           (awhen (config-value :archives key)
+           (awhen (config-value key)
              (hash-table-plist it)))))
 
 (defun compute-available-tar-clients ()
