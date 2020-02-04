@@ -80,7 +80,7 @@ directory in ~*clpm-config-directories*~."
 ;; * Configuration variables and merging configs
 
 (defparameter *config-info*
-  '((()
+  `((()
      :type hash-table)
 
     ((:archives)
@@ -203,7 +203,9 @@ directory in ~*clpm-config-directories*~."
     ((:http-client)
      :type hash-table)
     ((:http-client :type)
-     :type (member :auto #+clpm-drakma :drakma #+clpm-curl :curl)
+     :type (member :auto
+                   ,@(when (featurep :clpm-drakma) (list :drakma))
+                   ,@(when (featurep :clpm-curl) (list :curl)))
      :default :auto
      :documentation
      "The HTTP client implementation to use.")

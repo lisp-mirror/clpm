@@ -19,7 +19,10 @@
   :entry-point "clpm/cli/entry:main"
   :build-operation "deploy-op"
   :build-pathname #+win32 "clpm.exe" #-win32 "clpm"
-  :depends-on (#:clpm/clpm)
+  :depends-on (#:clpm/clpm
+               (:feature :clpm-curl #:clpm/http-client/curl)
+               (:feature :clpm-drakma #:clpm/http-client/drakma)
+               (:feature :clpm-firejail #:clpm/sandbox/firejail))
   :in-order-to ((prepare-op (build-op :clpm-client))))
 
 (defmethod asdf:output-files ((o deploy:deploy-op) (c (eql (find-system "clpm"))))

@@ -5,8 +5,7 @@
 
 (uiop:define-package #:clpm/sandbox
     (:use #:cl
-          #:clpm/sandbox/defs
-          #+clpm-firejail #:clpm/sandbox/firejail)
+          #:clpm/sandbox/defs)
   (:reexport #:clpm/sandbox/defs))
 
 (in-package #:clpm/sandbox)

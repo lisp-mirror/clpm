@@ -5,9 +5,7 @@
 
 (uiop:define-package #:clpm/http-client/all
     (:use #:cl
-          #+:clpm-curl #:clpm/http-client/curl
-          #:clpm/http-client/defs
-          #+:clpm-drakma #:clpm/http-client/drakma)
+          #:clpm/http-client/defs)
   (:reexport #:clpm/http-client/defs))
 
 (in-package #:clpm/http-client/all)
