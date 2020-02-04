@@ -80,7 +80,10 @@ directory in ~*clpm-config-directories*~."
 ;; * Configuration variables and merging configs
 
 (defparameter *config-info*
-  '(((:archives)
+  '((()
+     :type hash-table)
+
+    ((:archives)
      :type hash-table)
     ((:archives :tar)
      :type hash-table)
@@ -213,15 +216,15 @@ directory in ~*clpm-config-directories*~."
      :documentation
      "The path to the tar executable.")))
 
+(defun paths-match (canonical-path path)
+  (and (length= canonical-path path)
+       (every (lambda (left right)
+                (or (eql left :*)
+                    (equal left right)))
+              canonical-path path)))
+
 (defun get-config-entry (path)
-  (let ((canonical-path (mapcar (lambda (x)
-                                  (etypecase x
-                                    (keyword
-                                     x)
-                                    (string
-                                     :*)))
-                                path)))
-    (assoc canonical-path *config-info* :test #'equal)))
+  (find-if (rcurry #'paths-match path) *config-info* :key #'car))
 
 (defvar *config-sources* nil)
 
@@ -393,8 +396,11 @@ value."
                       (if (eql (pop canonical-path) :*)
                           (ecase (pop wildcard-types)
                             ((header string)
-                             (string-upcase
-                              (cl-ppcre:regex-replace-all "-" x "_")))
+                             (if (stringp x)
+                                 (string-upcase
+                                  (cl-ppcre:regex-replace-all "-" x "_"))
+                                 (string-upcase
+                                  (cl-ppcre:regex-replace-all "-" (symbol-name x) "_"))))
                             (hostname
                              (uiop:strcat
                               (string-upcase
@@ -438,14 +444,24 @@ value."
 
 (defun config-table-keys (&rest path)
   "Return a list of keys in the table rooted at PATH. This currently does not
-look at default-config and environment variables."
+look at environment variables."
   (let* ((config-info (get-config-entry path))
-         (type (getf (cdr config-info) :type)))
+         (type (getf (cdr config-info) :type))
+         (canonical-path (car config-info)))
     (assert config-info)
     (assert (eql type 'hash-table))
-    (let ((tables (mapcar (rcurry #'gethashes* path) *config-sources*)))
-      (remove-duplicates (mapcan #'hash-table-keys (remove nil tables))
-                         :test #'equal))))
+    (let ((sub-paths (loop
+                       :for info :in *config-info*
+                       :for info-path := (car info)
+                       :when (and (starts-with-subseq canonical-path info-path)
+                                  (length= (1+ (length path)) info-path))
+                         :collect info-path)))
+      (if (and (length= 1 sub-paths)
+               (eql :* (last-elt (first sub-paths))))
+          (let ((tables (mapcar (rcurry #'gethashes* path) *config-sources*)))
+            (remove-duplicates (mapcan #'hash-table-keys (remove nil tables))
+                               :test #'equal))
+          (mapcar #'last-elt sub-paths)))))
 
 (defun config-value (&rest path)
   "Get the configuration value located at path. First search environment
@@ -453,18 +469,23 @@ variables, then the config file, then the default config."
   (let* ((config-info (get-config-entry path))
          (type (getf (cdr config-info) :type)))
     (assert config-info)
-    (assert (and type (not (eql type 'hash-table))))
-    (let ((env-var-name (path-to-env-var path config-info)))
-      (if-let ((env-value (uiop:getenv env-var-name)))
-        (parse-env-value env-value type)
-        (loop
-          :for config-source :in *config-sources*
-          :for (value exists-p) := (multiple-value-list (gethashes* config-source path))
-          :until exists-p
-          :finally
-             (if exists-p
-                 (return value)
-                 (return (getf (cdr config-info) :default))))))))
+    (if (eql type 'hash-table)
+        (let ((keys (apply #'config-table-keys path))
+              (out (make-hash-table :test 'equal)))
+          (dolist (key keys)
+            (setf (gethash key out) (apply #'config-value (append path (list key)))))
+          out)
+        (let ((env-var-name (path-to-env-var path config-info)))
+          (if-let ((env-value (uiop:getenv env-var-name)))
+            (parse-env-value env-value type)
+            (loop
+              :for config-source :in *config-sources*
+              :for (value exists-p) := (multiple-value-list (gethashes* config-source path))
+              :until exists-p
+              :finally
+                 (if exists-p
+                     (return value)
+                     (return (getf (cdr config-info) :default)))))))))
 
 (defun flatten-hts (ht)
   "Given a hash table ~ht~, recursively flatten it into a plist."

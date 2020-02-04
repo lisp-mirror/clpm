@@ -68,7 +68,7 @@ Instantiate all registered tar clients, then remove the ones where
 
 (defun get-preferred-tar-client ()
   "Return the tar client instance that is available and most preferred."
-  (let* ((client-key (config-value :archives :tar-method))
+  (let* ((client-key (config-value :archives :tar :type))
          (available-clients (available-tar-clients))
          (client (if (eql :auto client-key)
                      (cdr (first available-clients))
