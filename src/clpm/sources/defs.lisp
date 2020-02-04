@@ -295,17 +295,11 @@ release."))
   (:documentation "Return the base pathname for where this release is installed.")
   (:method (release)
     (let ((version (release-version release)))
-      (when (listp version)
-        (unless (eql (first version) :snapshot)
-          (error "Don't know how to compute pathname for release ~A" release))
-        (setf version (list "snapshots" (second version))))
-      (setf version (ensure-list version))
       (uiop:resolve-absolute-location
-       (append
-        (list (source-lib-directory (release-source release))
-              "projects"
-              (project-name (release-project release)))
-        version)
+       (list (source-lib-directory (release-source release))
+             "projects"
+             (project-name (release-project release))
+             version)
        :ensure-directory t))))
 
 (defgeneric release-system-file (release system-file-namestring)

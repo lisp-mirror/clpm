@@ -115,7 +115,7 @@
 
 (defun ql-flat-release-quicklisp-versions (release)
   (let ((project (release-project release)))
-    (gethash (second (release-version release))
+    (gethash (release-version release)
              (ql-flat-project-snapshot-to-ql-version-map project))))
 
 (defun ql-flat-source-metadata (source)
@@ -173,8 +173,8 @@ in the same Quicklisp distribution versions as system-release."
 
 (defmethod release-> ((release-1 ql-flat-release)
                       (release-2 ql-flat-release))
-  (string> (second (release-version release-1))
-           (second (release-version release-2))))
+  (string> (release-version release-1)
+           (release-version release-2)))
 
 (defmethod source-cache-directory ((source ql-flat-source))
   "Compute the cache location for this source, based on its canonical url."
@@ -225,8 +225,8 @@ in the same Quicklisp distribution versions as system-release."
                   (let ((satisfying-versions
                           (ql-system-release-overlapping-snapshots system-release
                                                                    (source-system source dep-name))))
-                    (setf satisfying-versions (sort satisfying-versions #'string<
-                                                    :key #'second))
+                    (setf satisfying-versions (mapcar (curry #'list :snapshot)
+                                                      (sort satisfying-versions #'string<)))
                     (make-instance 'system-requirement
                                    :name dep-name
                                    :version-spec (if (length= 1 satisfying-versions)
@@ -252,15 +252,15 @@ the release..."
                 (release-version (release-version (system-release-release system-release))))
             (ecase direction
               (=
-               (equal release-version version))
+               (equal release-version snapshot))
               (<=
-               (string<= (second release-version) snapshot))
+               (string<= release-version snapshot))
               (<
-               (string< (second release-version) snapshot))
+               (string< release-version snapshot))
               (>=
-               (string>= (second release-version) snapshot))
+               (string>= release-version snapshot))
               (>
-               (string> (second release-version) snapshot))))))))
+               (string> release-version snapshot))))))))
 
 (defmethod system-release-satisfies-version-spec-p ((system-release ql-flat-system-release)
                                                     version-spec)
@@ -332,7 +332,7 @@ the release..."
                            (not (equal (ql-release-file-md5 release)
                                        (ql-release-file-md5 previous-release))))
                    (push project-name modified-projects)
-                   (let ((project-version (list :snapshot version)))
+                   (let ((project-version version))
                      (push (list project-version
                                  :url url-string
                                  :tar-prefix (ql-release-prefix release)
@@ -351,7 +351,7 @@ the release..."
                  ;; Map this quicklisp dist version to the latest known snapshot
                  (setf (assoc-value (gethash project-name (ql-sync-state-dist-to-snapshot-map sync-state))
                                     version :test 'equal)
-                       (second (gethash project-name (ql-sync-state-last-snapshot-seen-map sync-state))))))
+                       (gethash project-name (ql-sync-state-last-snapshot-seen-map sync-state)))))
              release-map)
 
         (maphash (lambda (system-name system)
@@ -375,12 +375,12 @@ the release..."
                                           :projects)
                                     :test #'equal)
                            (push (list (ql-system-project system)
-                                       (list :snapshot version))
+                                       version)
                                  (getf (gethash system-name
                                                 (ql-sync-state-system-index-map sync-state))
                                        :releases))
                            (push (list* (list (ql-system-project system)
-                                              (list :snapshot version))
+                                              version)
                                         :system-file long-system-file
                                         (awhen (ql-system-dependencies system)
                                           (list :dependencies it)))
