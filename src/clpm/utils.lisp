@@ -18,6 +18,7 @@
            #:run-program-augment-env-args
            #:uri-to-string
            #:url-port
+           #:with-forms-from-stream
            #:with-retries))
 
 (in-package #:clpm/utils)
@@ -152,3 +153,14 @@ other than ~:https~ or ~:http~."))
     (close (uiop:process-info-error-output proc))
     (uiop:wait-process proc))
   (close (process-stream-true-stream stream)))
+
+(defun call-with-forms-from-stream (stream thunk)
+  (let ((sentinel (gensym)))
+    (loop
+      (let ((f (read stream nil sentinel)))
+        (when (eq f sentinel)
+          (return))
+        (funcall thunk f)))))
+
+(defmacro with-forms-from-stream ((stream form-binding) &body body)
+  `(call-with-forms-from-stream ,stream (lambda (,form-binding) ,@body)))

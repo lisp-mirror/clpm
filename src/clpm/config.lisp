@@ -7,6 +7,7 @@
 (uiop:define-package #:clpm/config
     (:use #:cl
           #:alexandria
+          #:clpm/utils
           #:iterate)
   (:export #:*clpm-config-directories*
            #:clpm-config-pathname
@@ -315,17 +316,6 @@ overwrites the value from ~default-ht~."
   (let ((out (make-hash-table :test 'equal)))
     (mapcar (rcurry #'parse-toplevel-config-form out) forms)
     out))
-
-(defun call-with-forms-from-stream (stream thunk)
-  (let ((sentinel (gensym)))
-    (loop
-      (let ((f (read stream nil sentinel)))
-        (when (eq f sentinel)
-          (return))
-        (funcall thunk f)))))
-
-(defmacro with-forms-from-stream ((stream form-binding) &body body)
-  `(call-with-forms-from-stream ,stream (lambda (,form-binding) ,@body)))
 
 (defun load-config-from-stream (stream)
   "Given a stream containing CLPM config forms, return a hash table representing

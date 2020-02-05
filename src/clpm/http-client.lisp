@@ -11,6 +11,7 @@
           #:clpm/log
           #:iterate)
   (:import-from #:flexi-streams)
+  (:import-from #:puri)
   (:export #:ensure-file-fetched
            #:fetch-url
            #:http-request))

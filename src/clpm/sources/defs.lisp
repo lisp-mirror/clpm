@@ -48,7 +48,6 @@
            #:source-projects
            #:source-system
            #:source-systems
-           #:source-url
            #:source-context-pathname
            #:source-missing-project
            #:source-missing-system
@@ -114,11 +113,7 @@
 ;; * Sources
 
 (defclass clpm-source ()
-  ((url
-    :initarg :url
-    :accessor source-url
-    :documentation "A puri URL that specifies where the source is located.")
-   (name
+  ((name
     :initarg :name
     :accessor source-name
     :documentation "The name of the source."))

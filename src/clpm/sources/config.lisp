@@ -7,6 +7,7 @@
     (:use #:cl
           #:alexandria
           #:clpm/config
+          #:clpm/sources/clpi
           #:clpm/sources/defs
           #:clpm/sources/ql-flat
           #:clpm/utils)
