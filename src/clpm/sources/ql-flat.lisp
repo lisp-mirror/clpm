@@ -37,10 +37,7 @@
    (force-https
     :initarg :force-https
     :initform nil
-    :accessor ql-flat-source-force-https)
-   (enforce-version-constraints-p
-    :initform t
-    :accessor ql-flat-source-enforce-version-constraints-p)))
+    :accessor ql-flat-source-force-https)))
 
 (defmethod initialize-instance :after ((source ql-flat-source)
                                        &rest initargs
@@ -218,49 +215,17 @@ in the same Quicklisp distribution versions as system-release."
 
 (defmethod system-release-requirements ((system-release ql-flat-system-release))
   (let ((deps (remove-if (rcurry #'member (list "asdf" "uiop") :test #'string-equal)
-                         (flat-file-system-release-dependencies system-release)))
-        (source (system-release-source system-release)))
+                         (flat-file-system-release-dependencies system-release))))
     (mapcar (lambda (dep-name)
-              (if (ql-flat-source-enforce-version-constraints-p source)
-                  (let ((satisfying-versions
-                          (ql-system-release-overlapping-snapshots system-release
-                                                                   (source-system source dep-name))))
-                    (setf satisfying-versions (mapcar (curry #'list :snapshot)
-                                                      (sort satisfying-versions #'string<)))
-                    (make-instance 'system-requirement
-                                   :name dep-name
-                                   :version-spec (if (length= 1 satisfying-versions)
-                                                     `((= . ,(first satisfying-versions)))
-                                                     `((>= . ,(first satisfying-versions))
-                                                       (<= . ,(last-elt satisfying-versions))))))
-                  (make-instance 'system-requirement
-                                 :name dep-name)))
+              (make-instance 'system-requirement
+                             :name dep-name))
             deps)))
 
 (defun %system-release-satisfies-version-spec-p-1 (system-release version-spec)
-  "A string refers to the system version currently, whereas a snapshot refers to
-the release..."
-  (destructuring-bind (direction . version) version-spec
-    (or
-     ;; There is currently no good way to reasonably get the system version from the
-     ;; metadata alone, so say everything is satisfied.
-     (stringp version)
-     ;; Look at release version
-     (and (listp version)
-          (eql (first version) :snapshot)
-          (let ((snapshot (second version))
-                (release-version (release-version (system-release-release system-release))))
-            (ecase direction
-              (=
-               (equal release-version snapshot))
-              (<=
-               (string<= release-version snapshot))
-              (<
-               (string< release-version snapshot))
-              (>=
-               (string>= release-version snapshot))
-              (>
-               (string> release-version snapshot))))))))
+  (declare (ignore system-release version-spec))
+  ;; There is currently no good way to reasonably get the system version from
+  ;; the metadata alone, so say everything is satisfied.
+  t)
 
 (defmethod system-release-satisfies-version-spec-p ((system-release ql-flat-system-release)
                                                     version-spec)
