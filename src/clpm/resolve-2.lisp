@@ -484,9 +484,6 @@ satisfied. Returns one of :SAT, :UNSAT, or :UNKNOWN."))
 representing satisfying solutions of the requirement. The alist maps release
 objects to a list of system-releases."))
 
-(defmethod resolve-requirement :before (req search-state)
-  (resolve-requirement-source! req))
-
 (defmethod resolve-requirement ((req vcs-project-requirement) search-state)
   (declare (ignore search-state))
   (let* ((project-name (requirement/name req))
