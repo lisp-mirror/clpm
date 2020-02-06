@@ -6,12 +6,14 @@
 (uiop:define-package #:clpm/context
     (:use #:cl
           #:alexandria
+          #:cl-ansi-text
           #:clpm/config
           #:clpm/data
           #:clpm/log
           #:clpm/requirement
           #:clpm/source)
   (:export #:context-diff
+           #:context-diff-has-diff-p
            #:context-name
            #:context-releases
            #:context-requirements
@@ -24,6 +26,7 @@
            #:copy-context
            #:get-context
            #:load-global-context
+           #:print-context-diff
            #:save-global-context
            #:serialize-context-to-stream))
 
@@ -130,19 +133,68 @@
 
 ;; * Diffing
 
+(defclass context-diff ()
+  ((added-releases
+    :initarg :added-releases
+    :initform nil
+    :accessor context-diff-added-releases)
+   (removed-releases
+    :initarg :removed-releases
+    :initform nil
+    :accessor context-diff-removed-releases)))
+
 (defun context-diff (old-context new-context)
   (let* ((old-releases (context-releases old-context))
          (new-releases (context-releases new-context))
          (added-releases (set-difference new-releases old-releases))
-         (removed-releases (set-difference old-releases new-releases))
-         (changed-releases nil))
-    ;; Compute up/downgrades.
-    (dolist (r removed-releases)
-      (when-let ((new-r (member (project-name r) added-releases :key #'project-name :test #'equal)))
-        (removef removed-releases r)
-        (removef added-releases new-r)
-        (push (cons r new-r) changed-releases)))
-    (values added-releases removed-releases changed-releases)))
+         (removed-releases (set-difference old-releases new-releases)))
+    (make-instance 'context-diff
+                   :added-releases added-releases
+                   :removed-releases removed-releases)))
+
+(defun context-diff-has-diff-p (diff)
+  (or (context-diff-added-releases diff)
+      (context-diff-removed-releases diff)))
+
+(defun print-diff-release (r stream)
+  (format stream "~A~50,1,4<~A~;~A~^~;~A~;~A~^~>"
+          (make-color-string :green)
+          (project-name (release-project r))
+          (make-color-string :blue)
+          (release-version r)
+          +reset-color-string+))
+
+(defun print-context-diff (diff stream)
+  ;; Compute the maximum project length.
+  (let ((removed-releases (context-diff-removed-releases diff))
+        (added-releases (context-diff-added-releases diff))
+        (changed-releases nil))
+    (dolist (r added-releases)
+      (when-let ((matching-release (find (release-project r) removed-releases
+                                         :key #'release-project)))
+        (removef removed-releases matching-release)
+        (removef added-releases r)
+        (push (cons r matching-release) changed-releases)))
+
+    (when changed-releases
+      (format stream "~AChanged releases:~A~%"
+              (make-color-string :magenta :effect :bright)
+              +reset-color-string+))
+    (when added-releases
+      (format stream "~AAdded releases:~A~%"
+              (make-color-string :magenta :effect :bright)
+              +reset-color-string+)
+      (dolist (r added-releases)
+        (print-diff-release r stream)
+        (terpri stream)))
+    (when removed-releases
+      (format stream "~ARemoved releases:~A~%"
+              (make-color-string :magenta :effect :bright)
+              +reset-color-string+)
+      (dolist (r removed-releases)
+        (print-diff-release r stream)
+        (terpri stream)))
+    (format stream "~A" +reset-color-string+)))
 
 
 ;; * Deserializing
@@ -157,7 +209,7 @@
             out)
           (make-instance 'context
                          :name name
-                         :sources (load-sources))))))
+                         :sources (sources))))))
 
 (defgeneric check-section-valid (prev-section current-section)
   (:method (prev-section current-section)
@@ -181,7 +233,12 @@
                          :why t)
           (context-requirements context))))
 
-(defmethod process-form (context (section (eql :releases)) form))
+(defmethod process-form (context (section (eql :releases)) form)
+  (destructuring-bind (name &key version source systems) form
+    (declare (ignore systems))
+    (let ((source (get-source source)))
+      (push (source-project-release source name version)
+            (context-releases context)))))
 
 (defmethod process-form (context (section (eql :reverse-dependencies)) form))
 
@@ -191,7 +248,7 @@
     (let ((f (read stream nil)))
       (unless (equal f '(:api-version "0.3"))
         (error "Unknown context API version")))
-    (let ((out (make-instance 'context :sources (load-sources))))
+    (let ((out (make-instance 'context :sources (sources))))
       ;; The next forms are either tags or lists. The tags denote sections.
       (loop
         :with section := nil
@@ -392,7 +449,14 @@
       (prin1 :source stream)
       (write-char #\Space stream)
       (pprint-newline :miser stream)
-      (prin1 (source-name (requirement/source req)) stream))))
+      (prin1 (source-name (requirement/source req)) stream))
+    ;; no deps
+    (when (requirement/no-deps-p req)
+      (write-char #\Space stream)
+      (pprint-newline :fill stream)
+      (prin1 :no-deps-p stream)
+      (write-char #\Space stream)
+      (prin1 t stream))))
 
 (defmethod print-object ((context context) stream)
   (pprint-logical-block (stream nil)

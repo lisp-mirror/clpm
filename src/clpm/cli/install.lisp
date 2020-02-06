@@ -7,6 +7,7 @@
     (:use #:cl
           #:clpm/cli/common-args
           #:clpm/cli/subcommands
+          #:clpm/context
           #:clpm/install
           #:clpm/log)
   (:import-from #:adopt))
@@ -52,6 +53,14 @@
    :help "Install a system instead of a project"
    :reduce (constantly t)))
 
+(defparameter *option-install-yes*
+  (adopt:make-option
+   :install-yes
+   :short #\y
+   :long "yes"
+   :help "Answer yes to all questions"
+   :reduce (constantly t)))
+
 (defparameter *option-install-no-deps*
   (adopt:make-option
    :install-no-deps
@@ -71,7 +80,12 @@
                    *option-install-source*
                    *option-install-system*
                    *option-install-no-deps*
+                   *option-install-yes*
                    *option-context*)))
+
+(defun validate-fun (diff)
+  (print-context-diff diff *standard-output*)
+  (y-or-n-p "Proceed?"))
 
 (define-cli-command (("install") *install-ui*) (args options)
   (let* ((version-string (gethash :install-version options))
@@ -80,7 +94,8 @@
          (install-system-p (gethash :install-system options))
          (no-deps-p (gethash :install-no-deps options))
          (context-name (or (gethash :context options)
-                           "default")))
+                           "default"))
+         (yes-p (gethash :install-yes options)))
     (unless package-name
       (error "A package or system name is required"))
 
@@ -95,5 +110,6 @@
              :version-spec version-string
              :source source-name
              :context context-name
-             :no-deps-p no-deps-p)
+             :no-deps-p no-deps-p
+             :validate (if yes-p (constantly t) #'validate-fun))
     t))
