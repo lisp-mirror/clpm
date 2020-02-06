@@ -151,3 +151,9 @@
 [submodule "ext/cffi"]
 	path = ext/cffi
 	url = https://github.com/cffi/cffi.git
+[submodule "ext/cl-ansi-text"]
+	path = ext/cl-ansi-text
+	url = https://github.com/pnathan/cl-ansi-text.git
+[submodule "ext/cl-colors2"]
+	path = ext/cl-colors2
+	url = https://notabug.org/cage/cl-colors2.git
