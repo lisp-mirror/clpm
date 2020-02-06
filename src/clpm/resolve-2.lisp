@@ -374,7 +374,7 @@ otherwise."
 by name."
   (loop
     :for source :in *sources*
-    :for s := (source-system source system-name)
+    :for s := (source-system source system-name nil)
     :when s
       :do (return s)))
 
@@ -383,7 +383,7 @@ by name."
 by name."
   (loop
     :for source :in *sources*
-    :for p := (source-project source project-name)
+    :for p := (source-project source project-name nil)
     :when p
       :do (return p)))
 

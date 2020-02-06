@@ -69,10 +69,10 @@ the request."
     (iter
       (for header-name :in header-names)
       (when (or (eql scheme :https)
-                (not (config-value :http :headers hostname :secure-only-p)))
-        (let ((value (config-value :http :headers hostname :value))
-              (exec (config-value :http :headers hostname :exec))
-              (contents (config-value :http :headers hostname :contents)))
+                (not (config-value :http :headers hostname header-name :secure-only-p)))
+        (let ((value (config-value :http :headers hostname header-name :value))
+              (exec (config-value :http :headers hostname header-name :exec))
+              (contents (config-value :http :headers hostname header-name :contents)))
           (cond
             (value
              (collect (cons header-name value)))

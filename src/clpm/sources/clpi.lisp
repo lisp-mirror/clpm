@@ -16,6 +16,7 @@
           #:clpm/sources/flat-file
           #:clpm/sources/tarball-release
           #:clpm/utils
+          #:clpm/version-strings
           #:do-urlencode
           #:split-sequence)
   (:import-from #:puri)
@@ -50,8 +51,7 @@
 ;; ** Release
 
 (defclass clpi-release (flat-file-release
-                        tarball-release-with-md5
-                        tarball-release-with-size)
+                        tarball-release)
   ((url
     :initarg :url
     :reader tarball-release/url)
@@ -136,18 +136,23 @@
   (string> (release-version release-1)
            (release-version release-2)))
 
+(defmethod release-satisfies-version-spec-p ((release clpi-release)
+                                             version-spec)
+  (version-spec-satisfied-p/semantic version-spec (release-version release)))
+
 (defmethod source-cache-directory ((source clpi-source))
   "Compute the cache location for this source, based on its canonical url."
   (let ((url (source-url source)))
     (clpm-cache-pathname
      `("sources"
        "clpi"
-       ,(concatenate 'string
-                     (string-downcase (puri:uri-host url))
-                     "_"
-                     (format nil "~d" (url-port url))
-                     "_"
-                     (urlencode (subseq (puri:uri-path url) 1))))
+       ,(apply #'concatenate 'string
+               (string-downcase (puri:uri-host url))
+               "_"
+               (format nil "~d" (url-port url))
+               (awhen (puri:uri-path url)
+                 (list "_"
+                       (urlencode (subseq it 1))))))
      :ensure-directory t)))
 
 (defmethod source-lib-directory ((source clpi-source))
@@ -184,17 +189,9 @@
                              :name dep-name))
             deps)))
 
-(defun %system-release-satisfies-version-spec-p-1 (system-release version-spec)
-  (declare (ignore system-release version-spec))
-  ;; There is currently no good way to reasonably get the system version from
-  ;; the metadata alone, so say everything is satisfied.
-  t)
-
 (defmethod system-release-satisfies-version-spec-p ((system-release clpi-system-release)
                                                     version-spec)
-  "There is currently no good way to reasonably get the system version from the
-  metadata alone, so say everything is satisfied."
-  (every (curry #'%system-release-satisfies-version-spec-p-1 system-release) version-spec))
+  (version-spec-satisfied-p/semantic version-spec (system-release-system-version system-release)))
 
 
 ;; * Flat file methods

@@ -311,6 +311,10 @@
     :reader flat-file-system-release-release-spec
     :documentation "A specification of which release this system release belongs to.")
 
+   (system-version
+    :initarg :version
+    :reader system-release-system-version
+    :documentation "The version of the system.")
    (system
     :initarg :system
     :reader system-release-system

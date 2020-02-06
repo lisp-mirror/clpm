@@ -166,7 +166,7 @@ by the character used to separate the segments."
   (check-type version-1 (or string list))
   (check-type version-2 (or string list)))
 
-(defun version-spec-satisfied-p/semantic (spec version)
+(defun version-spec-satisfied-p/semantic-1 (spec version)
   (destructuring-bind (test version-spec)
       spec
     (ecase test
@@ -184,6 +184,9 @@ by the character used to separate the segments."
       (/=
        (or (semantic-version< version-spec version)
            (semantic-version< version version-spec))))))
+
+(defun version-spec-satisfied-p/semantic (spec version)
+  (every (rcurry #'version-spec-satisfied-p/semantic-1 version) spec))
 
 (defun version-spec-satisfied-p/simple-string-1 (spec version)
   (destructuring-bind (test version-spec)
