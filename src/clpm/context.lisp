@@ -164,6 +164,16 @@
           (release-version r)
           +reset-color-string+))
 
+(defun print-diff-release-change (pair stream)
+  (destructuring-bind (to . from) pair
+    (format stream "~A~65,1,4<~A~;~A~^~;~A -> ~A~;~A~^~>"
+            (make-color-string :green)
+            (project-name (release-project from))
+            (make-color-string :blue)
+            (release-version from)
+            (release-version to)
+            +reset-color-string+)))
+
 (defun print-context-diff (diff stream)
   ;; Compute the maximum project length.
   (let ((removed-releases (context-diff-removed-releases diff))
@@ -179,7 +189,10 @@
     (when changed-releases
       (format stream "~AChanged releases:~A~%"
               (make-color-string :magenta :effect :bright)
-              +reset-color-string+))
+              +reset-color-string+)
+      (dolist (pair changed-releases)
+        (print-diff-release-change pair stream)
+        (terpri stream)))
     (when added-releases
       (format stream "~AAdded releases:~A~%"
               (make-color-string :magenta :effect :bright)
@@ -224,12 +237,13 @@
 (defgeneric process-form (context section form))
 
 (defmethod process-form (context (section (eql :requirements)) form)
-  (destructuring-bind (type &key name version-spec source) form
-    (assert (eql type :system))
-    (assert (null version-spec))
-    (push (make-instance 'system-requirement
+  (destructuring-bind (type &key name version source) form
+    (push (make-instance (ecase type
+                           (:system 'system-requirement)
+                           (:project 'project-requirement))
                          :name name
                          :source (get-source source)
+                         :version-spec version
                          :why t)
           (context-requirements context))))
 
@@ -421,6 +435,9 @@
 
 (defgeneric requirement-type-keyword (req))
 
+(defmethod requirement-type-keyword ((req project-requirement))
+  :project)
+
 (defmethod requirement-type-keyword ((req system-requirement))
   :system)
 
@@ -438,7 +455,7 @@
     (when (requirement/version-spec req)
       (write-char #\Space stream)
       (pprint-newline :fill stream)
-      (prin1 :version-spec stream)
+      (prin1 :version stream)
       (write-char #\Space stream)
       (pprint-newline :miser stream)
       (prin1 (requirement/version-spec req) stream))

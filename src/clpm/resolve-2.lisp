@@ -131,6 +131,12 @@
 
   search-state)
 
+(defun search-state-find-project (search-state project-name)
+  "Find a release object for a project, if it is activated in the search state."
+  (car (find project-name (search-state-activated-releases search-state)
+             :test #'string-equal
+             :key (compose #'project-name #'release-project #'car))))
+
 (defun search-state-find-system (search-state system)
   "Find a system object, if it is activated in the search state."
   (find system (search-state-activated-system-releases search-state)
@@ -410,6 +416,18 @@ satisfied. Returns one of :SAT, :UNSAT, or :UNKNOWN."))
        :unsat)
       (t
        :sat))))
+
+(defmethod requirement-state ((req project-requirement) search-state)
+  (let* ((project-name (requirement/name req))
+         (version-spec (requirement/version-spec req))
+         (release (search-state-find-project search-state project-name)))
+    (cond
+      ((not release)
+       :unknown)
+      ((release-satisfies-version-spec-p release version-spec)
+       (values :sat nil))
+      (t
+       :unsat))))
 
 (defmethod requirement-state ((req system-requirement) search-state)
   (let* ((system-name (requirement/name req))

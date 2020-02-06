@@ -167,7 +167,7 @@ by the character used to separate the segments."
   (check-type version-2 (or string list)))
 
 (defun version-spec-satisfied-p/semantic (spec version)
-  (destructuring-bind (test . version-spec)
+  (destructuring-bind (test version-spec)
       spec
     (ecase test
       (=
@@ -185,8 +185,8 @@ by the character used to separate the segments."
        (or (semantic-version< version-spec version)
            (semantic-version< version version-spec))))))
 
-(defun version-spec-satisfied-p/simple-string (spec version)
-  (destructuring-bind (test . version-spec)
+(defun version-spec-satisfied-p/simple-string-1 (spec version)
+  (destructuring-bind (test version-spec)
       spec
     (ecase test
       (=
@@ -202,6 +202,9 @@ by the character used to separate the segments."
       (/=
        (string/= version version-spec)))))
 
+(defun version-spec-satisfied-p/simple-string (spec version)
+  (every (rcurry #'version-spec-satisfied-p/simple-string-1 version) spec))
+
 (defun parse-version-specifier-1 (v-spec)
   "Given a string containing a single version specifier, return a s-expr'ized
 version of the specifier."
@@ -211,21 +214,21 @@ version of the specifier."
       (switch (v-spec :test (lambda (x y)
                               (starts-with-subseq y x)))
         ("=="
-         (cons '= (trim-whitespace (subseq v-spec 2))))
+         (list '= (trim-whitespace (subseq v-spec 2))))
         ("="
-         (cons '= (trim-whitespace (subseq v-spec 1))))
+         (list '= (trim-whitespace (subseq v-spec 1))))
         ("!="
-         (cons '/= (trim-whitespace (subseq v-spec 2))))
+         (list '/= (trim-whitespace (subseq v-spec 2))))
         (">="
-         (cons '>= (trim-whitespace (subseq v-spec 2))))
+         (list '>= (trim-whitespace (subseq v-spec 2))))
         (">"
-         (cons '> (trim-whitespace (subseq v-spec 1))))
+         (list '> (trim-whitespace (subseq v-spec 1))))
         ("<="
-         (cons '<= (trim-whitespace (subseq v-spec 2))))
+         (list '<= (trim-whitespace (subseq v-spec 2))))
         ("<"
-         (cons '< (trim-whitespace (subseq v-spec 1))))
+         (list '< (trim-whitespace (subseq v-spec 1))))
         (t
-         (cons '= v-spec))))))
+         (list '= v-spec))))))
 
 (defun parse-version-specifier (v-spec)
   "Given a string containing (potentially multiple) version specifiers, return a

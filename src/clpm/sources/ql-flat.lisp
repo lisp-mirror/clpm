@@ -16,6 +16,7 @@
           #:clpm/sources/tarball-release
           #:clpm/ql
           #:clpm/utils
+          #:clpm/version-strings
           #:do-urlencode
           #:split-sequence)
   (:import-from #:puri)
@@ -172,6 +173,10 @@ in the same Quicklisp distribution versions as system-release."
                       (release-2 ql-flat-release))
   (string> (release-version release-1)
            (release-version release-2)))
+
+(defmethod release-satisfies-version-spec-p ((release ql-flat-release)
+                                             version-spec)
+  (version-spec-satisfied-p/simple-string version-spec (release-version release)))
 
 (defmethod source-cache-directory ((source ql-flat-source))
   "Compute the cache location for this source, based on its canonical url."
