@@ -14,7 +14,6 @@
           #:clpm/cli/sync
           #:clpm/cli/version
           #:clpm/deploy
-          #:clpm/interface
           #:clpm/man))
 
 (in-package #:clpm/clpm)

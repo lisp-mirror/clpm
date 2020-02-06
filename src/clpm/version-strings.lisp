@@ -202,26 +202,36 @@ by the character used to separate the segments."
       (/=
        (string/= version version-spec)))))
 
+(defun parse-version-specifier-1 (v-spec)
+  "Given a string containing a single version specifier, return a s-expr'ized
+version of the specifier."
+  (flet ((trim-whitespace (x)
+           (string-trim '(#\Space #\Tab #\Newline #\Return) x)))
+    (let ((v-spec (trim-whitespace v-spec)))
+      (switch (v-spec :test (lambda (x y)
+                              (starts-with-subseq y x)))
+        ("=="
+         (cons '= (trim-whitespace (subseq v-spec 2))))
+        ("="
+         (cons '= (trim-whitespace (subseq v-spec 1))))
+        ("!="
+         (cons '/= (trim-whitespace (subseq v-spec 2))))
+        (">="
+         (cons '>= (trim-whitespace (subseq v-spec 2))))
+        (">"
+         (cons '> (trim-whitespace (subseq v-spec 1))))
+        ("<="
+         (cons '<= (trim-whitespace (subseq v-spec 2))))
+        ("<"
+         (cons '< (trim-whitespace (subseq v-spec 1))))
+        (t
+         (cons '= v-spec))))))
+
 (defun parse-version-specifier (v-spec)
-  (list
-   (switch (v-spec :test (lambda (x y)
-                           (starts-with-subseq y x)))
-     ("=="
-      (cons '= (subseq v-spec 2)))
-     ("="
-      (cons '= (subseq v-spec 1)))
-     ("!="
-      (cons '/= (subseq v-spec 2)))
-     (">="
-      (cons '>= (subseq v-spec 2)))
-     (">"
-      (cons '> (subseq v-spec 1)))
-     ("<="
-      (cons '<= (subseq v-spec 2)))
-     ("<"
-      (cons '< (subseq v-spec 1)))
-     (t
-      (cons '= v-spec)))))
+  "Given a string containing (potentially multiple) version specifiers, return a
+list of version specifiers."
+  (let ((sub-strs (split-string v-spec :separator '(#\,))))
+    (mapcar #'parse-version-specifier-1 sub-strs)))
 
 (defun min-with-nil (&rest args)
   (apply #'min (remove nil args)))

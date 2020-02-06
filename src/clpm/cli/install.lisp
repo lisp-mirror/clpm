@@ -7,13 +7,8 @@
     (:use #:cl
           #:clpm/cli/common-args
           #:clpm/cli/subcommands
-          #:clpm/context
           #:clpm/install
-          ;; #:clpm/interface
-          #:clpm/log
-          #:clpm/requirement
-          #:clpm/resolve-2
-          #:clpm/version-strings)
+          #:clpm/log)
   (:import-from #:adopt))
 
 (in-package #:clpm/cli/install)
@@ -40,14 +35,21 @@
    :short #\v
    :help "The version to install"
    :parameter "VERSION"
-   :initial-value ">=0"
+   :reduce #'adopt:last))
+
+(defparameter *option-install-source*
+  (adopt:make-option
+   :install-source
+   :long "source"
+   :parameter "SOURCE-NAME"
+   :help "The name of the source to install from."
    :reduce #'adopt:last))
 
 (defparameter *option-install-system*
   (adopt:make-option
    :install-system
    :short #\s
-   :help "Install a system instead of a package"
+   :help "Install a system instead of a project"
    :reduce (constantly t)))
 
 (defparameter *option-install-no-deps*
@@ -66,6 +68,7 @@
    :help "Common Lisp Package Manager"
    :contents (list *group-common*
                    *option-install-version*
+                   *option-install-source*
                    *option-install-system*
                    *option-install-no-deps*
                    *option-context*)))
@@ -73,44 +76,24 @@
 (define-cli-command (("install") *install-ui*) (args options)
   (let* ((version-string (gethash :install-version options))
          (package-name (first args))
+         (source-name (gethash :install-source options))
          (install-system-p (gethash :install-system options))
          (no-deps-p (gethash :install-no-deps options))
          (context-name (or (gethash :context options)
-                           "default"))
-         (original-context (load-global-context context-name nil))
-         (new-context (copy-context original-context)))
+                           "default")))
     (unless package-name
       (error "A package or system name is required"))
+
     (log:debug "Installing version ~S of ~:[project~;system~] ~S"
                version-string
                install-system-p
                package-name)
-
-    (let ((req (if install-system-p
-                   (make-instance 'system-requirement
-                                  :name package-name
-                                  :version-spec (parse-version-specifier version-string)
-                                  :no-deps-p no-deps-p
-                                  :why t)
-                   (make-instance 'project-requirement
-                                  :name package-name
-                                  :version-spec (parse-version-specifier version-string)
-                                  :no-deps-p no-deps-p
-                                  :why t))))
-      (push req (context-requirements new-context))
-      (let ((new-context (resolve-requirements new-context)))
-        (mapc #'install-release (context-releases new-context))
-        (context-write-asdf-files new-context)
-        (save-global-context new-context)
-        ;;(format t "~%~%~S~%" (multiple-value-list (context-diff original-context new-context)))
-        )
-      ;;(serialize-context-to-stream (resolve-requirements new-context) *standard-output*)
-      ;; (format t "~A~%" )
-      ;; (format t "~S~S~S~S")
-      ;; (write-context-to-stream )
-      )
-
-    ;; (if install-system-p
-    ;;     (install-project package-name (parse-version-specifier version-string) :no-deps-p no-deps-p)
-    ;;     (install-system package-name (parse-version-specifier version-string) :no-deps-p no-deps-p))
+    (install (if install-system-p
+                 :system
+                 :project)
+             package-name
+             :version-spec version-string
+             :source source-name
+             :context context-name
+             :no-deps-p no-deps-p)
     t))

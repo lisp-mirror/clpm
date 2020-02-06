@@ -8,7 +8,7 @@
           #:anaphora
           #:clpm/archives
           #:clpm/http-client
-          #:clpm/install
+          #:clpm/install/defs
           #:clpm/log
           #:clpm/sources/defs)
   (:import-from #:ironclad

@@ -12,7 +12,7 @@
           #:clpm/context
           #:clpm/deps
           #:clpm/groveler
-          #:clpm/install
+          #:clpm/install/defs
           #:clpm/log
           #:clpm/requirement
           #:clpm/source

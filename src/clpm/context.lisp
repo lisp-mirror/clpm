@@ -22,6 +22,7 @@
            #:context-to-asdf-source-registry.d-forms
            #:context-write-asdf-files
            #:copy-context
+           #:get-context
            #:load-global-context
            #:save-global-context
            #:serialize-context-to-stream))
@@ -67,6 +68,17 @@
 
 (defun global-context-pathname (name)
   (clpm-data-pathname (list "contexts" name)))
+
+(defun get-context (context-designator)
+  (cond
+    ((typep context-designator 'context)
+     context-designator)
+    ((stringp context-designator)
+     (load-global-context context-designator nil))
+    ((null context-designator)
+     (load-global-context "default" nil))
+    (t
+     (error "Unable to translate ~S to a context object" context-designator))))
 
 
 ;; * ASDF Integration
@@ -160,11 +172,12 @@
 (defgeneric process-form (context section form))
 
 (defmethod process-form (context (section (eql :requirements)) form)
-  (destructuring-bind (type &key name version-spec) form
+  (destructuring-bind (type &key name version-spec source) form
     (assert (eql type :system))
     (assert (null version-spec))
     (push (make-instance 'system-requirement
                          :name name
+                         :source (get-source source)
                          :why t)
           (context-requirements context))))
 
@@ -365,14 +378,21 @@
     (pprint-newline :miser stream)
     (prin1 (requirement/name req) stream)
     ;; Version
-    (when (and (requirement/version-spec req)
-               (not (equal (requirement/version-spec req) '((>= . "0")))))
+    (when (requirement/version-spec req)
       (write-char #\Space stream)
       (pprint-newline :fill stream)
       (prin1 :version-spec stream)
       (write-char #\Space stream)
       (pprint-newline :miser stream)
-      (prin1 (requirement/version-spec req) stream))))
+      (prin1 (requirement/version-spec req) stream))
+    ;; Source
+    (when (requirement/source req)
+      (write-char #\Space stream)
+      (pprint-newline :fill stream)
+      (prin1 :source stream)
+      (write-char #\Space stream)
+      (pprint-newline :miser stream)
+      (prin1 (source-name (requirement/source req)) stream))))
 
 (defmethod print-object ((context context) stream)
   (pprint-logical-block (stream nil)
