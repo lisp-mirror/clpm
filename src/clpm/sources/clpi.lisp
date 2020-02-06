@@ -71,64 +71,6 @@
   ())
 
 
-;; * Quicklisp specific methods
-
-;; (defun ql-flat-release-quicklisp-versions (release)
-;;   (let ((project (release-project release)))
-;;     (gethash (release-version release)
-;;              (ql-flat-project-snapshot-to-ql-version-map project))))
-
-;; (defun ql-flat-source-metadata (source)
-;;   (let ((metadata-pathname (flat-file-source-repo-metadata-pathname source)))
-;;     (when (probe-file metadata-pathname)
-;;       (uiop:with-safe-io-syntax ()
-;;         (uiop:read-file-forms metadata-pathname)))))
-
-;; (defun ql-flat-source-update-metadata (source &rest args &key &allow-other-keys)
-;;   (let ((metadata-pathname (flat-file-source-repo-metadata-pathname source))
-;;         (existing-metadata (or (ql-flat-source-metadata source)
-;;                                (list (cons :api-version "0.1")))))
-;;     (loop
-;;       :for key :in args :by #'cddr
-;;       :for value :in (rest args) :by #'cddr
-;;       :do
-;;          (setf (assoc-value existing-metadata key) value))
-;;     (uiop:with-safe-io-syntax ()
-;;       (with-open-file (s metadata-pathname
-;;                          :direction :output
-;;                          :if-exists :supersede
-;;                          :if-does-not-exist :create)
-;;         (let ((*print-right-margin* nil)
-;;               (*print-case* :downcase))
-;;           (dolist (pair existing-metadata)
-;;             (prin1 pair s)
-;;             (terpri s)))))
-
-;;     existing-metadata))
-
-;; (defun ql-flat-source-latest-version-synced (source)
-;;   (assoc-value (ql-flat-source-metadata source) :latest-version-synced))
-
-;; (defun intersection-non-empty-p (set1 set2 &key test)
-;;   (some (rcurry #'member set2 :test test) set1))
-
-;; (defun ql-system-release-overlapping-snapshots (system-release system)
-;;   "Given a system-release, return a list of versions of system that are present
-;; in the same Quicklisp distribution versions as system-release."
-;;   ;; First find all Quicklisp distribution versions containing the
-;;   ;; system-release. Then, iterate over all releases of the system to find the
-;;   ;; ones that are also present in at least one of the same distribution
-;;   ;; versions.
-;;   (let* ((release (system-release-release system-release))
-;;          (quicklisp-versions (ql-flat-release-quicklisp-versions release))
-;;          (potential-releases (system-releases system)))
-;;     (mapcar #'release-version (remove-if-not (rcurry #'intersection-non-empty-p
-;;                                                      quicklisp-versions
-;;                                                      :test #'equal)
-;;                                              potential-releases
-;;                                              :key #'ql-flat-release-quicklisp-versions))))
-
-
 ;; * Basic source methods
 
 (defmethod release-> ((release-1 clpi-release)
