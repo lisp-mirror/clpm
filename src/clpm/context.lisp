@@ -12,7 +12,8 @@
           #:clpm/log
           #:clpm/requirement
           #:clpm/source)
-  (:export #:context-diff
+  (:export #:context-add-requirement!
+           #:context-diff
            #:context-diff-has-diff-p
            #:context-name
            #:context-releases
@@ -82,6 +83,35 @@
      (load-global-context "default" nil))
     (t
      (error "Unable to translate ~S to a context object" context-designator))))
+
+
+;; * Adding requirements
+
+(defun context-find-requirement (context type name)
+  (find-if (lambda (req)
+             (and (typep req type)
+                  (equal name (requirement/name req))))
+           (context-requirements context)))
+
+(defun context-edit-req! (old-req new-req)
+  (let ((changed-p nil))
+    (unless (eql (requirement/source old-req) (requirement/source new-req))
+      (setf changed-p t
+            (requirement/source old-req) (requirement/source new-req)))
+    (unless (subsetp (requirement/version-spec new-req) (requirement/version-spec old-req)
+                     :test #'equal)
+      (setf changed-p t
+            (requirement/version-spec old-req) (union (requirement/version-spec old-req)
+                                                      (requirement/version-spec new-req)
+                                                      :test #'equal)))
+
+    changed-p))
+
+(defun context-add-requirement! (context req)
+  (let ((existing-req (context-find-requirement context (type-of req) (requirement/name req))))
+    (if existing-req
+        (context-edit-req! existing-req req)
+        (push req (context-requirements context)))))
 
 
 ;; * ASDF Integration

@@ -62,7 +62,7 @@ this source.")
   ((version-spec
     :initarg :version-spec
     :initform nil
-    :reader requirement/version-spec
+    :accessor requirement/version-spec
     :documentation
     "The version specifier that must be satisfied."))
   (:documentation

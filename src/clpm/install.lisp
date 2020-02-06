@@ -34,11 +34,10 @@
                                      :no-deps-p no-deps-p
                                      :source source
                                      :why t)))
-    (push requirement (context-requirements context))
+    (context-add-requirement! context requirement)
     (let* ((new-context (resolve-requirements context))
            (diff (context-diff orig-context new-context)))
-      (when (and (context-diff-has-diff-p diff)
-                 (funcall validate diff))
+      (when (funcall validate diff)
         (mapc #'install-release (context-releases new-context))
         (context-write-asdf-files new-context)
         (save-global-context new-context)))))
