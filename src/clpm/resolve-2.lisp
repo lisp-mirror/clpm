@@ -214,15 +214,16 @@ incompatible, a new one is created."
           ;; Add the chosen resolution.
           (search-state-add-resolution! new-search-state release system-releases nil unresolved-req)
           ;; And push its requirements.
-          (dolist (sr system-releases)
-            (let ((new-reqs (system-release-requirements sr)))
-              ;; Mark the reason for the new reqs
-              (mapc (lambda (r)
-                      (setf (requirement/why r) sr))
-                    new-reqs)
-              (setf (search-state-unresolved-reqs new-search-state)
-                    (append new-reqs
-                            (search-state-unresolved-reqs new-search-state)))))
+          (unless (requirement/no-deps-p unresolved-req)
+            (dolist (sr system-releases)
+              (let ((new-reqs (system-release-requirements sr)))
+                ;; Mark the reason for the new reqs
+                (mapc (lambda (r)
+                        (setf (requirement/why r) sr))
+                      new-reqs)
+                (setf (search-state-unresolved-reqs new-search-state)
+                      (append new-reqs
+                              (search-state-unresolved-reqs new-search-state))))))
           (values new-search-node (not (null resolutions))))))))
 
 (defun compute-child-generator (search-node)
