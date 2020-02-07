@@ -96,7 +96,7 @@
   (ensure-gethash
    project-name (flat-file-source-projects-map source)
 
-   (let ((pathname (merge-pathnames project-name (flat-file-source-repo-projects-pathname source))))
+   (let ((pathname (flat-file-source-repo-project-pathname source project-name)))
      (unless (uiop:probe-file* pathname)
        (if error
            (error 'source-missing-project
@@ -176,8 +176,7 @@
 
 (defun %project-root-pathname (project)
   (uiop:ensure-directory-pathname
-   (merge-pathnames (project-name project)
-                    (flat-file-source-repo-projects-pathname (project-source project)))))
+   (flat-file-source-repo-project-pathname (project-source project) (project-name project))))
 
 (defun %project-releases-pathname (project)
   (merge-pathnames "releases" (%project-root-pathname project)))
