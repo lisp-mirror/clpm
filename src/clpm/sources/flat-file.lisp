@@ -9,7 +9,9 @@
           #:alexandria
           #:clpm/cache
           #:clpm/data
+          #:clpm/repos
           #:clpm/sources/defs
+          #:clpm/utils
           #:do-urlencode
           #:puri
           #:split-sequence)
@@ -151,7 +153,9 @@
     :reader project-name
     :documentation "The name of the project.")
    (releases-map
-    :accessor flat-file-project-releases-map)))
+    :accessor flat-file-project-releases-map)
+   (repo
+    :accessor project-repo)))
 
 (defun %populate-project-releases! (project)
   "Open the releases file, read it, and instantiate release objects for each
@@ -159,24 +163,38 @@
   (let ((releases-map (make-hash-table :test 'equal)))
     (uiop:with-safe-io-syntax ()
       (with-open-file (s (%project-releases-pathname project))
-        (loop
-          (let ((form (read s nil :eof)))
-            (when (eql form :eof)
-              (return))
-            (setf (gethash (first form) releases-map)
-                  (apply #'make-instance (flat-file-source-release-class (project-source project))
-                         :source (project-source project)
-                         :project project
-                         :version form))))))
+        (with-forms-from-stream (s form)
+          (setf (gethash (first form) releases-map)
+                (apply #'make-instance (flat-file-source-release-class (project-source project))
+                       :source (project-source project)
+                       :project project
+                       :version form)))))
     (setf (flat-file-project-releases-map project) releases-map)))
+
+(defun %populate-project-metadata! (project)
+  "Open the metadata file, read it, and shove everything in the correct slots."
+  (uiop:with-safe-io-syntax ()
+    (with-open-file (s (%project-metadata-pathname project))
+      (with-forms-from-stream (s f)
+        (destructuring-bind (type data) f
+          (case type
+            (:repo
+             (setf (project-repo project) (make-repo-from-description data)))))))))
 
 (defmethod slot-unbound (class (project flat-file-project) (slot-name (eql 'releases-map)))
   (%populate-project-releases! project)
   (flat-file-project-releases-map project))
 
+(defmethod slot-unbound (class (project flat-file-project) (slot-name (eql 'repo)))
+  (%populate-project-metadata! project)
+  (project-repo project))
+
 (defun %project-root-pathname (project)
   (uiop:ensure-directory-pathname
    (flat-file-source-repo-project-pathname (project-source project) (project-name project))))
+
+(defun %project-metadata-pathname (project)
+  (merge-pathnames "metadata" (%project-root-pathname project)))
 
 (defun %project-releases-pathname (project)
   (merge-pathnames "releases" (%project-root-pathname project)))

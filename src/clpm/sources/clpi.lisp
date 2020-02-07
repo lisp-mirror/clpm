@@ -182,11 +182,16 @@
           (with-forms-from-stream (s form)
             (destructuring-bind (project-name &rest args) form
               (declare (ignore args))
-              (let ((url (puri:merge-uris (uiop:strcat "projects/" project-name "/releases")
-                                          base-url))
-                    (pn (merge-pathnames "releases"
-                                         (flat-file-source-repo-project-pathname source project-name))))
-                (ensure-file-fetched pn url)))))
+              (let ((releases-url (puri:merge-uris (uiop:strcat "projects/" project-name "/releases")
+                                                   base-url))
+                    (releases-pn (merge-pathnames "releases"
+                                                  (flat-file-source-repo-project-pathname source project-name)))
+                    (metadata-url (puri:merge-uris (uiop:strcat "projects/" project-name "/metadata")
+                                                   base-url))
+                    (metadata-pn (merge-pathnames "metadata"
+                                                  (flat-file-source-repo-project-pathname source project-name))))
+                (ensure-file-fetched releases-pn releases-url)
+                (ensure-file-fetched metadata-pn metadata-url)))))
 
         (with-open-file (s system-index-pn)
           (with-forms-from-stream (s form)
