@@ -83,9 +83,10 @@
                    *option-install-yes*
                    *option-context*)))
 
-(defun validate-fun (diff)
-  (print-context-diff diff *standard-output*)
-  (y-or-n-p "Proceed?"))
+(defun make-validate-fun (yes-p)
+  (lambda (diff)
+    (print-context-diff diff *standard-output*)
+    (or yes-p (y-or-n-p "Proceed?"))))
 
 (define-cli-command (("install") *install-ui*) (args options)
   (let* ((version-string (gethash :install-version options))
@@ -111,5 +112,5 @@
              :source source-name
              :context context-name
              :no-deps-p no-deps-p
-             :validate (if yes-p (constantly t) #'validate-fun))
+             :validate (make-validate-fun yes-p))
     t))
