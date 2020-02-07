@@ -364,6 +364,7 @@ otherwise."
 
 
 (defvar *sources* nil)
+(defvar *releases-sort-function* nil)
 
 (defmethod find-sources-for-req ((req system-requirement))
   (aif (requirement/source req)
@@ -484,6 +485,12 @@ satisfied. Returns one of :SAT, :UNSAT, or :UNKNOWN."))
   (:documentation "Given a requirement and a search-state, returns an alist
 representing satisfying solutions of the requirement. The alist maps release
 objects to a list of system-releases."))
+
+(defmethod resolve-requirement :around (req search-state)
+  (let ((result (call-next-method)))
+    (when *releases-sort-function*
+      (setf result (funcall *releases-sort-function* result)))
+    result))
 
 (defmethod resolve-requirement ((req vcs-project-requirement) search-state)
   (declare (ignore search-state))
@@ -635,13 +642,22 @@ correct commit."
         (when valid-p
           (push next-node q))))))
 
+(defun make-no-update-result-sorter (context)
+  (lambda (release-alist)
+    (let ((existing-release (find-if (lambda (x)
+                                       (member x (context-releases context)))
+                                     release-alist
+                                     :key #'car)))
+      (if existing-release
+          (list* existing-release (remove existing-release release-alist))
+          release-alist))))
 
 (defun resolve-requirements (context &key update-p)
   "Given a context, return a new context that has the same requirements but the
 set of installed releases is updated to be the minimum set that satisfies all
 the requirements."
-  (declare (ignore update-p))
   (let* ((*sources* (context-sources context))
+         (*releases-sort-function* (unless update-p (make-no-update-result-sorter context)))
          (reqs (context-requirements context))
          (out-context (copy-context context))
          (root-node (make-instance 'search-node
