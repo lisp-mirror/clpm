@@ -69,6 +69,33 @@
    :help "Do not install dependencies"
    :reduce (constantly t)))
 
+(defparameter *option-install-commit*
+  (adopt:make-option
+   :install-commit
+   :short #\c
+   :long "commit"
+   :parameter "COMMIT"
+   :help "Install the project from source control, at the given commit"
+   :reduce #'adopt:last))
+
+(defparameter *option-install-branch*
+  (adopt:make-option
+   :install-branch
+   :short #\b
+   :long "branch"
+   :parameter "BRANCH"
+   :help "Install the project from source control, using the given branch"
+   :reduce #'adopt:last))
+
+(defparameter *option-install-tag*
+  (adopt:make-option
+   :install-tag
+   :short #\t
+   :long "tag"
+   :parameter "TAG"
+   :help "Install the project from source control, at the given tag"
+   :reduce #'adopt:last))
+
 (defparameter *install-ui*
   (adopt:make-interface
    :name "clpm install"
@@ -81,6 +108,9 @@
                    *option-install-system*
                    *option-install-no-deps*
                    *option-install-yes*
+                   *option-install-branch*
+                   *option-install-tag*
+                   *option-install-commit*
                    *option-context*)))
 
 (defun make-validate-fun (yes-p)
@@ -96,7 +126,10 @@
          (no-deps-p (gethash :install-no-deps options))
          (context-name (or (gethash :context options)
                            "default"))
-         (yes-p (gethash :install-yes options)))
+         (yes-p (gethash :install-yes options))
+         (commit (gethash :install-commit options))
+         (branch (gethash :install-branch options))
+         (tag (gethash :install-tag options)))
     (unless package-name
       (error "A package or system name is required"))
 
@@ -112,5 +145,8 @@
              :source source-name
              :context context-name
              :no-deps-p no-deps-p
+             :commit commit
+             :branch branch
+             :tag tag
              :validate (make-validate-fun yes-p))
     t))

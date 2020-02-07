@@ -19,21 +19,46 @@
 
 (setup-logger)
 
-(defun install (type name &key version-spec source context no-deps-p
-                            (validate (constantly t)))
-  (let* ((requirement-type (ecase type
-                             (:project 'project-requirement)
-                             (:system 'system-requirement)))
-         (orig-context (get-context context))
-         (context (copy-context orig-context))
-         (source (get-source source))
+
+(defun make-requirement (type name
+                         &key version-spec source no-deps-p commit branch tag)
+  (let* ((source (get-source source))
          (version-spec (parse-version-specifier version-spec))
-         (requirement (make-instance requirement-type
-                                     :name name
-                                     :version-spec version-spec
-                                     :no-deps-p no-deps-p
-                                     :source source
-                                     :why t)))
+         (common-args (list :name name
+                            :source source
+                            :why t
+                            :no-deps-p no-deps-p)))
+    (cond
+      ((and (eql :project type)
+            (or commit branch tag))
+       ;; Requesting that we install a project from vcs.
+       (assert (not version-spec))
+       (apply #'make-instance 'vcs-project-requirement
+              :tag tag
+              :commit commit
+              :branch branch
+              common-args))
+      ((eql :project type)
+       ;; Install a project.
+       (apply #'make-instance 'project-requirement
+              :version-spec version-spec
+              common-args))
+      ((eql type :system)
+       ;; Install a system.
+       (assert (not (or commit branch tag)))
+       (apply #'make-instance 'system-requirement
+              :version-spec version-spec
+              common-args)))))
+
+(defun install (type name &key version-spec source context no-deps-p
+                            commit branch tag
+                            (validate (constantly t)))
+  (let* ((orig-context (get-context context))
+         (context (copy-context orig-context))
+         (requirement (make-requirement type name
+                                        :version-spec version-spec :source source
+                                        :no-deps-p no-deps-p :commit commit
+                                        :branch branch :tag tag)))
     (context-add-requirement! context requirement)
     (let* ((new-context (resolve-requirements context))
            (diff (context-diff orig-context new-context)))

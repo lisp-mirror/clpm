@@ -493,8 +493,7 @@ objects to a list of system-releases."))
          (branch (requirement/branch req))
          (commit (requirement/commit req))
          (tag (requirement/tag req))
-         (source (requirement/source req))
-         (vcs-project (source-project source project-name))
+         (vcs-project (find-project-in-sources project-name))
          (vcs-release (project-release vcs-project
                                        (cond
                                          (commit

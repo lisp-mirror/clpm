@@ -38,7 +38,6 @@
 (defparameter *option-context*
   (adopt:make-option :context
                      :long "context"
-                     :short #\c
                      :help "Set the context in which to operate"
                      :parameter "CONTEXT"
                      :reduce #'adopt:last))
