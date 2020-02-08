@@ -204,40 +204,41 @@ optionally changing into the local dir for ~repo~."
                   exit-code output error-output)
           (error 'retriable-error))))))
 
-(defmethod ref-present-p ((repo git-repo) &key commit branch tag)
-  (assert (xor commit branch tag))
-  (let ((local-dir (git-repo-local-dir repo)))
-    (and (uiop:probe-file* local-dir)
-         (if commit
-             (zerop (nth-value 2 (git-cat-file commit :repo repo :ignore-error-status t)))
-             (zerop (nth-value 2 (git-rev-parse (or branch tag) :repo repo :ignore-error-status t)))))))
+(defmethod ref-present-p ((repo git-repo) ref)
+  (destructuring-bind (ref-type ref-name) ref
+    (let ((local-dir (git-repo-local-dir repo)))
+      (and (uiop:probe-file* local-dir)
+           (if (eql ref-type :commit)
+               (zerop (nth-value 2 (git-cat-file ref-name :repo repo :ignore-error-status t)))
+               (zerop (nth-value 2 (git-rev-parse ref-name :repo repo :ignore-error-status t))))))))
 
-(defmethod ensure-ref-present-locally! ((repo git-repo) &key commit branch tag)
+(defmethod ensure-ref-present-locally! ((repo git-repo) ref)
   "Given a repo and a reference (either a commit, branch, or tag), ensure that
 ref is present locally, fetching or cloning the repo as necessary."
-  (assert (xor commit branch tag))
-  (let ((local-dir (git-repo-local-dir repo)))
-    (if (uiop:probe-file* local-dir)
-        ;; Repo is present, need to fetch if the ref is not present.
-        (when (or branch (not (ref-present-p repo :commit commit :tag tag)))
+  (destructuring-bind (ref-type ref-name) ref
+    (declare (ignore ref-name))
+    (let ((local-dir (git-repo-local-dir repo)))
+      (if (uiop:probe-file* local-dir)
+          ;; Repo is present, need to fetch if the ref is not present or the ref
+          ;; is a branch.
+          (when (or (eql ref-type :branch)
+                    (not (ref-present-p repo ref)))
+            (with-retries (:max 10 :sleep 5)
+              (fetch-repo! repo))
+            ;; Make sure the ref is actually present, raising an error otherwise.
+            (unless (ref-present-p repo ref)
+              (error "ref is not present, even after updating.")))
+          ;; Repo is not present at all, need to clone it.
           (with-retries (:max 10 :sleep 5)
-            (fetch-repo! repo))
-          ;; Make sure the ref is actually present, raising an error otherwise.
-          (unless (ref-present-p repo :commit commit :tag tag :branch branch)
-            (error "ref is not present, even after updating.")))
-        ;; Repo is not present at all, need to clone it.
-        (with-retries (:max 10 :sleep 5)
-          (clone-repo! repo)
-          ;; Make sure the ref is actually present, raising an error otherwise.
-          (unless (ref-present-p repo :commit commit :tag tag :branch branch)
-            (error "ref is not present, even after updating."))))))
+            (clone-repo! repo)
+            ;; Make sure the ref is actually present, raising an error otherwise.
+            (unless (ref-present-p repo ref)
+              (error "ref is not present, even after updating.")))))))
 
-(defmethod repo-archive-stream ((repo git-repo) &key branch tag commit)
-  (assert (xor branch tag commit))
+(defmethod repo-archive-stream ((repo git-repo) ref)
   (values
-   (git-archive (or branch tag commit) :repo repo)
+   (git-archive (second ref) :repo repo)
    'tar-archive))
 
-(defmethod resolve-ref-to-commit ((repo git-repo) &key branch tag commit)
-  (assert (xor branch tag commit))
-  (git-rev-parse (or branch tag commit) :repo repo))
+(defmethod resolve-ref-to-commit ((repo git-repo) ref)
+  (git-rev-parse (second ref) :repo repo))

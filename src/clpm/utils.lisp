@@ -6,6 +6,7 @@
 (uiop:define-package #:clpm/utils
     (:use #:cl
           #:alexandria
+          #:anaphora
           #:puri
           #:split-sequence
           #:trivial-gray-streams)
@@ -148,9 +149,12 @@ other than ~:https~ or ~:http~."))
   "Close the underlying stream and cleanup the process. ABORT is ignored."
   (declare (ignore abort))
   (let ((proc (process-stream-process-info stream)))
-    (close (uiop:process-info-input proc))
-    (close (uiop:process-info-output proc))
-    (close (uiop:process-info-error-output proc))
+    (awhen (uiop:process-info-input proc)
+      (close it))
+    (awhen (uiop:process-info-output proc)
+      (close it))
+    (awhen (uiop:process-info-error-output proc)
+      (close it))
     (uiop:wait-process proc))
   (close (process-stream-true-stream stream)))
 

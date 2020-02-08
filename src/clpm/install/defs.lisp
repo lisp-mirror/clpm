@@ -5,14 +5,10 @@
 
 (uiop:define-package #:clpm/install/defs
     (:use #:cl
-          #:clpm/sources/defs
-          #:clpm/sources/vcs)
+          #:clpm/sources/defs)
   (:export #:install-release))
 
 (in-package #:clpm/install/defs)
 
 (defgeneric install-release (release)
   (:documentation "Install a ~release~."))
-
-(defmethod install-release ((release vcs-release))
-  (ensure-vcs-release-installed! release))

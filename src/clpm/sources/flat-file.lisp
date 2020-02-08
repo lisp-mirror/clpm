@@ -11,6 +11,7 @@
           #:clpm/data
           #:clpm/repos
           #:clpm/sources/defs
+          #:clpm/sources/vcs-release
           #:clpm/utils
           #:do-urlencode
           #:puri
@@ -110,6 +111,13 @@
                     :source source
                     :name project-name))))
 
+(defmethod source-ensure-system ((source flat-file-source) system-name)
+  (ensure-gethash
+   system-name (flat-file-source-systems-map source)
+   (make-instance (flat-file-source-system-class source)
+                  :source source
+                  :name system-name)))
+
 (defmethod source-system ((source flat-file-source) system-name &optional (error t))
   (ensure-gethash
    system-name (flat-file-source-systems-map source)
@@ -154,6 +162,9 @@
     :documentation "The name of the project.")
    (releases-map
     :accessor flat-file-project-releases-map)
+   (vcs-releases-map
+    :initform (make-hash-table :test 'equal)
+    :reader flat-file-project-vcs-releases-map)
    (repo
     :accessor project-repo)))
 
@@ -209,6 +220,17 @@
 
 (defmethod project-releases ((project flat-file-project))
   (hash-table-values (flat-file-project-releases-map project)))
+
+(defmethod project-vcs-release ((project flat-file-project) &key commit branch tag)
+  (let ((ref (cond
+               (commit `(:commit ,commit))
+               (branch `(:branch ,branch))
+               (tag `(:tag ,tag)))))
+    (ensure-gethash ref (flat-file-project-vcs-releases-map project)
+                    (make-instance 'vcs-release
+                                   :source (project-source project)
+                                   :project project
+                                   :ref ref))))
 
 
 ;; * Releases
@@ -289,11 +311,10 @@
       (with-open-file (s (merge-pathnames "releases"
                                           (flat-file-source-repo-system-pathname
                                            (system-source system)
-                                           (system-name system))))
-        (loop
-          (let ((form (read s nil :eof)))
-            (when (eql form :eof)
-              (return))
+                                           (system-name system)))
+                         :if-does-not-exist nil)
+        (when s
+          (with-forms-from-stream (s form)
             (destructuring-bind (release-spec &rest initargs &key &allow-other-keys) form
               (setf (gethash release-spec map)
                     (apply #'make-instance
@@ -304,6 +325,9 @@
                            :system system
                            initargs)))))))
     (setf (slot-value system slot-name) map)))
+
+(defmethod system-register-release! ((system flat-file-system) release)
+  (setf (gethash (release-version release) (flat-file-system-releases-map system)) release))
 
 (defmethod system-releases ((system flat-file-system))
   (mapcar #'system-release-release (system-system-releases system)))

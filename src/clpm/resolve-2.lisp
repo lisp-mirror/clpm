@@ -198,12 +198,109 @@ incompatible, a new one is created."
        (groveler-load-asd! (search-node-groveler search-node) asd-pathname)
        (push asd-namestring (search-state-groveler-loaded-asds search-state))))))
 
+(defun compute-child-generator/grovel (search-node)
+  (let ((search-state (search-node-state search-node)))
+    (destructuring-bind (sf . system-names)
+        (first (search-state-system-files-pending-groveling search-state))
+      (format t "GROVEL: ~S~%~%" (search-state-system-files-pending-groveling search-state))
+      (let* ((new-search-state (copy-search-state search-state))
+             (new-search-node (make-search-node search-node new-search-state)))
+        (handler-bind
+            ((groveler-dependency-missing
+               (lambda (c)
+                 (let* ((missing-system-spec (groveler-dependency-missing/system c))
+                        (missing-req (convert-asd-system-spec-to-req missing-system-spec)))
+                   (multiple-value-bind (status satisfying-system-release)
+                       (requirement-state missing-req search-state)
+
+                     (ecase status
+                       (:sat
+                        (unless (release-installed-p (system-release-release satisfying-system-release))
+                          (install-release (system-release-release satisfying-system-release)))
+                        (log:debug "Groveler is missing ~S, but it is already in resolution. Adding it."
+                                   missing-system-spec)
+                        (invoke-restart 'add-asd-and-retry
+                                        (system-release-absolute-asd-pathname satisfying-system-release)
+                                        (lambda ()
+                                          (log:debug "Groveler successfully added ~S. Adding ~S to search state."
+                                                     missing-system-spec
+                                                     (namestring (system-release-absolute-asd-pathname satisfying-system-release)))
+                                          (push (namestring (system-release-absolute-asd-pathname satisfying-system-release))
+                                                (search-state-groveler-loaded-asds new-search-state)))))
+                       (:unsat
+                        (return-from compute-child-generator/grovel (lambda () (values nil nil))))
+                       (:unknown
+                        (return-from compute-child-generator/grovel
+                          ;; If the missing requirement is a system requirement
+                          ;; that looks like it'd be provided by another system
+                          ;; file on our list of files to grovel, reorder the
+                          ;; list so that it's first. Otherwise, add the
+                          ;; requirement to the unresolved grovel-reqs list.
+                          (if-let ((candidate-file
+                                    (and (typep missing-req 'system-requirement)
+                                         (find (asdf:primary-system-name (requirement/name missing-req))
+                                               (search-state-system-files-pending-groveling new-search-state)
+                                               :key (compose #'system-file-primary-system-name #'car)
+                                               :test #'equal))))
+                              (lambda ()
+                                (setf (search-state-system-files-pending-groveling new-search-state)
+                                      (list* candidate-file (remove candidate-file
+                                                                    (search-state-system-files-pending-groveling new-search-state))))
+                                (values new-search-node nil))
+                              (lambda ()
+                                (push missing-req (search-state-unresolved-grovel-reqs new-search-state))
+                                (values new-search-node nil)))))))))))
+          (search-node-load-asd-in-groveler! new-search-node (system-file-absolute-asd-pathname sf))
+
+          ;; Groveller is primed. Get the requirements from it.
+          (let ((*active-groveler* (search-node-groveler new-search-node))
+                (system-releases nil))
+            (if (eql t system-names)
+                (setf system-releases (system-file-system-releases sf))
+                (setf system-releases (mapcar (lambda (sn)
+                                                (release-system-release (system-file-release sf) sn))
+                                              system-names)))
+
+            (dolist (sr system-releases)
+              (let ((reqs (system-release-requirements sr)))
+                ;; Add the deps we just computed.
+                (setf (search-state-unresolved-reqs new-search-state)
+                      (append reqs (search-state-unresolved-reqs new-search-state)))))
+            ;; Remove the SF we just computed the deps for.
+            (pop (search-state-system-files-pending-groveling new-search-state))
+            ;; activate the system releases
+            ;;
+            ;; TODO: Put actual reason here. Should probably be captured from
+            ;; whatever added this to the queue.
+            (search-state-add-resolution! new-search-state (system-file-release sf)
+                                          system-releases nil nil)
+            (lambda ()
+              (values new-search-node nil))))))))
+
+(defun compute-child-generator/unresolved-grovel-req (search-node)
+  ;; We need to resolve some requirements before we can grovel further.
+  (let* ((search-state (search-node-state search-node))
+         (*active-groveler* (search-node-groveler search-node))
+         (req (first (search-state-unresolved-grovel-reqs search-state)))
+         (resolutions (resolve-requirement req search-state)))
+    (format t "REQ: ~S~%~%" req)
+    (lambda ()
+      (destructuring-bind (release &key system-releases) (pop resolutions)
+        (let* ((new-search-state (copy-search-state search-state))
+               (new-search-node (make-search-node search-node new-search-state)))
+          ;; Remove the thing we just resolved.
+          (pop (search-state-unresolved-grovel-reqs new-search-state))
+          ;; Add the chosen resolution.
+          (search-state-add-resolution! new-search-state release system-releases nil req)
+          (values new-search-node (not (null resolutions))))))))
+
 (defun compute-child-generator/unresolved-reqs (search-node)
   (let* ((search-state (search-node-state search-node))
          (*active-groveler* (search-node-groveler search-node))
          (unresolved-req (first (search-state-unresolved-reqs search-state)))
          (resolutions (resolve-requirement unresolved-req
                                            search-state)))
+    (format t "UNRESOLVED-REQ: ~S~%~%" unresolved-req)
     (lambda ()
       (destructuring-bind (release &key system-releases) (pop resolutions)
         (let* ((new-search-state (copy-search-state search-state))
@@ -226,6 +323,26 @@ incompatible, a new one is created."
                               (search-state-unresolved-reqs new-search-state))))))
           (values new-search-node (not (null resolutions))))))))
 
+(defun compute-child-generator/unresolved-vcs-or-fs-req (search-node unresolved-vcs-or-fs-req)
+  ;; We will generate one child. That child will resolve this req, without
+  ;; adding its dependencies yet...
+  (let* ((search-state (search-node-state search-node))
+         (new-search-state (copy-search-state search-state))
+         (new-search-node (make-search-node search-node new-search-state))
+         (resolutions (resolve-requirement unresolved-vcs-or-fs-req search-state)))
+    ;; If there's not exactly one resolution available, something is wrong.
+    (assert (length= 1 resolutions))
+    (destructuring-bind ((release &key system-files)) resolutions
+      (search-state-add-resolution! new-search-state release
+                                    nil system-files unresolved-vcs-or-fs-req)
+      ;; Install the release so we can grovel it later...
+      (unless (release-installed-p release)
+        (install-release release)))
+    (removef (search-state-unresolved-reqs new-search-state)
+             unresolved-vcs-or-fs-req)
+    (lambda ()
+      (values new-search-node nil))))
+
 (defun compute-child-generator (search-node)
   (let* ((search-state (search-node-state search-node))
          (unresolved-vcs-or-fs-req (find-if (lambda (x)
@@ -234,100 +351,15 @@ incompatible, a new one is created."
                                                   (typep x 'fs-system-file-requirement)))
                                             (search-state-unresolved-reqs search-state))))
     (cond
-      ;; (unresolved-vcs-or-fs-req
-      ;;  (log:debug "Have an unresolved vcs or fs req")
-      ;;  ;; We will generate one child. That child will resolve this req, without
-      ;;  ;; adding its dependencies yet...
-      ;;  (let* ((new-search-state (copy-search-state search-state))
-      ;;         (new-search-node (make-search-node search-node new-search-state))
-      ;;         (resolutions (resolve-requirement unresolved-vcs-or-fs-req search-state)))
-      ;;    ;; If there's not exactly one resolution available, something is
-      ;;    ;; wrong.
-      ;;    (assert (length= 1 resolutions))
-      ;;    (destructuring-bind ((release &key system-files)) resolutions
-      ;;      (search-state-add-resolution! new-search-state release nil system-files)
-      ;;      ;; Install the release so we can grovel it later...
-      ;;      (unless (release-installed-p release)
-      ;;        (install-release release)))
-      ;;    (removef (search-state-unresolved-reqs new-search-state)
-      ;;             unresolved-vcs-or-fs-req)
-      ;;    (lambda ()
-      ;;      (values new-search-node nil))))
-      ;; ((search-state-unresolved-grovel-reqs search-state)
-      ;;  (log:debug "Have an unresolved grovel requirement")
-      ;;  ;; We need to resolve some requirements before we can grovel further.
-      ;;  (let* ((*active-groveler* (search-node-groveler search-node))
-      ;;         (resolutions (resolve-requirement (first (search-state-unresolved-grovel-reqs search-state))
-      ;;                                           search-state)))
-      ;;    (lambda ()
-      ;;      (destructuring-bind (release &key system-releases) (pop resolutions)
-      ;;        (let* ((new-search-state (copy-search-state search-state))
-      ;;               (new-search-node (make-search-node search-node new-search-state)))
-      ;;          ;; Remove the thing we just resolved.
-      ;;          (pop (search-state-unresolved-grovel-reqs new-search-state))
-      ;;          ;; Add the chosen resolution.
-      ;;          (search-state-add-resolution! new-search-state release system-releases nil)
-      ;;          (values new-search-node (not (null resolutions))))))))
-      ;; ((search-state-system-files-pending-groveling search-state)
-      ;;  (log:debug "Have a system file to grovel")
-      ;;  (destructuring-bind (sf . system-names)
-      ;;      (first (search-state-system-files-pending-groveling search-state))
-
-      ;;    (let* ((new-search-state (copy-search-state search-state))
-      ;;           (new-search-node (make-search-node search-node new-search-state)))
-      ;;      (handler-bind
-      ;;          ((groveler-dependency-missing
-      ;;             (lambda (c)
-      ;;               (let* ((missing-system-spec (groveler-dependency-missing/system c))
-      ;;                      (missing-req (convert-asd-system-spec-to-req missing-system-spec)))
-      ;;                 (multiple-value-bind (status satisfying-system-release)
-      ;;                     (requirement-state missing-req search-state)
-
-      ;;                   (ecase status
-      ;;                     (:sat
-      ;;                      (unless (release-installed-p (system-release-release satisfying-system-release))
-      ;;                        (install-release (system-release-release satisfying-system-release)))
-      ;;                      (log:debug "Groveler is missing ~S, but it is already in resolution. Adding it."
-      ;;                                 missing-system-spec)
-      ;;                      (invoke-restart 'add-asd-and-retry
-      ;;                                      (system-release-absolute-asd-pathname satisfying-system-release)
-      ;;                                      (lambda ()
-      ;;                                        (log:debug "Groveler successfully added ~S. Adding ~S to search state."
-      ;;                                                   missing-system-spec
-      ;;                                                   (namestring (system-release-absolute-asd-pathname satisfying-system-release)))
-      ;;                                        (push (namestring (system-release-absolute-asd-pathname satisfying-system-release))
-      ;;                                              (search-state-groveler-loaded-asds new-search-state)))))
-      ;;                     (:unsat
-      ;;                      (return-from compute-child-generator (lambda () (values nil nil))))
-      ;;                     (:unknown
-      ;;                      (return-from compute-child-generator
-      ;;                        (lambda ()
-      ;;                          (push missing-req (search-state-unresolved-grovel-reqs new-search-state))
-      ;;                          (values new-search-node nil))))))))))
-      ;;        (search-node-load-asd-in-groveler! new-search-node (system-file-absolute-asd-pathname sf))
-
-      ;;        ;; Groveller is primed. Get the requirements from it.
-      ;;        (let ((*active-groveler* (search-node-groveler new-search-node))
-      ;;              (system-releases nil))
-      ;;          (if (eql t system-names)
-      ;;              (setf system-releases (system-file-system-releases sf))
-      ;;              (setf system-releases (mapcar (lambda (sn)
-      ;;                                              (release-system-release (system-file-release sf) sn))
-      ;;                                            system-names)))
-
-      ;;          ;; Remove the SF we just computed the deps for.
-      ;;          (pop (search-state-system-files-pending-groveling new-search-state))
-
-      ;;          (dolist (sr system-releases)
-      ;;            (let ((reqs (system-release-requirements sr)))
-      ;;              ;; Add the deps we just computed.
-      ;;              (setf (search-state-unresolved-reqs new-search-state)
-      ;;                    (append reqs (search-state-unresolved-reqs new-search-state)))))
-      ;;          ;; activate the system releases
-      ;;          (search-state-add-resolution! new-search-state (system-file-release sf)
-      ;;                                        system-releases nil)
-      ;;          (lambda ()
-      ;;            (values new-search-node nil)))))))
+      (unresolved-vcs-or-fs-req
+       (log:debug "Have an unresolved vcs or fs req")
+       (compute-child-generator/unresolved-vcs-or-fs-req search-node unresolved-vcs-or-fs-req))
+      ((search-state-unresolved-grovel-reqs search-state)
+       (log:debug "Have an unresolved grovel requirement")
+       (compute-child-generator/unresolved-grovel-req search-node))
+      ((search-state-system-files-pending-groveling search-state)
+       (log:debug "Have a system file to grovel")
+       (compute-child-generator/grovel search-node))
       ((search-state-unresolved-reqs search-state)
        (log:debug "Have an unresolved requirement")
        (compute-child-generator/unresolved-reqs search-node))
@@ -484,7 +516,7 @@ satisfied. Returns one of :SAT, :UNSAT, or :UNKNOWN."))
 (defgeneric resolve-requirement (req search-state)
   (:documentation "Given a requirement and a search-state, returns an alist
 representing satisfying solutions of the requirement. The alist maps release
-objects to a list of system-releases."))
+objects to a plist. This plist can contain :system-releases or :system-files."))
 
 (defmethod resolve-requirement :around (req search-state)
   (let ((result (call-next-method)))
@@ -501,14 +533,10 @@ objects to a list of system-releases."))
          (commit (requirement/commit req))
          (tag (requirement/tag req))
          (vcs-project (find-project-in-sources project-name))
-         (vcs-release (project-release vcs-project
-                                       (cond
-                                         (commit
-                                          `(:commit ,commit))
-                                         (branch
-                                          `(:branch ,branch))
-                                         (tag
-                                          `(:tag ,tag)))))
+         (vcs-release (project-vcs-release vcs-project
+                                           :tag tag
+                                           :commit commit
+                                           :branch branch))
          (release-system-files (release-system-files vcs-release)))
     (assert (null system-files))
     ;; If the systems are defined, we only need to grovel the files in which
@@ -529,8 +557,7 @@ objects to a list of system-releases."))
                          (assert system-file)
                          (push system (assoc-value out system-file))
                       :finally (return out))
-                    (mapcar (rcurry #'cons t)
-                            (release-system-files vcs-release)))))))
+                    (mapcar (rcurry #'cons t) release-system-files))))))
 
 (defmethod resolve-requirement ((req project-requirement) search-state)
   (let* ((project-name (requirement/name req))

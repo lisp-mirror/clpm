@@ -23,6 +23,7 @@
            #:project-releases
            #:project-repo
            #:project-source
+           #:project-vcs-release
            #:release->
            #:release-lib-pathname
            #:release-project
@@ -41,6 +42,7 @@
            #:source
            #:source-args
            #:source-cache-directory
+           #:source-ensure-system
            #:source-lib-directory
            #:source-name
            #:source-project
@@ -59,11 +61,13 @@
            #:sync-source
            #:system-name
            #:system-system-releases
+           #:system-register-release!
            #:system-releases
            #:system-source
            #:clpm-system-file
            #:system-file-absolute-asd-pathname
            #:system-file-asd-enough-namestring
+           #:system-file-primary-system-name
            #:system-file-release
            #:system-file-source
            #:system-file-system-releases
@@ -173,6 +177,9 @@ source implementation should provide a ~sync-and-retry~ restart.")
   (:documentation "Return an instance of CLPM-SYSTEM. If the system is not
 located in the source and ERROR is T (default), signals an error of type
 SOURCE-MISSING-SYSTEM. Otherwise, returns NIL."))
+(defgeneric source-ensure-system (source system-name)
+  (:documentation "Return an instance of CLPM-SYSTEM from the source,
+instantiating it if necessary. Used when groveling for systems."))
 
 (defgeneric source-projects (source)
   (:documentation "Return a list of all projects (as CLPM-PROJECT instances)
@@ -196,6 +203,9 @@ are provided by the SOURCE."))
     :documentation "The name of the system."))
   (:documentation "Base class for a system that is located in a source. A system
 represents an ASDF system."))
+
+(defgeneric system-register-release! (system release)
+  (:documentation "Register RELEASE as providing SYSTEM."))
 
 (defgeneric system-releases (system)
   (:documentation "Return a list of releases (as CLPM-RELEASE instances) that
@@ -232,6 +242,12 @@ type PROJECT-MISSING-VERSION."))
 (defgeneric project-releases (project)
   (:documentation "Return a list of releases (as CLPM-RELEASE instances) of this
 project."))
+
+(defgeneric project-vcs-release (project &key commit branch tag)
+  (:documentation "Return a release of this project, taken from its repo.")
+  (:method :before (project &key commit branch tag)
+    (assert (xor commit branch tag))))
+
 
 
 ;; * Releases
@@ -332,6 +348,10 @@ release-2."))
 (defgeneric system-file-asd-enough-namestring (clpm-system-file))
 
 (defgeneric system-file-absolute-asd-pathname (clpm-system-file))
+
+(defgeneric system-file-primary-system-name (clpm-system-file)
+  (:method (clpm-system-file)
+    (pathname-name (system-file-asd-enough-namestring clpm-system-file))))
 
 (defgeneric system-file-system-releases (clpm-system-file))
 

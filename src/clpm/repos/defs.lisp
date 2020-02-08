@@ -14,12 +14,12 @@
 
 (in-package #:clpm/repos/defs)
 
-(defgeneric ensure-ref-present-locally! (repo &key commit branch tag))
+(defgeneric ensure-ref-present-locally! (repo ref))
 
-(defgeneric ref-present-p (repo &key commit branch tag))
+(defgeneric ref-present-p (repo ref))
 
-(defgeneric repo-archive-stream (repo &key branch tag commit))
+(defgeneric repo-archive-stream (repo ref))
 
 (defgeneric repo-lib-base-pathname (repo))
 
-(defgeneric resolve-ref-to-commit (repo &key branch tag commit))
+(defgeneric resolve-ref-to-commit (repo ref))

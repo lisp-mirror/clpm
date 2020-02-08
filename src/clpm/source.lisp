@@ -10,11 +10,12 @@
           #:clpm/sources/config
           #:clpm/sources/defs
           #:clpm/sources/fs
-          #:clpm/sources/vcs)
+          ;;#:clpm/sources/vcs
+          )
   (:reexport #:clpm/sources/config)
   (:reexport #:clpm/sources/defs)
   (:reexport #:clpm/sources/fs)
-  (:reexport #:clpm/sources/vcs)
+  ;;(:reexport #:clpm/sources/vcs)
   (:export #:get-source
            #:sources))
 
