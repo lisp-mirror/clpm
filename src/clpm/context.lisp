@@ -237,6 +237,7 @@
       (dolist (r removed-releases)
         (print-diff-release r stream)
         (terpri stream)))
+    (format stream "~A" +reset-color-string+)
     (finish-output stream)))
 
 
