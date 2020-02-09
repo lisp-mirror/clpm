@@ -210,6 +210,10 @@
 (defun %project-releases-pathname (project)
   (merge-pathnames "releases" (%project-root-pathname project)))
 
+(defmethod project-release ((project flat-file-project) (version-string list) &optional error)
+  (declare (ignore error))
+  (apply #'project-vcs-release project version-string))
+
 (defmethod project-release ((project flat-file-project) version &optional (error t))
   (or (gethash version (flat-file-project-releases-map project))
       (when error

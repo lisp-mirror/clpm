@@ -124,6 +124,9 @@ this source.")
 systems and system-files are NIL, requires all systems in all asd files defined
 in the project."))
 
+(defmethod initialize-instance :after ((self vcs-project-requirement) &rest initargs &key commit)
+  (assert (or (null commit) (stringp commit))))
+
 (defclass fs-system-requirement (requirement)
   ((pathname
     :initarg :pathname

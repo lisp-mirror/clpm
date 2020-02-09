@@ -5,6 +5,7 @@
 
 (uiop:define-package #:clpm/install
     (:use #:cl
+          #:anaphora
           #:clpm/context
           #:clpm/install/defs
           #:clpm/log
@@ -58,9 +59,12 @@
          (requirement (make-requirement type name
                                         :version-spec version-spec :source source
                                         :no-deps-p no-deps-p :commit commit
-                                        :branch branch :tag tag)))
-    (context-add-requirement! context requirement)
-    (let* ((new-context (resolve-requirements context))
+                                        :branch branch :tag tag))
+         (update-projects nil)
+         (add-result (context-add-requirement! context requirement)))
+    (when (and (or commit branch tag) add-result)
+      (push name update-projects))
+    (let* ((new-context (resolve-requirements context :update-projects update-projects))
            (diff (context-diff orig-context new-context)))
       (when (funcall validate diff)
         (mapc #'install-release (context-releases new-context))

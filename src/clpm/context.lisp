@@ -89,29 +89,28 @@
 
 (defun context-find-requirement (context type name)
   (find-if (lambda (req)
-             (and (typep req type)
+             (and (ecase type
+                    (:project (or (typep req 'project-requirement)
+                                  (typep req 'vcs-project-requirement)))
+                    (:system (typep req 'system-requirement)))
                   (equal name (requirement/name req))))
            (context-requirements context)))
 
-(defun context-edit-req! (old-req new-req)
-  (let ((changed-p nil))
-    (unless (eql (requirement/source old-req) (requirement/source new-req))
-      (setf changed-p t
-            (requirement/source old-req) (requirement/source new-req)))
-    (unless (subsetp (requirement/version-spec new-req) (requirement/version-spec old-req)
-                     :test #'equal)
-      (setf changed-p t
-            (requirement/version-spec old-req) (union (requirement/version-spec old-req)
-                                                      (requirement/version-spec new-req)
-                                                      :test #'equal)))
-
-    changed-p))
-
 (defun context-add-requirement! (context req)
-  (let ((existing-req (context-find-requirement context (type-of req) (requirement/name req))))
+  "If the requirement is new, add it. Otherwise modify an existing requirement
+in place with the same name. Return the new requirement if it was modified."
+  (let ((existing-req (context-find-requirement context (requirement-type-keyword req)
+                                                (requirement/name req))))
     (if existing-req
-        (context-edit-req! existing-req req)
-        (push req (context-requirements context)))))
+        (progn
+          (log:debug "Replacing requirement ~A with ~A" existing-req req)
+          (setf (context-requirements context)
+                (substitute req existing-req (context-requirements context)))
+          req)
+        (progn
+          (log:debug "Adding requirement ~A" req)
+          (push req (context-requirements context))
+          nil))))
 
 
 ;; * ASDF Integration
@@ -268,14 +267,22 @@
 (defgeneric process-form (context section form))
 
 (defmethod process-form (context (section (eql :requirements)) form)
-  (destructuring-bind (type &key name version source) form
-    (push (make-instance (ecase type
-                           (:system 'system-requirement)
-                           (:project 'project-requirement))
-                         :name name
-                         :source (get-source source)
-                         :version-spec version
-                         :why t)
+  (destructuring-bind (type &key name version source branch tag commit) form
+    (push (if (or branch tag commit)
+              (make-instance 'vcs-project-requirement
+                             :name name
+                             :source (get-source source)
+                             :commit commit
+                             :branch branch
+                             :tag tag
+                             :why t)
+              (make-instance (ecase type
+                               (:system 'system-requirement)
+                               (:project 'project-requirement))
+                             :name name
+                             :source (get-source source)
+                             :version-spec version
+                             :why t))
           (context-requirements context))))
 
 (defmethod process-form (context (section (eql :releases)) form)

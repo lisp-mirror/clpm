@@ -42,7 +42,7 @@
     :initarg :ref
     :reader vcs-release-ref)
    (commit
-    :initarg :ref
+    :initarg :commit
     :accessor vcs-release-commit)
    (installed-p
     :initform nil
@@ -55,6 +55,11 @@
    (system-releases-by-name
     :initform (make-hash-table :test 'equal)
     :accessor vcs-release-system-releases-by-name)))
+
+(defmethod initialize-instance :after ((release vcs-release) &rest initargs &key ref)
+  (declare (ignore initargs))
+  (when (and (listp ref) (eql (first ref) :commit))
+    (setf (vcs-release-commit release) (second ref))))
 
 (defun populate-release-system-files! (release)
   (ensure-release-installed! release)

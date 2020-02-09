@@ -177,6 +177,7 @@ source implementation should provide a ~sync-and-retry~ restart.")
   (:documentation "Return an instance of CLPM-SYSTEM. If the system is not
 located in the source and ERROR is T (default), signals an error of type
 SOURCE-MISSING-SYSTEM. Otherwise, returns NIL."))
+
 (defgeneric source-ensure-system (source system-name)
   (:documentation "Return an instance of CLPM-SYSTEM from the source,
 instantiating it if necessary. Used when groveling for systems."))

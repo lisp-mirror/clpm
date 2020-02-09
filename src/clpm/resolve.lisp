@@ -12,6 +12,7 @@
           #:clpm/context
           #:clpm/groveler
           #:clpm/log
+          #:clpm/requirement
           #:clpm/resolve/defs
           #:clpm/resolve/node
           #:clpm/resolve/requirement
@@ -60,28 +61,54 @@
 ;;      indirectly).
 ;;   5. A list of system files that need to be added to the groveler.
 
-(defun make-no-update-result-sorter (context)
+(defun make-result-sorter (context update-projects)
   (lambda (release-alist)
     (let ((existing-release (find-if (lambda (x)
                                        (member x (context-releases context)))
                                      release-alist
                                      :key #'car)))
-      (if existing-release
+      (if (and existing-release (member (project-name (release-project (car existing-release)))
+                                        update-projects :test #'equal))
           (list* existing-release (remove existing-release release-alist))
           release-alist))))
 
-(defun resolve-requirements (context &key update-p)
+(defun rewrite-vcs-req (req context)
+  "Given a VCS requirement and a context, "
+  (let ((existing-release (find (requirement/name req) (context-releases context)
+                                :test #'equal :key (compose #'project-name #'release-project))))
+    (if (and existing-release (listp (release-version existing-release)))
+        (progn
+          (make-instance 'vcs-project-requirement
+                         :name (requirement/name req)
+                         :source (requirement/source req)
+                         :why (requirement/why req)
+                         :no-deps-p (requirement/no-deps-p req)
+                         :commit (second (release-version existing-release))))
+        req)))
+
+(defun rewrite-vcs-reqs (reqs context update-projects)
+  (mapcar (lambda (req)
+            (if (and (not (eql update-projects t))
+                     (typep req 'vcs-requirement)
+                     (not (member (requirement/name req) update-projects :test #'equal)))
+                (rewrite-vcs-req req context)
+                req))
+          reqs))
+
+(defun resolve-requirements (context &key update-projects)
   "Given a context, return a new context that has the same requirements but the
 set of installed releases is updated to be the minimum set that satisfies all
 the requirements."
   (let* ((*sources* (context-sources context))
-         (*releases-sort-function* (unless update-p (make-no-update-result-sorter context)))
-         (reqs (context-requirements context))
+         (*releases-sort-function* (unless (eql update-projects t)
+                                     (make-result-sorter context update-projects)))
+         (reqs (rewrite-vcs-reqs (context-requirements context) context update-projects))
          (out-context (copy-context context))
          (root-node (make-instance 'node
                                    :unresolved-reqs reqs
                                    :groveler (make-groveler)))
          (final-node (perform-search root-node)))
+    (setf (context-requirements out-context) reqs)
     (setf (context-releases out-context)
           (mapcar #'car (node-activated-releases final-node)))
     (setf (context-reverse-dependencies out-context)
