@@ -100,6 +100,10 @@
 
           (dolist (sr system-releases)
             (let ((reqs (system-release-requirements sr)))
+              ;; Mark the reason for the new reqs
+              (mapc (lambda (r)
+                      (setf (requirement/why r) sr))
+                    reqs)
               ;; Add the deps we just computed.
               (node-add-unresolved-reqs! new-search-node reqs)))
           ;; activate the system releases
