@@ -12,6 +12,9 @@
           #:clpm/requirement
           #:clpm/source)
   (:export #:*releases-sort-function*
+           #:find-project-source
+           #:find-requirement-source
+           #:find-system-source
            #:requirement-state
            #:resolve-requirement))
 
@@ -21,6 +24,18 @@
 
 
 ;; * Find Requirement Source
+
+(defun find-project-source (project-name)
+  (loop
+    :for source :in *sources*
+    :when (source-project source project-name nil)
+      :do (return source)))
+
+(defun find-system-source (system-name)
+  (loop
+    :for source :in *sources*
+    :when (source-system source system-name nil)
+      :do (return source)))
 
 (defgeneric find-requirement-source (req &optional errorp)
   (:documentation "Given a requirement, return the source which provides the
@@ -40,31 +55,19 @@ to searching."
   "Find the first source in *SOURCES* that provides the project. ERRORP is
 handled by an :AROUND method."
   (declare (ignore errorp))
-  (loop
-    :with project-name := (requirement/name req)
-    :for source :in *sources*
-    :when (source-project source project-name nil)
-      :do (return source)))
+  (find-project-source (requirement/name req)))
 
 (defmethod find-requirement-source ((req system-requirement) &optional errorp)
   "Find the first source in *SOURCES* that provides the system. ERRORP is andled
 by an :AROUND method."
   (declare (ignore errorp))
-  (loop
-    :with system-name := (requirement/name req)
-    :for source :in *sources*
-    :when (source-system source system-name nil)
-      :do (return source)))
+  (find-system-source (requirement/name req)))
 
 (defmethod find-requirement-source ((req vcs-project-requirement) &optional errorp)
   "Find the first source in *SOURCES* that provides the project. ERRORP is
 handled by an :AROUND method."
   (declare (ignore errorp))
-  (loop
-    :with project-name := (requirement/name req)
-    :for source :in *sources*
-    :when (source-project source project-name nil)
-      :do (return source)))
+  (find-project-source (requirement/name req)))
 
 
 ;; * Requirement States
