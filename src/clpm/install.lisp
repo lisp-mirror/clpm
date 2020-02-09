@@ -8,7 +8,7 @@
           #:clpm/context
           #:clpm/install/defs
           #:clpm/log
-          #:clpm/resolve-2
+          #:clpm/resolve
           #:clpm/requirement
           #:clpm/source
           #:clpm/version-strings)

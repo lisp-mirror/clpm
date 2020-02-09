@@ -1,0 +1,191 @@
+;;;; Requirement resolution
+;;;;
+;;;; This software is part of CLPM. See README.org for more information. See
+;;;; LICENSE for license information.
+
+(uiop:define-package #:clpm/resolve/requirement
+    (:use #:cl
+          #:alexandria
+          #:clpm/log
+          #:clpm/resolve/defs
+          #:clpm/resolve/node
+          #:clpm/requirement
+          #:clpm/source)
+  (:export #:*releases-sort-function*
+           #:requirement-state
+           #:resolve-requirement))
+
+(in-package #:clpm/resolve/requirement)
+
+(setup-logger)
+
+
+;; * Find Requirement Source
+
+(defgeneric find-requirement-source (req &optional errorp)
+  (:documentation "Given a requirement, return the source which provides the
+requirement. ERRORP defaults to T, and if T, an error is raised if no suitable
+source can be found."))
+
+(defmethod find-requirement-source :around (req &optional (errorp t))
+  "If the requirement has a specific source set, use that. Otherwise, fallback
+to searching."
+  (let ((out (or (requirement/source req)
+                 (call-next-method))))
+    (or out
+        (when errorp
+          (error "Unable to find a source for requirement ~S" req)))))
+
+(defmethod find-requirement-source ((req project-requirement) &optional errorp)
+  "Find the first source in *SOURCES* that provides the project. ERRORP is
+handled by an :AROUND method."
+  (declare (ignore errorp))
+  (loop
+    :with project-name := (requirement/name req)
+    :for source :in *sources*
+    :when (source-project source project-name nil)
+      :do (return source)))
+
+(defmethod find-requirement-source ((req system-requirement) &optional errorp)
+  "Find the first source in *SOURCES* that provides the system. ERRORP is andled
+by an :AROUND method."
+  (declare (ignore errorp))
+  (loop
+    :with system-name := (requirement/name req)
+    :for source :in *sources*
+    :when (source-system source system-name nil)
+      :do (return source)))
+
+(defmethod find-requirement-source ((req vcs-project-requirement) &optional errorp)
+  "Find the first source in *SOURCES* that provides the project. ERRORP is
+handled by an :AROUND method."
+  (declare (ignore errorp))
+  (loop
+    :with project-name := (requirement/name req)
+    :for source :in *sources*
+    :when (source-project source project-name nil)
+      :do (return source)))
+
+
+;; * Requirement States
+
+(defgeneric requirement-state (req node)
+  (:documentation "Given a search node, determine if the requirement is
+satisfied. Returns one of :SAT, :UNSAT, or :UNKNOWN."))
+
+(defmethod requirement-state ((req project-requirement) node)
+  "A project requirement is satisfied if a release for the project is active in
+the search node and its version satisfies the requested version."
+  (let* ((project-name (requirement/name req))
+         (version-spec (requirement/version-spec req))
+         (release (node-find-project-if-active node project-name)))
+    (cond
+      ((not release)
+       :unknown)
+      ((release-satisfies-version-spec-p release version-spec)
+       (values :sat nil))
+      (t
+       :unsat))))
+
+(defmethod requirement-state ((req system-requirement) node)
+  "A system requirement is satisfied if there is an active system release that
+provides the system."
+  (let* ((system-name (requirement/name req))
+         (version-spec (requirement/version-spec req))
+         (system-release (node-find-system-if-active node system-name)))
+    (cond
+      ((provided-system-p system-name)
+       :sat)
+      ((not system-release)
+       :unknown)
+      ((system-release-satisfies-version-spec-p system-release version-spec)
+       (values :sat system-release))
+      (t
+       :unsat))))
+
+(defmethod requirement-state ((req vcs-requirement) node)
+  "Right now, all VCS requirements are :UNKNOWN. This doesn't affect the search
+at all, since we try to always resolve VCS requirements first."
+  :unknown)
+
+
+;; * Resolve Requirement
+
+(defvar *releases-sort-function* nil)
+
+(defgeneric resolve-requirement (req node)
+  (:documentation "Given a requirement and a search node, returns an alist
+representing ways to satisfy the requirement. The alist maps release objects to
+a plist. This plist can contain :system-releases or :system-files."))
+
+(defmethod resolve-requirement :around (req node)
+  (let ((result (call-next-method)))
+    (when *releases-sort-function*
+      (setf result (funcall *releases-sort-function* result)))
+    result))
+
+(defmethod resolve-requirement ((req project-requirement) node)
+  "A project requirement is resolved by finding releases of the project that
+satisfy the version spec (if any) and including every system release per
+satisfying release."
+  (when-let*
+      ((project-name (requirement/name req))
+       (source (find-requirement-source req nil))
+       (project (source-project source project-name))
+       (releases (project-releases project))
+       (applicable-releases (remove-if-not (rcurry #'release-satisfies-version-spec-p (requirement/version-spec req))
+                                           releases)))
+    (mapcar (lambda (x)
+              (list x :system-releases (release-system-releases x)))
+            (sort applicable-releases #'release->))))
+
+(defmethod resolve-requirement ((req system-requirement) node)
+  "A system requirement is resolved by any release that provides the system."
+  (when-let*
+      ((system-name (requirement/name req))
+       (source (find-requirement-source req))
+       (system (source-system source system-name))
+       (system-releases (system-system-releases system))
+       (applicable-system-releases (remove-if-not (rcurry #'system-release-satisfies-version-spec-p
+                                                          (requirement/version-spec req))
+                                                  system-releases)))
+    (mapcar (lambda (x)
+              (list (system-release-release x)
+                    :system-releases (list x)))
+            (sort applicable-system-releases #'system-release->))))
+
+(defmethod resolve-requirement ((req vcs-project-requirement) node)
+  (declare (ignore node))
+  (let* ((project-name (requirement/name req))
+         (systems (requirement/systems req))
+         (system-files (requirement/system-files req))
+         (branch (requirement/branch req))
+         (commit (requirement/commit req))
+         (tag (requirement/tag req))
+         (source (find-requirement-source req nil))
+         (vcs-project (source-project source project-name nil))
+         (vcs-release (project-vcs-release vcs-project
+                                           :tag tag
+                                           :commit commit
+                                           :branch branch))
+         (release-system-files (release-system-files vcs-release)))
+    (assert (null system-files))
+    ;; If the systems are defined, we only need to grovel the files in which
+    ;; those systems are defined. Otherwise we need to grovel all systems in
+    ;; all files.
+    (list (list vcs-release
+                :system-files
+                (if systems
+                    (loop
+                      :with out := nil
+                      :for system :in systems
+                      :for primary-system-name := (asdf:primary-system-name system)
+                      :for system-file := (find primary-system-name release-system-files
+                                                :test #'equalp
+                                                :key (lambda (x)
+                                                       (pathname-name (system-file-absolute-asd-pathname x))))
+                      :do
+                         (assert system-file)
+                         (push system (assoc-value out system-file))
+                      :finally (return out))
+                    (mapcar (rcurry #'cons t) release-system-files))))))
