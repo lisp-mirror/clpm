@@ -135,7 +135,7 @@
     (apply #'append (mapcar #'system-file-system-releases system-files))))
 
 (defmethod release-version ((release vcs-release))
-  (vcs-release-commit release))
+  (list :commit (vcs-release-commit release)))
 
 
 ;; * system files
@@ -210,7 +210,7 @@ include it."
     (declare (ignore system-name))
     (setf (system-release-system-version system-release) version)
     (setf (system-release-requirements system-release)
-          (mapcar (rcurry #'convert-asd-system-spec-to-req :why system-release)
+          (mapcar #'convert-asd-system-spec-to-req
                   (append depends-on defsystem-depends-on loaded-systems)))))
 
 (defun grovel-system-release! (system-release)
