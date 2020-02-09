@@ -86,10 +86,7 @@
   (let* ((defsystem-deps (asdf:system-defsystem-depends-on system))
          (source-file (asdf:system-source-file system))
          (*cache* (make-hash-table :test 'equalp))
-         (direct-depends-on (asdf:system-depends-on system))
-         (depends-on (if (typep system 'asdf:package-inferred-system)
-                         (chase-package-inferred-deps direct-depends-on system)
-                         direct-depends-on)))
+         (depends-on (asdf:system-depends-on system)))
 
     `(,(asdf:component-name system)
       :depends-on ,depends-on
@@ -116,12 +113,50 @@ if an unknown error occurred, the third is a missing system."
                     (uiop:print-condition-backtrace c :stream s))
               nil))))
 
+(defun lisp-file-wilden (pathname)
+  (uiop:merge-pathnames*
+   (uiop:merge-pathnames* (uiop:make-pathname* :name uiop:*wild*
+                                               :type "lisp")
+                          uiop:*wild-inferiors*)
+   pathname))
+
+(defun chase-primary-system-package-inferred-systems (system-name)
+  ;; Get the primary system, look at at its pathname and find any lisp files
+  ;; that could be sub systems.
+  (let* ((system (asdf:find-system system-name))
+         (root-pathname (asdf:component-pathname system))
+         (all-lisp-files (uiop:directory* (lisp-file-wilden root-pathname))))
+    (remove nil
+            (mapcar (lambda (pn)
+                      (let* ((enough (enough-namestring pn root-pathname))
+                             (system-name (uiop:strcat system-name "/"
+                                                       ;; Trim the .lisp from the end.
+                                                       (subseq enough 0 (- (length enough) 5)))))
+                        ;; Make sure we can load a package inferred system from
+                        ;; this file. (We've all done it: accidentally included
+                        ;; an empty file or one with a mangled defpackage...)
+                        (ignore-errors
+                         (asdf:find-system system-name t)
+                         system-name)))
+                    all-lisp-files))))
+
 (defun determine-systems-from-file (asd-pathname)
-  (remove-if-not (lambda (system-name)
-                   (let* ((system (asdf:find-system system-name))
-                          (system-source-file (asdf:system-source-file system)))
-                     (pathname-equal asd-pathname system-source-file)))
-                 (asdf:registered-systems)))
+  (let* ((systems (remove-if-not (lambda (system-name)
+                                   (let* ((system (asdf:find-system system-name))
+                                          (system-source-file (asdf:system-source-file system)))
+                                     (pathname-equal asd-pathname system-source-file)))
+                                 (asdf:registered-systems)))
+         ;; If any of the systems are primary systems that are also package
+         ;; inferred systems, we need to chase down all the secondary systems
+         ;; coming from them...
+         (primary-package-inferred-system-names
+           (remove-if-not (lambda (system-name)
+                            (and (equal system-name (asdf:primary-system-name system-name))
+                                 (typep (asdf:find-system system-name) 'asdf:package-inferred-system)))
+                          systems))
+         (secondary-package-inferred-system-names
+           (mapcan #'chase-primary-system-package-inferred-systems primary-package-inferred-system-names)))
+    (remove-duplicates (append systems secondary-package-inferred-system-names) :test #'equal)))
 
 (defun start-rel ()
   "Some lisp's like to always print a prompt at their REPL. To avoid needing to

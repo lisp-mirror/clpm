@@ -12,6 +12,7 @@
           #:anaphora
           #:clpm/archives
           #:clpm/groveler
+          #:clpm/install/defs
           #:clpm/log
           #:clpm/repos
           #:clpm/requirement
@@ -128,6 +129,11 @@
             :release release
             :system-name system-name))))
 
+(defmethod release-system-releases ((release vcs-release))
+  "Get all the system files and append together their systems."
+  (let* ((system-files (release-system-files release)))
+    (apply #'append (mapcar #'system-file-system-releases system-files))))
+
 (defmethod release-version ((release vcs-release))
   (vcs-release-commit release))
 
@@ -175,7 +181,7 @@
 
 ;; * system-releases
 
-(defclass vcs-system-release ()
+(defclass vcs-system-release (clpm-system-release)
   ((source
     :initarg :source
     :reader system-release-source)
@@ -204,7 +210,7 @@ include it."
     (declare (ignore system-name))
     (setf (system-release-system-version system-release) version)
     (setf (system-release-requirements system-release)
-          (mapcar #'convert-asd-system-spec-to-req
+          (mapcar (rcurry #'convert-asd-system-spec-to-req :why system-release)
                   (append depends-on defsystem-depends-on loaded-systems)))))
 
 (defun grovel-system-release! (system-release)
@@ -231,6 +237,8 @@ include it."
 
 ;; * Installing
 
+;; TODO: Split into a method that resolves to a commit and one that ensure the
+;; commit is installed.
 (defmethod ensure-release-installed! ((release vcs-release))
   (unless (vcs-release-installed-p release)
     (let* ((project (release-project release))
@@ -252,6 +260,9 @@ include it."
             (with-open-stream (stream stream)
               (unarchive archive-type stream install-root))))))
     (setf (vcs-release-installed-p release) t)))
+
+(defmethod install-release ((release vcs-release))
+  (ensure-release-installed! release))
 
 ;; (defun ensure-vcs-release-installed! (release)
 ;;   (ensure-release-installed! release))

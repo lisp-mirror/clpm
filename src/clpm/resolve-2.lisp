@@ -209,7 +209,7 @@ incompatible, a new one is created."
             ((groveler-dependency-missing
                (lambda (c)
                  (let* ((missing-system-spec (groveler-dependency-missing/system c))
-                        (missing-req (convert-asd-system-spec-to-req missing-system-spec)))
+                        (missing-req (convert-asd-system-spec-to-req missing-system-spec :why :grovel)))
                    (multiple-value-bind (status satisfying-system-release)
                        (requirement-state missing-req search-state)
 
@@ -273,7 +273,7 @@ incompatible, a new one is created."
             ;; TODO: Put actual reason here. Should probably be captured from
             ;; whatever added this to the queue.
             (search-state-add-resolution! new-search-state (system-file-release sf)
-                                          system-releases nil nil)
+                                          system-releases nil t)
             (lambda ()
               (values new-search-node nil))))))))
 

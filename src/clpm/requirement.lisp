@@ -168,22 +168,24 @@ filesystem must be included. NAME is the pathname to the asd file."))
       ;; ID
       (pprint-newline :linear stream))))
 
-(defgeneric convert-asd-system-spec-to-req (dep)
+(defgeneric convert-asd-system-spec-to-req (dep &key why)
   (:documentation
    "Given an ASD dependency specification, return the requirement object it
 represents."))
 
-(defmethod convert-asd-system-spec-to-req ((dep string))
+(defmethod convert-asd-system-spec-to-req ((dep string) &key why)
   "A string simply maps to a system requirement."
   (make-instance 'system-requirement
-                 :name (string-downcase dep)))
+                 :name (string-downcase dep)
+                 :why why))
 
-(defmethod convert-asd-system-spec-to-req ((dep list))
+(defmethod convert-asd-system-spec-to-req ((dep list) &key why)
   "Handles version and feature specifications."
   (ecase (first dep)
     (:version
      (make-instance 'system-requirement
                     :name (string-downcase (second dep))
-                    :version-spec `(>= . ,(third dep))))
+                    :version-spec `(>= . ,(third dep))
+                    :why why))
     (:feature
-     (convert-asd-system-spec-to-req (third dep)))))
+     (convert-asd-system-spec-to-req (third dep) :why why))))

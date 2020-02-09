@@ -455,9 +455,18 @@
         (pprint-logical-block (stream reverse-deps)
           (pprint-exit-if-list-exhausted)
           (loop
-            (serialize-reverse-dep (pprint-pop) stream)
-            (pprint-exit-if-list-exhausted)
-            (pprint-newline :mandatory stream)))))))
+            (let* ((req (pprint-pop)))
+              ;; This is a requirement where we didn't know the real reason for
+              ;; its existence at the time (because we were trying to load an
+              ;; ASD file into the groveler). We can ignore it because we'll
+              ;; have the true reason elsewhere in the list.
+              (unless (or (eql t req)
+                          (eql (requirement/why req) :grovel))
+                (serialize-reverse-dep req stream))
+              (pprint-exit-if-list-exhausted)
+              (unless (or (eql t req)
+                          (eql (requirement/why req) :grovel))
+                (pprint-newline :mandatory stream)))))))))
 
 ;; ** Requirements
 
@@ -470,6 +479,59 @@
 
 (defmethod requirement-type-keyword ((req system-requirement))
   :system)
+
+(defmethod requirement-type-keyword ((req vcs-project-requirement))
+  :project)
+
+(defmethod serialize-context-requirement ((req vcs-project-requirement) stream)
+  (pprint-logical-block (stream nil :prefix "(" :suffix ")")
+    (prin1 (requirement-type-keyword req) stream)
+    ;; Name
+    (write-char #\Space stream)
+    (pprint-newline :fill stream)
+    (prin1 :name stream)
+    (write-char #\Space stream)
+    (pprint-newline :miser stream)
+    (prin1 (requirement/name req) stream)
+    ;; Branch
+    (when (requirement/branch req)
+      (write-char #\Space stream)
+      (pprint-newline :fill stream)
+      (prin1 :branch stream)
+      (write-char #\Space stream)
+      (pprint-newline :miser stream)
+      (prin1 (requirement/branch req) stream))
+    ;; Commit
+    (when (requirement/commit req)
+      (write-char #\Space stream)
+      (pprint-newline :fill stream)
+      (prin1 :commit stream)
+      (write-char #\Space stream)
+      (pprint-newline :miser stream)
+      (prin1 (requirement/commit req) stream))
+    ;; Tag
+    (when (requirement/tag req)
+      (write-char #\Space stream)
+      (pprint-newline :fill stream)
+      (prin1 :tag stream)
+      (write-char #\Space stream)
+      (pprint-newline :miser stream)
+      (prin1 (requirement/tag req) stream))
+    ;; Source
+    (when (requirement/source req)
+      (write-char #\Space stream)
+      (pprint-newline :fill stream)
+      (prin1 :source stream)
+      (write-char #\Space stream)
+      (pprint-newline :miser stream)
+      (prin1 (source-name (requirement/source req)) stream))
+    ;; no deps
+    (when (requirement/no-deps-p req)
+      (write-char #\Space stream)
+      (pprint-newline :fill stream)
+      (prin1 :no-deps-p stream)
+      (write-char #\Space stream)
+      (prin1 t stream))))
 
 (defmethod serialize-context-requirement ((req versioned-requirement) stream)
   (pprint-logical-block (stream nil :prefix "(" :suffix ")")
