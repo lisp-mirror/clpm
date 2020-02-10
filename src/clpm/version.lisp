@@ -15,11 +15,11 @@
 
 ;; NOTE: If this form changes position in this file you *must* update clpm.asd as
 ;; well.
-(defparameter *version-for-asdf* "0.1.0"
+(defparameter *version-for-asdf* "0.2.0"
   "ASDF is overly picky about its version numbers. This should be the primary
   version number (no prerelease info) as ~*base-version*~.")
 
-(defparameter *base-version* "0.1.0"
+(defparameter *base-version* "0.2.0-alpha.1"
   "The base version number of CLPM.")
 
 (defparameter *full-version* nil
