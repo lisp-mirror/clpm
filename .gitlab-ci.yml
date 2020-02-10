@@ -3,34 +3,39 @@ image: debian
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
 
-build-glibc:
-  image:
-    name: daewok/sbcl:1.5.2-debian-build
-    entrypoint: [""]
+quiet:
   stage: build
   script:
-    - apt-get update
-    - apt-get install -y libssl1.0-dev libsqlite3-dev
-    - echo "(lambda (list) (pushnew :sb-core-compression list) (pushnew :sb-dynamic-core list) (pushnew :sb-linkable-runtime list) list)" > /usr/local/src/sbcl-${SBCL_VERSION}/customize-target-features.lisp
-    - rebuild-sbcl
-    - sbcl --script scripts/build-static.lisp
-    - sbcl --script scripts/build-dynamic.lisp
-    - rm -rf build/cl-cache
-    - mv build build-glibc
+    - "true"
 
-build-musl:
-  image:
-    name: daewok/sbcl:1.5.2-alpine-build
-    entrypoint: [""]
-  stage: build
-  script:
-    - apk add openssl-dev sqlite-static sqlite-dev
-    - echo "(lambda (list) (pushnew :sb-core-compression list) (pushnew :sb-dynamic-core list) (pushnew :sb-linkable-runtime list) list)" > /usr/local/src/sbcl-${SBCL_VERSION}/customize-target-features.lisp
-    - rebuild-sbcl
-    - sbcl --script scripts/build-static.lisp
-    - sbcl --script scripts/build-dynamic.lisp
-    - rm -rf build/cl-cache
-    - mv build build-musl
+# build-glibc:
+#   image:
+#     name: daewok/sbcl:1.5.2-debian-build
+#     entrypoint: [""]
+#   stage: build
+#   script:
+#     - apt-get update
+#     - apt-get install -y libssl1.0-dev libsqlite3-dev
+#     - echo "(lambda (list) (pushnew :sb-core-compression list) (pushnew :sb-dynamic-core list) (pushnew :sb-linkable-runtime list) list)" > /usr/local/src/sbcl-${SBCL_VERSION}/customize-target-features.lisp
+#     - rebuild-sbcl
+#     - sbcl --script scripts/build-static.lisp
+#     - sbcl --script scripts/build-dynamic.lisp
+#     - rm -rf build/cl-cache
+#     - mv build build-glibc
+
+# build-musl:
+#   image:
+#     name: daewok/sbcl:1.5.2-alpine-build
+#     entrypoint: [""]
+#   stage: build
+#   script:
+#     - apk add openssl-dev sqlite-static sqlite-dev
+#     - echo "(lambda (list) (pushnew :sb-core-compression list) (pushnew :sb-dynamic-core list) (pushnew :sb-linkable-runtime list) list)" > /usr/local/src/sbcl-${SBCL_VERSION}/customize-target-features.lisp
+#     - rebuild-sbcl
+#     - sbcl --script scripts/build-static.lisp
+#     - sbcl --script scripts/build-dynamic.lisp
+#     - rm -rf build/cl-cache
+#     - mv build build-musl
 
 # release-glibc:
 #   stage: deploy
