@@ -147,15 +147,17 @@ satisfying release."
   (when-let*
       ((system-name (requirement/name req))
        (source (find-requirement-source req))
-       (system (source-system source system-name))
-       (system-releases (system-system-releases system))
-       (applicable-system-releases (remove-if-not (rcurry #'system-release-satisfies-version-spec-p
-                                                          (requirement/version-spec req))
-                                                  system-releases)))
-    (mapcar (lambda (x)
-              (list (system-release-release x)
-                    :system-releases (list x)))
-            (sort applicable-system-releases #'system-release->))))
+       (system (source-system source system-name)))
+    (let* ((system-releases (system-system-releases system))
+           (applicable-system-releases (remove-if-not (rcurry #'system-release-satisfies-version-spec-p
+                                                              (requirement/version-spec req))
+                                                      system-releases)))
+      (unless system-releases
+        (error "No releases for ~S" system-name))
+      (mapcar (lambda (x)
+                (list (system-release-release x)
+                      :system-releases (list x)))
+              (sort applicable-system-releases #'system-release->)))))
 
 (defmethod resolve-requirement ((req vcs-project-requirement) node)
   (declare (ignore node))
