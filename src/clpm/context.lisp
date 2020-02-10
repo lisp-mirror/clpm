@@ -121,8 +121,8 @@ in place with the same name. Return the new requirement if it was modified."
 ;; * ASDF Integration
 
 (defun context-to-asdf-source-registry.d-forms (context)
-  (let* ((system-releases (flatten (mapcar #'release-system-releases (context-releases context))))
-         (system-files (mapcar #'system-release-system-file system-releases))
+  (let* ((releases (context-releases context))
+         (system-files (flatten (mapcar #'release-system-files releases)))
          (system-file-pathnames (mapcar #'system-file-absolute-asd-pathname system-files))
          (system-file-directories (remove-duplicates (mapcar #'uiop:pathname-directory-pathname system-file-pathnames)
                                                      :test #'uiop:pathname-equal)))

@@ -7,10 +7,9 @@
     (:use #:cl
           #:clpm/cli/bundle/common
           #:clpm/cli/common-args
-          #:clpm/cli/config/common
           #:clpm/cli/subcommands
-          #:clpm/client
           #:clpm/clpmfile
+          #:clpm/context
           #:clpm/execvpe
           #:clpm/log
           #:clpm/source
@@ -43,30 +42,18 @@
                                              (uiop:getcwd)))
          (lockfile-pathname (merge-pathnames (make-pathname :type "lock")
                                              clpmfile-pathname))
-         (lockfile (read-lockfile lockfile-pathname))
-         (system-files (lockfile/system-files lockfile))
-         (asdf-pathnames (mapcar #'system-file-absolute-asd-pathname system-files))
-         (missing-pathnames (remove-if #'probe-file asdf-pathnames))
-         (client-location (when (gethash :bundle-exec-with-client options)
-                            (ensure-client-written)
-                            (clpm-client-lib-location)))
-         (extra-source-registry (uiop:getenv "CLPM_BUNDLE_EXTRA_SOURCE_REGISTRY"))
-         (cl-source-registry-value (format nil
-                                           #-os-windows "~@[~A:~]~{~A~^:~}~@[:~A~]"
-                                           #+os-windows "~@[~A;~]~{~A~^;~}~@[;~A~]"
-                                           client-location
-                                           (mapcar #'uiop:pathname-directory-pathname asdf-pathnames)
-                                           extra-source-registry))
+         (lockfile (load-anonymous-context-from-pathname lockfile-pathname))
+         (cl-source-registry-form (context-to-asdf-source-registry-form lockfile))
+         (cl-source-registry-value (format nil "~S" cl-source-registry-form))
          (command args))
-    (unless missing-pathnames
-      (log:debug "asdf pathnames available in new process:~%~A" asdf-pathnames)
-      (execvpe (first command) (rest command)
-               `(("CL_SOURCE_REGISTRY" . ,cl-source-registry-value)
-                 ("CLPM_BUNDLE_BIN_PATH" . ,(or *live-script-location*
-                                                (uiop:argv0)))
-                 ("CLPM_BUNDLE_CLPMFILE" . ,(uiop:native-namestring clpmfile-pathname))
-                 ("CLPM_BUNDLE_CLPMFILE_LOCK" . ,(uiop:native-namestring lockfile-pathname)))
-               t))
+    (log:debug "Computed CL_SOURCE_REGISTRY:~%~S" cl-source-registry-form)
+    (execvpe (first command) (rest command)
+             `(("CL_SOURCE_REGISTRY" . ,cl-source-registry-value)
+               ("CLPM_BUNDLE_BIN_PATH" . ,(or *live-script-location*
+                                              (uiop:argv0)))
+               ("CLPM_BUNDLE_CLPMFILE" . ,(uiop:native-namestring clpmfile-pathname))
+               ("CLPM_BUNDLE_CLPMFILE_LOCK" . ,(uiop:native-namestring lockfile-pathname)))
+             t)
     ;; We got here, there is some .asd file not present. Tell the user!
-    (format *error-output* "The following system files are missing! Please run `clpm bundle install` and try again!~%~A" missing-pathnames)
+    ;; (format *error-output* "The following system files are missing! Please run `clpm bundle install` and try again!~%~A" missing-pathnames)
     nil))

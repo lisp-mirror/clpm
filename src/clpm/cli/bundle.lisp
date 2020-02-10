@@ -7,7 +7,7 @@
     (:use #:cl
           #:clpm/cli/bundle/common
           ;;#:clpm/cli/bundle/config
-          ;;#:clpm/cli/bundle/exec
+          #:clpm/cli/bundle/exec
           #:clpm/cli/bundle/install
           ;;#:clpm/cli/bundle/pathnames
           ;;#:clpm/cli/bundle/update
