@@ -157,13 +157,37 @@ dependency."))
          (in-stream (sub-lisp-input sub-lisp))
          (out-stream (sub-lisp-output sub-lisp))
          (asd-pathname (uiop:ensure-absolute-pathname asd-pathname)))
-    (log:debug "Querying groveler for systems in file ~S" asd-pathname)
-    (uiop:with-safe-io-syntax ()
-      (format in-stream "(print (clpm-deps:determine-systems-from-file ~S))~%"
-              asd-pathname)
-      (format in-stream "(finish-output)~%")
-      (finish-output in-stream)
-      (read out-stream))))
+    (block nil
+      (tagbody
+       start
+         (log:debug "Querying groveler for systems in file ~S" asd-pathname)
+         (uiop:with-safe-io-syntax ()
+           (format in-stream "(print (multiple-value-list (clpm-deps:determine-systems-from-file ~S)))~%"
+                   asd-pathname)
+           (format in-stream "(finish-output)~%")
+           (finish-output in-stream)
+           (let ((raw-form (read out-stream)))
+             (log:debug "Raw form: ~S" raw-form)
+             (multiple-value-bind (result unknown-error-backtrace missing-system)
+                 (values-list raw-form)
+               (when unknown-error-backtrace
+                 ;; Uh-oh, something happened that we don't know how to recover from
+                 ;; here. Signal an error!
+                 (error 'groveler-unknown-error
+                        :backtrace unknown-error-backtrace))
+               (when missing-system
+                 ;; We can provide a way to recover from this!
+                 (restart-case
+                     (error 'groveler-dependency-missing :system missing-system)
+                   (add-asd-and-retry (asd &optional callback)
+                     :report
+                     "Add an asd file to load and try again."
+                     :interactive read-asd-path
+                     (groveler-load-asd! groveler asd)
+                     (when callback
+                       (funcall callback))
+                     (go start))))
+               (return result))))))))
 
 (defun active-groveler-load-asd! (asd-pathname)
   (unless *active-groveler*

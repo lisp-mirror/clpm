@@ -95,23 +95,30 @@
       :source-file ,source-file
       :loaded-systems ,(gethash source-file *directly-loaded-systems*))))
 
-(defun safe-load-asd (pathname)
-  "Attempt to load the asd file located at PATHNAME. Returns three values, the
-first is T iff the file was loaded successfully. The second value is a backtrace
-if an unknown error occurred, the third is a missing system."
+(defun call-with-error-handling (thunk)
   (handler-case
-      (let ((*standard-output* (make-broadcast-stream))
-            (*error-output* (make-broadcast-stream))
-            (*terminal-io* (make-broadcast-stream))
-            (*file-being-loaded* pathname))
-        (asdf:load-asd pathname)
-        (values t nil nil))
+      (values (funcall thunk) nil nil)
     (asdf:missing-component (c)
       (values nil nil (string-downcase (string (asdf/find-component:missing-requires c)))))
     (error (c)
       (values nil (with-output-to-string (s)
                     (uiop:print-condition-backtrace c :stream s))
               nil))))
+
+(defmacro with-error-handling (nil &body body)
+  `(call-with-error-handling (lambda () ,@body)))
+
+(defun safe-load-asd (pathname)
+  "Attempt to load the asd file located at PATHNAME. Returns three values, the
+first is T iff the file was loaded successfully. The second value is a backtrace
+if an unknown error occurred, the third is a missing system."
+  (with-error-handling ()
+    (let ((*standard-output* (make-broadcast-stream))
+          (*error-output* (make-broadcast-stream))
+          (*terminal-io* (make-broadcast-stream))
+          (*file-being-loaded* pathname))
+      (asdf:load-asd pathname)
+      t)))
 
 (defun lisp-file-wilden (pathname)
   (uiop:merge-pathnames*
@@ -141,22 +148,23 @@ if an unknown error occurred, the third is a missing system."
                     all-lisp-files))))
 
 (defun determine-systems-from-file (asd-pathname)
-  (let* ((systems (remove-if-not (lambda (system-name)
-                                   (let* ((system (asdf:find-system system-name))
-                                          (system-source-file (asdf:system-source-file system)))
-                                     (pathname-equal asd-pathname system-source-file)))
-                                 (asdf:registered-systems)))
-         ;; If any of the systems are primary systems that are also package
-         ;; inferred systems, we need to chase down all the secondary systems
-         ;; coming from them...
-         (primary-package-inferred-system-names
-           (remove-if-not (lambda (system-name)
-                            (and (equal system-name (asdf:primary-system-name system-name))
-                                 (typep (asdf:find-system system-name) 'asdf:package-inferred-system)))
-                          systems))
-         (secondary-package-inferred-system-names
-           (mapcan #'chase-primary-system-package-inferred-systems primary-package-inferred-system-names)))
-    (remove-duplicates (append systems secondary-package-inferred-system-names) :test #'equal)))
+  (with-error-handling ()
+    (let* ((systems (remove-if-not (lambda (system-name)
+                                     (let* ((system (asdf:find-system system-name))
+                                            (system-source-file (asdf:system-source-file system)))
+                                       (pathname-equal asd-pathname system-source-file)))
+                                   (asdf:registered-systems)))
+           ;; If any of the systems are primary systems that are also package
+           ;; inferred systems, we need to chase down all the secondary systems
+           ;; coming from them...
+           (primary-package-inferred-system-names
+             (remove-if-not (lambda (system-name)
+                              (and (equal system-name (asdf:primary-system-name system-name))
+                                   (typep (asdf:find-system system-name) 'asdf:package-inferred-system)))
+                            systems))
+           (secondary-package-inferred-system-names
+             (mapcan #'chase-primary-system-package-inferred-systems primary-package-inferred-system-names)))
+      (remove-duplicates (append systems secondary-package-inferred-system-names) :test #'equal))))
 
 (defun start-rel ()
   "Some lisp's like to always print a prompt at their REPL. To avoid needing to
