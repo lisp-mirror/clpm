@@ -42,6 +42,9 @@
     :initform nil
     :initarg :name
     :accessor context-name)
+   (pathname
+    :initarg :pathname
+    :accessor context-pathname)
    (requirements
     :initform nil
     :initarg :requirements
@@ -246,7 +249,7 @@ in place with the same name. Return the new requirement if it was modified."
 
 (defun load-anonymous-context-from-pathname (pn)
   (with-open-file (s pn)
-    (load-context-from-stream s)))
+    (load-context-from-stream s pn)))
 
 (defun load-global-context (name &optional (error t))
   (let ((pn (global-context-pathname name)))
@@ -276,22 +279,29 @@ in place with the same name. Return the new requirement if it was modified."
 (defgeneric process-form (context section form))
 
 (defmethod process-form (context (section (eql :requirements)) form)
-  (destructuring-bind (type &key name version source branch tag commit) form
-    (push (if (or branch tag commit)
-              (make-instance 'vcs-project-requirement
-                             :name name
-                             :source (get-source source)
-                             :commit commit
-                             :branch branch
-                             :tag tag
-                             :why t)
-              (make-instance (ecase type
-                               (:system 'system-requirement)
-                               (:project 'project-requirement))
-                             :name name
-                             :source (get-source source)
-                             :version-spec version
-                             :why t))
+  (destructuring-bind (type &key name version source branch tag commit pathname) form
+    (push (cond
+            ((eql type :asd-system)
+             (make-instance 'fs-system-requirement
+                            :name name
+                            :pathname pathname
+                            :why t))
+            ((or branch tag commit)
+             (make-instance 'vcs-project-requirement
+                            :name name
+                            :source (get-source source)
+                            :commit commit
+                            :branch branch
+                            :tag tag
+                            :why t))
+            (t
+             (make-instance (ecase type
+                              (:system 'system-requirement)
+                              (:project 'project-requirement))
+                            :name name
+                            :source (get-source source)
+                            :version-spec version
+                            :why t)))
           (context-requirements context))))
 
 (defmethod process-form (context (section (eql :releases)) form)
@@ -304,16 +314,24 @@ in place with the same name. Return the new requirement if it was modified."
 (defmethod process-form (context (section (eql :reverse-dependencies)) form))
 
 (defmethod process-form (context (section (eql :sources)) form)
-  (push (load-source-from-form form)
-        (context-sources context)))
+  (let ((source (load-source-from-form form)))
+    (when (typep source 'fs-source)
+      (push (project-release (source-project source "all") "newest")
+            (context-releases context)))
+    (push source
+          (context-sources context))))
 
-(defun load-context-from-stream (stream)
+(defun load-context-from-stream (stream &optional pathname)
   (uiop:with-safe-io-syntax ()
     ;; The first form in the stream must be an API declaration.
     (let ((f (read stream nil)))
       (unless (equal f '(:api-version "0.3"))
         (error "Unknown context API version")))
-    (let ((out (make-instance 'context :sources (sources))))
+    (let ((out (apply #'make-instance
+                      'context
+                      :sources (sources)
+                      (when pathname
+                        (list :pathname pathname)))))
       ;; The next forms are either tags or lists. The tags denote sections.
       (loop
         :with section := nil
@@ -324,6 +342,7 @@ in place with the same name. Return the new requirement if it was modified."
               (setf section form)
         :else
           :do (process-form out section form))
+      (nreversef (context-sources out))
       out)))
 
 
@@ -404,14 +423,16 @@ in place with the same name. Return the new requirement if it was modified."
           (pprint-exit-if-list-exhausted)
           (loop
             (let ((release (pprint-pop)))
-              (serialize-context-release release
-                                         (remove-if-not (lambda (x)
-                                                          (eql x release))
-                                                        (context-system-releases context)
-                                                        :key #'system-release-release)
-                                         stream)
+              (unless (typep release 'fs-release)
+                (serialize-context-release release
+                                           (remove-if-not (lambda (x)
+                                                            (eql x release))
+                                                          (context-system-releases context)
+                                                          :key #'system-release-release)
+                                           stream))
               (pprint-exit-if-list-exhausted)
-              (pprint-newline :mandatory stream))))
+              (unless (typep release 'fs-release)
+                (pprint-newline :mandatory stream)))))
         (pprint-newline :mandatory stream)
         (pprint-newline :mandatory stream)
 
@@ -520,7 +541,7 @@ in place with the same name. Return the new requirement if it was modified."
   :system)
 
 (defmethod requirement-type-keyword ((req fs-system-requirement))
-  :asd)
+  :asd-system)
 
 (defmethod requirement-type-keyword ((req vcs-project-requirement))
   :project)
@@ -612,6 +633,12 @@ in place with the same name. Return the new requirement if it was modified."
 (defmethod serialize-context-requirement ((req fs-system-requirement) stream)
   (pprint-logical-block (stream nil :prefix "(" :suffix ")")
     (prin1 (requirement-type-keyword req) stream)
+    ;; pathname
+    (write-char #\Space stream)
+    (pprint-newline :fill stream)
+    (prin1 :pathname stream)
+    (write-char #\Space stream)
+    (prin1 (requirement/pathname req) stream)
     ;; Name
     (write-char #\Space stream)
     (pprint-newline :fill stream)

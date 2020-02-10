@@ -7,11 +7,14 @@
 (uiop:define-package #:clpm/sources/fs
     (:use #:cl
           #:alexandria
+          #:anaphora
           #:clpm/groveler
+          #:clpm/install/defs
           #:clpm/requirement
           #:clpm/sources/defs
           #:clpm/sources/semantic-versioned-project)
   (:export #:fs-source
+           #:fs-source-from-form
            #:fs-source-register-asd
            #:fs-source-system-release-class
            #:fs-project
@@ -55,7 +58,6 @@ objects.")
                                        &key root-dir
                                        &allow-other-keys)
   "Construct the singleton project and release."
-  (assert (uiop:absolute-pathname-p root-dir))
   (assert (uiop:directory-pathname-p root-dir))
   (let* ((project (make-instance 'fs-project
                                  :name "all"
@@ -109,7 +111,7 @@ file with the same primary name and construct a new system for it."
   "Given a pathname to an asd file, register it with the source. asd-pathname
 can be relative (to the source's root dir) or absolute."
   (unless (uiop:relative-pathname-p asd-pathname)
-    (setf asd-pathname (enough-namestring asd-pathname (fs-source/root-dir fs-source))))
+    (setf asd-pathname (enough-namestring asd-pathname (merge-pathnames (fs-source/root-dir fs-source)))))
   (let* ((primary-name-ht (fs-source-system-files-by-primary-name fs-source))
          (namestring-ht (fs-source-system-files-by-namestring fs-source))
          (namestring (namestring asd-pathname))
@@ -119,6 +121,31 @@ can be relative (to the source's root dir) or absolute."
                                      :enough-namestring namestring)))
     (setf (gethash (pathname-name namestring) primary-name-ht) system-file
           (gethash namestring namestring-ht) system-file)))
+
+(defmethod source-to-form ((source fs-source))
+  (let* ((project (source-project source "all"))
+         (release (project-release project "newest"))
+         (system-files (release-system-files release)))
+    (append (list :file-system)
+            (unless (uiop:pathname-equal (fs-source/root-dir source)
+                                         (uiop:make-pathname* :directory '(:relative)))
+              (list :root-pathname (namestring (fs-source/root-dir source))))
+            (list
+             :system-files (mapcar #'system-file-asd-enough-namestring system-files)))))
+
+(defun fs-source-from-form (form)
+  (destructuring-bind (type &key root-pathname system-files) form
+    (assert (eql type :file-system))
+    (aprog1 (make-instance 'fs-source
+                           :root-dir (if root-pathname
+                                         (pathname root-pathname)
+                                         (uiop:pathname-directory-pathname
+                                          (uiop:make-pathname* :directory '(:relative)))))
+      (dolist (system-file system-files)
+        (fs-source-register-asd it system-file)))))
+
+(defmethod sync-source ((source fs-source))
+  nil)
 
 
 ;; * Project
@@ -150,7 +177,15 @@ nil."
 ;; * Release
 
 (defclass fs-release (clpm-release)
-  ()
+  ((source
+    :initarg :source
+    :reader release-source)
+   (project
+    :initarg :project
+    :reader release-project)
+   (version
+    :initarg :version
+    :reader release-version))
   (:documentation "A release on the filesystem. Each fs-source has one instance
 of this created upon instantiation."))
 
@@ -178,6 +213,9 @@ release."
   (let* ((system-files (release-system-files release)))
     (apply #'append (mapcar #'system-file-system-releases system-files))))
 
+(defmethod install-release ((release fs-release))
+  t)
+
 (defmethod release-installed-p ((release fs-release))
   (every (lambda (x)
            (probe-file (system-file-absolute-asd-pathname x)))
@@ -199,7 +237,7 @@ release."
 (defmethod system-file-absolute-asd-pathname ((system-file fs-system-file))
   "Merge the enough pathname with the source's root dir."
   (merge-pathnames (fs-system-file/enough-namestring system-file)
-                   (fs-source/root-dir (system-file-source system-file))))
+                   (merge-pathnames (fs-source/root-dir (system-file-source system-file)))))
 
 (defmethod system-file-system-releases ((system-file fs-system-file))
   "Grovel over the system file if necessary to determine every system it
@@ -247,7 +285,16 @@ contains."
 ;; * System release
 
 (defclass fs-system-release (semantic-versioned-system-release clpm-system-release)
-  ((version
+  ((source
+    :initarg :source
+    :accessor system-release-source)
+   (system
+    :initarg :system
+    :accessor system-release-system)
+   (release
+    :initarg :release
+    :accessor system-release-release)
+   (version
     :accessor system-release-system-version
     :documentation "The version of this system. Groveled on request.")
    (reqs

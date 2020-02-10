@@ -192,22 +192,34 @@ dependency."))
 (defun active-groveler-load-asd! (asd-pathname)
   (unless *active-groveler*
     (error "No active groveler defined!"))
-  (groveler-load-asd! *active-groveler* asd-pathname))
+  (groveler-load-asd! (if (functionp *active-groveler*)
+                          (funcall *active-groveler*)
+                          *active-groveler*)
+                      asd-pathname))
 
 (defun active-groveler-ensure-asd-loaded! (asd-pathname)
   (unless *active-groveler*
     (error "No active groveler defined!"))
-  (groveler-ensure-asd-loaded! *active-groveler* asd-pathname))
+  (groveler-ensure-asd-loaded! (if (functionp *active-groveler*)
+                                   (funcall *active-groveler*)
+                                   *active-groveler*)
+                               asd-pathname))
 
 (defun active-groveler-system-deps (system-name)
   (unless *active-groveler*
     (error "No active groveler defined!"))
-  (groveler-system-deps *active-groveler* system-name))
+  (groveler-system-deps (if (functionp *active-groveler*)
+                            (funcall *active-groveler*)
+                            *active-groveler*)
+                        system-name))
 
 (defun active-groveler-systems-in-file (asd-pathname)
   (unless *active-groveler*
     (error "No active groveler defined!"))
-  (groveler-systems-in-file *active-groveler* asd-pathname))
+  (groveler-systems-in-file (if (functionp *active-groveler*)
+                                (funcall *active-groveler*)
+                                *active-groveler*)
+                            asd-pathname))
 
 (defun read-asd-path ()
   (format t "Enter a path to an asd file (not evaluated): ")

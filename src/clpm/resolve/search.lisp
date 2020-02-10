@@ -90,8 +90,7 @@
         (node-load-asd-in-groveler! new-search-node (system-file-absolute-asd-pathname sf))
 
         ;; Groveller is primed. Get the requirements from it.
-        (let ((*active-groveler* (node-groveler new-search-node))
-              (system-releases nil))
+        (let ((system-releases nil))
           (if (eql t system-names)
               (setf system-releases (system-file-system-releases sf))
               (setf system-releases (mapcar (lambda (sn)
@@ -255,8 +254,9 @@ otherwise."
         (error "unable to resolve requirements"))
       (when (search-done-p node)
         (return node))
-      (for generator := (node-child-generator node))
-      (for (values next-node-unclean requeue-p) := (funcall generator))
+      (let ((*active-groveler* (lambda () (node-groveler node))))
+        (for generator := (node-child-generator node))
+        (for (values next-node-unclean requeue-p) := (funcall generator)))
       (when requeue-p
         (push node q))
       (when next-node-unclean

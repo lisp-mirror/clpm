@@ -15,7 +15,7 @@
           #:clpm/source
           #:clpm/utils)
   (:export #:clpmfile/all-requirements
-           #:clpmfile/user-global-sources
+           #:clpmfile/sources
            #:clpmfile/user-requirements
            #:read-clpmfile)
   ;; (:export #:clpmfile/all-requirements
@@ -78,7 +78,8 @@
 clpmfile is located."
   (setf (clpmfile/fs-source clpmfile)
         (make-instance 'fs-source
-                       :root-dir (uiop:pathname-directory-pathname pathname)
+                       :root-dir (uiop:pathname-directory-pathname
+                                  (uiop:make-pathname* :directory '(:relative)))
                        :name "%clpmfile")))
 
 (defun clpmfile/asd-file-requirements (clpmfile)
@@ -93,6 +94,7 @@ clpmfile is located."
                               (make-instance 'fs-system-requirement
                                              :name system-name
                                              :source fs-source
+                                             :pathname asd-file
                                              :why t))
                             systems)
                     (list (make-instance 'fs-system-file-requirement
@@ -107,6 +109,11 @@ clpmfile is located."
   (append
    (clpmfile/asd-file-requirements clpmfile)
    (clpmfile/user-requirements clpmfile)))
+
+(defun clpmfile/sources (clpmfile)
+  "Return a list of all the sources associated with ~clpmfile~."
+  (list* (clpmfile/fs-source clpmfile)
+         (clpmfile/user-global-sources clpmfile)))
 
 
 ;; * Deserializing
@@ -251,10 +258,6 @@ instance."
     (write-char #\Space stream)
     (write (clpmfile/user-requirements obj) :stream stream)))
 
-;; (defun clpmfile/sources (clpmfile)
-;;   "Return a list of all the sources associated with ~clpmfile~."
-;;   (list* (clpmfile/fs-source clpmfile)
-;;          (clpmfile/user-global-sources clpmfile)))
 
 ;; (defun find-source-or-error (sources source-name)
 ;;   "Given a list of ~sources~, return the source that has is named ~source-name~
