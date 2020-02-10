@@ -125,11 +125,6 @@
 uniquely by a URL to its canonical location and contains projects and
 systems."))
 
-(defmethod initialize-instance :after ((self clpm-source) &rest initargs &key url)
-  "Ensure that the URL field on a CLPM-SOURCE instance is a puri URL."
-  (declare (ignore initargs))
-  (setf (source-url self) (parse-uri url)))
-
 (defgeneric source-cache-directory (source)
   (:documentation "The source's cache directory."))
 

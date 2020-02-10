@@ -11,6 +11,7 @@
           #:iterate)
   (:export #:*clpm-config-directories*
            #:clpm-config-pathname
+           #:config-add-file-source!
            #:config-table-keys
            #:config-value
            #:print-config)
@@ -344,6 +345,10 @@ file (clpm.conf)."
                     (load-config-from-file config-file)
                     (make-hash-table :test 'equal)))))
   *config-sources*)
+
+(defun config-add-file-source! (pn)
+  (when (uiop:probe-file* pn)
+    (push (load-config-from-file pn) *config-sources*)))
 
 (defun clear-global-config ()
   "Clear the *config-sources* variable."

@@ -12,7 +12,8 @@
           #:clpm/log
           #:clpm/requirement
           #:clpm/source)
-  (:export #:context-add-requirement!
+  (:export #:context
+           #:context-add-requirement!
            #:context-diff
            #:context-diff-has-diff-p
            #:context-name
@@ -26,6 +27,7 @@
            #:context-write-asdf-files
            #:copy-context
            #:get-context
+           #:load-anonymous-context-from-pathname
            #:load-global-context
            #:print-context-diff
            #:save-global-context
@@ -242,6 +244,10 @@ in place with the same name. Return the new requirement if it was modified."
 
 ;; * Deserializing
 
+(defun load-anonymous-context-from-pathname (pn)
+  (with-open-file (s pn)
+    (load-context-from-stream s)))
+
 (defun load-global-context (name &optional (error t))
   (let ((pn (global-context-pathname name)))
     (with-open-file (s pn
@@ -249,6 +255,7 @@ in place with the same name. Return the new requirement if it was modified."
       (if s
           (let ((out (load-context-from-stream s)))
             (setf (context-name out) name)
+            (setf (context-sources out) (sources))
             out)
           (make-instance 'context
                          :name name
@@ -257,7 +264,9 @@ in place with the same name. Return the new requirement if it was modified."
 (defgeneric check-section-valid (prev-section current-section)
   (:method (prev-section current-section)
     (error "Invalid section transition ~S -> ~S" prev-section current-section))
-  (:method ((prev-section (eql nil)) (current-section (eql :requirements)))
+  (:method ((prev-section (eql nil)) (current-section (eql :sources)))
+    t)
+  (:method ((prev-section (eql :sources)) (current-section (eql :requirements)))
     t)
   (:method ((prev-section (eql :requirements)) (current-section (eql :releases)))
     t)
@@ -293,6 +302,10 @@ in place with the same name. Return the new requirement if it was modified."
             (context-releases context)))))
 
 (defmethod process-form (context (section (eql :reverse-dependencies)) form))
+
+(defmethod process-form (context (section (eql :sources)) form)
+  (push (load-source-from-form form)
+        (context-sources context)))
 
 (defun load-context-from-stream (stream)
   (uiop:with-safe-io-syntax ()
@@ -357,6 +370,19 @@ in place with the same name. Return the new requirement if it was modified."
         (pprint-newline :mandatory stream)
         (pprint-newline :mandatory stream)
 
+        ;; Streams
+        (write-section-header "sources" stream)
+        (prin1 :sources stream)
+        (pprint-newline :mandatory stream)
+        (pprint-logical-block (stream (context-sources context))
+          (pprint-exit-if-list-exhausted)
+          (loop
+            (serialize-context-source (pprint-pop) stream)
+            (pprint-exit-if-list-exhausted)
+            (pprint-newline :mandatory stream)))
+        (pprint-newline :mandatory stream)
+        (pprint-newline :mandatory stream)
+
         ;; Requirements
         (write-section-header "requirements" stream)
         (prin1 :requirements stream)
@@ -404,6 +430,11 @@ in place with the same name. Return the new requirement if it was modified."
             (pprint-newline :mandatory stream)
             (pprint-newline :mandatory stream)))
         (pprint-newline :mandatory stream)))))
+
+;; ** Sources
+
+(defun serialize-context-source (source stream)
+  (prin1 (source-to-form source) stream))
 
 ;; ** Releases
 
@@ -488,6 +519,9 @@ in place with the same name. Return the new requirement if it was modified."
 (defmethod requirement-type-keyword ((req system-requirement))
   :system)
 
+(defmethod requirement-type-keyword ((req fs-system-requirement))
+  :asd)
+
 (defmethod requirement-type-keyword ((req vcs-project-requirement))
   :project)
 
@@ -567,6 +601,24 @@ in place with the same name. Return the new requirement if it was modified."
       (write-char #\Space stream)
       (pprint-newline :miser stream)
       (prin1 (source-name (requirement/source req)) stream))
+    ;; no deps
+    (when (requirement/no-deps-p req)
+      (write-char #\Space stream)
+      (pprint-newline :fill stream)
+      (prin1 :no-deps-p stream)
+      (write-char #\Space stream)
+      (prin1 t stream))))
+
+(defmethod serialize-context-requirement ((req fs-system-requirement) stream)
+  (pprint-logical-block (stream nil :prefix "(" :suffix ")")
+    (prin1 (requirement-type-keyword req) stream)
+    ;; Name
+    (write-char #\Space stream)
+    (pprint-newline :fill stream)
+    (prin1 :name stream)
+    (write-char #\Space stream)
+    (pprint-newline :miser stream)
+    (prin1 (requirement/name req) stream)
     ;; no deps
     (when (requirement/no-deps-p req)
       (write-char #\Space stream)

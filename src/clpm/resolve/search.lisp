@@ -215,14 +215,14 @@ resolve a single, unresolved requirement."
        (null (node-unresolved-grovel-reqs node))
        (null (node-system-files-pending-groveling node))))
 
-(defun dead-system-requirement-p (req)
+(defun dead-system-requirement-p (req node)
   "Used to remove requirements that seem to be broken. That is, the system
 cannot be found and the primary system is already activated. This has been
 observed in package-inferred-systems that are groveled after a refactoring
 leaves some dead files around."
   (and (typep req 'system-requirement)
        (null (find-requirement-source req nil))
-       (find-system-source (asdf:primary-system-name (requirement/name req)))))
+       (node-find-system-if-active node (asdf:primary-system-name (requirement/name req)))))
 
 (defun cleanup-search-node! (node)
   "Returns two values. The first is the search node with all satisfied
@@ -232,7 +232,7 @@ otherwise."
         (iter
           (for r :in (node-unresolved-reqs node))
           (when (and (not (node-system-files-pending-groveling node))
-                     (dead-system-requirement-p r))
+                     (dead-system-requirement-p r node))
             (log:debug "Killing requirement ~A as it seems incorrect" r)
             (next-iteration))
           (for (values state satisfying-system-release) := (requirement-state r node))

@@ -7,13 +7,12 @@
     (:use #:cl
           #:clpm/cli/bundle/common
           #:clpm/cli/common-args
-          #:clpm/cli/config/common
           #:clpm/cli/subcommands
           #:clpm/clpmfile
+          #:clpm/context
           #:clpm/install
           #:clpm/log
           #:clpm/resolve
-          #:clpm/requirement
           #:clpm/source)
   (:import-from #:adopt))
 
@@ -32,16 +31,14 @@
 
 (defun build-lockfile (clpmfile)
   "Given a clpmfile instance, make a lockfile instance for it."
-  (let* ((sources (clpmfile/sources clpmfile))
-         (reqs (clpmfile/all-requirements clpmfile)))
-
+  (let* ((sources (clpmfile/user-global-sources clpmfile))
+         (reqs (append
+                (clpmfile/all-requirements clpmfile)))
+         (context (make-instance 'context
+                                 :sources sources
+                                 :requirements reqs)))
     ;; Resolve the requirements!
-    (multiple-value-bind (releases-to-install system-releases)
-        (resolve-requirements reqs sources)
-      (declare (ignore releases-to-install))
-      ;; Make the lock file and return it.
-      (make-lockfile clpmfile (remove-duplicates
-                               (mapcar #'system-release-system-file system-releases))))))
+    (resolve-requirements context)))
 
 (define-cli-command (("bundle" "install") *bundle-install-ui*) (args options)
   (let* ((clpmfile-pathname (merge-pathnames (gethash :bundle-file options)
@@ -49,10 +46,7 @@
          (lockfile-pathname (merge-pathnames (make-pathname :type "lock")
                                              clpmfile-pathname))
          (clpmfile (read-clpmfile clpmfile-pathname))
-         (sources (clpmfile/user-global-sources clpmfile))
          lockfile)
-    (log:info "clpmfile located at ~S" clpmfile-pathname)
-    ;; Get the lock file
     (if (probe-file lockfile-pathname)
         (handler-bind
             ((source-no-such-object
@@ -60,20 +54,16 @@
                  (when (find-restart 'sync-and-retry)
                    (log:info "Syncing source and retrying")
                    (invoke-restart 'sync-and-retry c)))))
-          (setf lockfile (read-lockfile lockfile-pathname)))
+          (setf lockfile (load-anonymous-context-from-pathname lockfile-pathname)))
         (progn
           ;; The lock file doesn't exist. Create it!
           (log:info "syncing sources")
-          (mapc #'sync-source sources)
+          (mapc #'sync-source (clpmfile/user-global-sources clpmfile))
           (log:info "Creating lockfile")
           (setf lockfile (build-lockfile clpmfile))
-          (with-open-file (s lockfile-pathname
-                             :direction :output
-                             :if-exists :supersede)
-            (write-lockfile-to-stream lockfile s))))
-
-    (let* ((system-files (lockfile/system-files lockfile))
-           (releases (mapcar #'system-file-release system-files)))
-      (log:info "Installing releases")
-      (mapc #'install-release (remove-if #'release-installed-p releases)))
+          (log:info "context: ~S" lockfile)
+          (with-open-file (stream lockfile-pathname
+                                  :direction :output)
+            (serialize-context-to-stream lockfile stream))))
+    (mapc #'install-release (context-releases lockfile))
     t))

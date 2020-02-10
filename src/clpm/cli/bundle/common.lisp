@@ -41,28 +41,6 @@
    :contents (list *group-common*
                    *group-bundle*)))
 
-(defun merge-git-auth-config ()
-  (let* ((env (posix-environment-alist))
-         (git-auth-vars (remove-if-not (curry #'starts-with-subseq "CLPM_BUNDLE_GIT_AUTH_")
-                                       env :key #'car))
-         (ht (make-hash-table :test 'equal
-                              :size (length git-auth-vars))))
-    (loop
-      :for (name . val) :in git-auth-vars
-      :for key := (string-downcase (cl-ppcre:regex-replace-all "__" (subseq name 21) "."))
-      :for split-value := (cl-ppcre:split ":" val :limit 2)
-      :for new-ht := (make-hash-table :test 'equal)
-      :do
-         (destructuring-bind (username password) split-value
-           (setf (gethash :username new-ht) username
-                 (gethash :password new-ht) password)
-           (setf (gethash key ht) new-ht)))
-    (merge-ht-into-config! (alist-hash-table
-                            `((:git . ,(alist-hash-table
-                                        `((:remotes . ,ht))
-                                        :test 'equal)))
-                            :test 'equal))))
-
 (define-cli-command-folder
     (("bundle") *default-ui*)
     (args options)
@@ -72,5 +50,4 @@
            (local-config (merge-pathnames ".clpm/bundle.conf"
                                           (uiop:pathname-directory-pathname clpmfile-path))))
       (when (probe-file local-config)
-        (merge-file-into-config! local-config))
-      (merge-git-auth-config)))
+        (config-add-file-source! local-config))))

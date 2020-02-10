@@ -76,6 +76,18 @@ handled by an :AROUND method."
   (:documentation "Given a search node, determine if the requirement is
 satisfied. Returns one of :SAT, :UNSAT, or :UNKNOWN."))
 
+(defmethod requirement-state ((req fs-system-requirement) node)
+  (let* ((system-name (requirement/name req))
+         (system-release (node-find-system-if-active node system-name)))
+    (cond
+      ((not system-release)
+       :unknown)
+      ((not (eql (system-release-source system-release)
+                 (requirement/source req)))
+       :unsat)
+      (t
+       :sat))))
+
 (defmethod requirement-state ((req project-requirement) node)
   "A project requirement is satisfied if a release for the project is active in
 the search node and its version satisfies the requested version."
@@ -126,6 +138,26 @@ a plist. This plist can contain :system-releases or :system-files."))
     (when *releases-sort-function*
       (setf result (funcall *releases-sort-function* result)))
     result))
+
+(defmethod resolve-requirement ((req fs-system-requirement) node)
+  ;; Make a release from the file system.
+  (let* ((system-name (requirement/name req))
+         (fs-source (requirement/source req))
+         (system (source-system fs-source system-name))
+         (releases (system-releases system))
+         (release (first releases))
+         (system-release (release-system-release release system-name)))
+    (assert (length= 1 releases))
+
+    (list (list release
+                :system-files
+                (list (cons (system-release-system-file system-release) (list system-name)))))
+    ;; (mapcar (lambda (release)
+    ;;           (list release :system-files (list (cons (release-system-release)))(release-system-files release))
+    ;;           ;;(list release :system-releases (list (release-system-release release system-name)))
+    ;;           )
+    ;;         releases)
+    ))
 
 (defmethod resolve-requirement ((req project-requirement) node)
   "A project requirement is resolved by finding releases of the project that
