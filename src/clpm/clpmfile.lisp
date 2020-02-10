@@ -189,6 +189,33 @@ source."
     (push `(,asd-file ,@(when systems (list :systems systems)))
           (clpmfile/user-asd-files clpmfile))))
 
+(defmethod parse-clpmfile-form (clpmfile (type (eql :project)) args)
+  (destructuring-bind (name &key source vcs version systems) args
+    (if vcs
+        (destructuring-bind (&key branch commit tag)
+            vcs
+          (push (make-instance 'vcs-project-requirement
+                               :name (string-downcase (string name))
+                               :source (when source
+                                         (find-source-or-error (clpmfile/user-global-sources clpmfile)
+                                                               source))
+                               :branch branch
+                               :commit commit
+                               :tag tag
+                               :systems systems
+                               :why t)
+                (clpmfile/user-requirements clpmfile)))
+        (push (make-instance 'project-requirement
+                             :name (string-downcase (string name))
+                             :source (when source
+                                       (find-source-or-error (clpmfile/user-global-sources clpmfile)
+                                                             source))
+                             :version-spec (when version
+                                             (cons (first version)
+                                                   (second version)))
+                             :why t)
+              (clpmfile/user-requirements clpmfile)))))
+
 (defmethod parse-clpmfile-form (clpmfile (type (eql :source)) args)
   "Load a :source statement from a clpmfile and add it to the list of sources."
   (unless (stringp (first args))

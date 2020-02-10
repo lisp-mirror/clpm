@@ -289,6 +289,9 @@
 (defmethod release-systems ((release flat-file-release))
   (hash-table-values (flat-file-release-systems-map release)))
 
+(defmethod release-system-files ((release flat-file-release))
+  (remove-duplicates (mapcar #'system-release-system-file (release-system-releases release))))
+
 
 ;; * Systems
 
