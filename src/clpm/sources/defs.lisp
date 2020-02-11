@@ -13,9 +13,10 @@
           #:split-sequence)
   (:export #:clpm-project
            #:clpm-release
-           #:clpm-system-release
            #:clpm-source
            #:clpm-system
+           #:clpm-system-file
+           #:clpm-system-release
            #:project
            #:project-missing-version
            #:project-name
@@ -38,8 +39,6 @@
            #:release-installed-p
            #:release-missing-system-release
            #:release-satisfies-version-spec-p
-           #:repo
-           #:source
            #:source-args
            #:source-cache-directory
            #:source-ensure-system
@@ -50,11 +49,9 @@
            #:source-projects
            #:source-system
            #:source-systems
-           #:source-context-pathname
            #:source-missing-project
            #:source-missing-system
            #:source-no-such-object
-           #:source-source-registry-cache-pathname
            #:source-to-form
            #:source-type-keyword
            #:sync-and-retry
@@ -64,7 +61,6 @@
            #:system-register-release!
            #:system-releases
            #:system-source
-           #:clpm-system-file
            #:system-file-absolute-asd-pathname
            #:system-file-asd-enough-namestring
            #:system-file-primary-system-name
@@ -81,8 +77,7 @@
            #:system-release-system-version
            #:system-release->
            #:system-release-satisfies-version-spec-p
-           #:system-version
-           #:version))
+           #:system-version))
 
 (in-package #:clpm/sources/defs)
 
@@ -117,46 +112,31 @@
 ;; * Sources
 
 (defclass clpm-source ()
-  ((name
-    :initarg :name
-    :accessor source-name
-    :documentation "The name of the source."))
-  (:documentation "Base class for any CLPM source. A source is identified
-uniquely by a URL to its canonical location and contains projects and
-systems."))
+  ()
+  (:documentation "Base class for any CLPM source. A source contains projects
+and systems."))
 
 (defgeneric source-cache-directory (source)
   (:documentation "The source's cache directory."))
 
+(defgeneric source-ensure-system (source system-name)
+  (:documentation "Return an instance of CLPM-SYSTEM from the source,
+instantiating it if necessary. Used when groveling for systems."))
+
 (defgeneric source-lib-directory (source)
   (:documentation "The source's lib directory."))
 
-(defun source-context-pathname (source context-name)
-  (merge-pathnames (make-pathname :type "sexp"
-                                  :directory `(:relative "contexts")
-                                  :name context-name)
-                   (source-lib-directory source)))
-
-(defun source-source-registry-cache-pathname (source)
-  (merge-pathnames ".cl-source-registry.cache"
-                   (source-lib-directory source)))
-
-(defgeneric sync-source (source)
-  (:documentation "Synchronize the local source metadata with the upstream
-metadata. Returns T if the local data has changed, NIL otherwise."))
-
-(defgeneric source-type-keyword (source)
-  (:documentation "Returns the keyword designating the type of this source."))
-
-(defgeneric source-to-form (source)
-  (:documentation "Given a source, return a list that is appropriate for
-inclusion in the sources.conf file. Consists of the URL followed by a plist of
-initargs and a :type as a keyword."))
+(defgeneric source-name (source)
+  (:documentation "The name of the source."))
 
 (defgeneric source-project (source project-name &optional error)
   (:documentation "Return an instance of CLPM-PROJECT. If the project is not in
 the source and ERROR is T (default), an error condition of type
 SOURCE-MISSING-PROJECT is signaled. Otherwise, NIL is returned."))
+
+(defgeneric source-projects (source)
+  (:documentation "Return a list of all projects (as CLPM-PROJECT instances)
+that are provided by the SOURCE."))
 
 (defgeneric source-project-release (source project-name version-string &optional error)
   (:documentation
@@ -173,39 +153,43 @@ source implementation should provide a ~sync-and-retry~ restart.")
 located in the source and ERROR is T (default), signals an error of type
 SOURCE-MISSING-SYSTEM. Otherwise, returns NIL."))
 
-(defgeneric source-ensure-system (source system-name)
-  (:documentation "Return an instance of CLPM-SYSTEM from the source,
-instantiating it if necessary. Used when groveling for systems."))
-
-(defgeneric source-projects (source)
-  (:documentation "Return a list of all projects (as CLPM-PROJECT instances)
-that are provided by the SOURCE."))
-
 (defgeneric source-systems (source)
   (:documentation "Return a list of all systems (as CLPM-SYSTEM instances) that
 are provided by the SOURCE."))
+
+(defgeneric source-to-form (source)
+  (:documentation "Given a source, return a list that is appropriate for
+inclusion in the sources.conf file. Consists of the URL followed by a plist of
+initargs and a :type as a keyword."))
+
+(defgeneric source-type-keyword (source)
+  (:documentation "Returns the keyword designating the type of this source."))
+
+(defgeneric sync-source (source)
+  (:documentation "Synchronize the local source metadata with the upstream
+metadata. Returns T if the local data has changed, NIL otherwise."))
+
 
 
 ;; * Systems
 
 (defclass clpm-system ()
-  ((source
-    :initarg :source
-    :accessor system-source
-    :documentation "The source that provides this system.")
-   (name
-    :initarg :name
-    :accessor system-name
-    :documentation "The name of the system."))
+  ()
   (:documentation "Base class for a system that is located in a source. A system
 represents an ASDF system."))
 
-(defgeneric system-register-release! (system release)
-  (:documentation "Register RELEASE as providing SYSTEM."))
+(defgeneric system-name (system)
+  (:documentation "The name of the system."))
 
 (defgeneric system-releases (system)
   (:documentation "Return a list of releases (as CLPM-RELEASE instances) that
 provide this system."))
+
+(defgeneric system-register-release! (system release)
+  (:documentation "Register RELEASE as providing SYSTEM."))
+
+(defgeneric system-source (system)
+  (:documentation "The source that provides the system."))
 
 (defgeneric system-system-releases (system)
   (:documentation "Return a list of system-releases (as CLPM-SYSTEM-RELEASE
@@ -215,20 +199,13 @@ instances) that provide this system."))
 ;; * Projects
 
 (defclass clpm-project ()
-  ((source
-    :initarg :source
-    :accessor project-source
-    :documentation "The source that provides this project.")
-   (name
-    :initarg :name
-    :accessor project-name
-    :documentation "The name of this project.")
-   (repo
-    :initarg :repo
-    :accessor project-repo))
+  ()
   (:documentation "The base class for all CLPM projects. A project can provide
 many systems and the list of provided systems can change over time as new
 releases are made."))
+
+(defgeneric project-name (project)
+  (:documentation "The name of this project."))
 
 (defgeneric project-release (project version-string &optional error)
   (:documentation "Return a release matching the given version string. If ERROR
@@ -238,6 +215,12 @@ type PROJECT-MISSING-VERSION."))
 (defgeneric project-releases (project)
   (:documentation "Return a list of releases (as CLPM-RELEASE instances) of this
 project."))
+
+(defgeneric project-repo (project)
+  (:documentation "The source code repository for this project."))
+
+(defgeneric project-source (project)
+  (:documentation "The source that provides the project."))
 
 (defgeneric project-vcs-release (project &key commit branch tag)
   (:documentation "Return a release of this project, taken from its repo.")
@@ -274,25 +257,6 @@ versioned snapshot of a project. A release provides systems."))
       ;; ID
       (pprint-newline :linear stream))))
 
-(defgeneric release-satisfies-version-spec-p (release version-spec)
-  (:documentation "Returns T if the release satisfies the VERSION-SPEC."))
-
-(defgeneric release-requirements (release)
-  (:documentation "A list of requirements needed by all systems in this release.")
-  (:method (release)
-    (mapcan #'system-release-requirements (release-system-releases release))))
-
-(defgeneric release-system-releases (release)
-  (:documentation "A list of system releases provided by this project release.")
-  (:method (release)
-    (let* ((systems (release-systems release))
-           (system-names (mapcar #'system-name systems)))
-      (mapcar (curry #'release-system-release release) system-names))))
-
-(defgeneric release-systems (release)
-  (:documentation "A list of systems (as CLPM-SYSTEM instances) provided by this
-release."))
-
 (defgeneric release-installed-p (release)
   (:documentation "Returns T if the release has been installed already.")
   (:method (r)
@@ -309,12 +273,31 @@ release."))
              version)
        :ensure-directory t))))
 
+(defgeneric release-requirements (release)
+  (:documentation "A list of requirements needed by all systems in this release.")
+  (:method (release)
+    (mapcan #'system-release-requirements (release-system-releases release))))
+
+(defgeneric release-satisfies-version-spec-p (release version-spec)
+  (:documentation "Returns T if the release satisfies the VERSION-SPEC."))
+
 (defgeneric release-system-file (release system-file-namestring)
   (:documentation "Return the system-file object that is part of this release
 located at system-file-namestring."))
 
 (defgeneric release-system-files (release)
   (:documentation "Return all system files part of this release."))
+
+(defgeneric release-systems (release)
+  (:documentation "A list of systems (as CLPM-SYSTEM instances) provided by this
+release."))
+
+(defgeneric release-system-releases (release)
+  (:documentation "A list of system releases provided by this project release.")
+  (:method (release)
+    (let* ((systems (release-systems release))
+           (system-names (mapcar #'system-name systems)))
+      (mapcar (curry #'release-system-release release) system-names))))
 
 (defgeneric release-system-release (release system-name &optional error)
   (:documentation "Given a release and the name of a system provided by the
@@ -330,26 +313,25 @@ release-2."))
 ;; * System files
 
 (defclass clpm-system-file ()
-  ((source
-    :initarg :source
-    :accessor system-file-source
-    :documentation "The source that provides this system file.")
-   (release
-    :initarg :release
-    :accessor system-file-release
-    :documentation "The release that provides this system file."))
+  ()
   (:documentation
    "Base class representing a single system file. It is scoped to a release."))
 
-(defgeneric system-file-asd-enough-namestring (clpm-system-file))
+(defgeneric system-file-absolute-asd-pathname (system-file))
 
-(defgeneric system-file-absolute-asd-pathname (clpm-system-file))
+(defgeneric system-file-asd-enough-namestring (system-file))
 
-(defgeneric system-file-primary-system-name (clpm-system-file)
-  (:method (clpm-system-file)
-    (pathname-name (system-file-asd-enough-namestring clpm-system-file))))
+(defgeneric system-file-primary-system-name (system-file)
+  (:method (system-file)
+    (pathname-name (system-file-asd-enough-namestring system-file))))
 
-(defgeneric system-file-system-releases (clpm-system-file))
+(defgeneric system-file-release (system-file)
+  (:documentation "The release that provides the system file."))
+
+(defgeneric system-file-source (system-file)
+  (:documentation "The source that provides the system file."))
+
+(defgeneric system-file-system-releases (system-file))
 
 
 ;; * System releases
@@ -365,14 +347,6 @@ release-2."))
             (project-name (release-project (system-release-release sr)))
             (release-version (system-release-release sr)))))
 
-(defgeneric system-release-satisfies-version-spec-p (system-release version-spec)
-  (:documentation "Returns T if the system release specifies the version
-spec."))
-
-(defgeneric system-release-asd-pathname (system-release)
-  (:documentation "The pathname to the asd file, relative to the root folder for
-this release."))
-
 (defgeneric system-release-absolute-asd-pathname (system-release)
   (:documentation "Returns the absolute pathname to the installed ASD file for
 this system release.")
@@ -380,7 +354,15 @@ this system release.")
     (merge-pathnames (system-release-asd-pathname system-release)
                      (release-lib-pathname (system-release-release system-release)))))
 
+(defgeneric system-release-asd-pathname (system-release)
+  (:documentation "The pathname to the asd file, relative to the root folder for
+this release."))
+
 (defgeneric system-release-requirements (system-release))
+
+(defgeneric system-release-satisfies-version-spec-p (system-release version-spec)
+  (:documentation "Returns T if the system release specifies the version
+spec."))
 
 (defgeneric system-release-system-file (system-release)
   (:documentation "Returns the system-file object representing the file that
