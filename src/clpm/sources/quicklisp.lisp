@@ -66,7 +66,7 @@
 
 ;; ** Project
 
-(defclass ql-flat-project (flat-file-project)
+(defclass ql-flat-project (ff-project)
   ((snapshot-to-ql-version-map
     :accessor ql-flat-project-snapshot-to-ql-version-map)))
 

@@ -16,7 +16,7 @@
           #:do-urlencode
           #:puri
           #:split-sequence)
-  (:export #:flat-file-project
+  (:export #:ff-project
            #:flat-file-release
            #:ff-source
            #:ff-source-project-class
@@ -50,7 +50,7 @@
 (defgeneric ff-source-project-class (source))
 
 (defmethod ff-source-project-class ((source ff-source))
-  'flat-file-project)
+  'ff-project)
 
 (defgeneric ff-source-system-class (source))
 
@@ -153,7 +153,7 @@
 
 ;; * Projects
 
-(defclass flat-file-project (clpm-project)
+(defclass ff-project (clpm-project)
   ((source
     :initarg :source
     :reader project-source
@@ -163,10 +163,10 @@
     :reader project-name
     :documentation "The name of the project.")
    (releases-map
-    :accessor flat-file-project-releases-map)
+    :accessor ff-project-releases-map)
    (vcs-releases-map
     :initform (make-hash-table :test 'equal)
-    :reader flat-file-project-vcs-releases-map)
+    :reader ff-project-vcs-releases-map)
    (repo
     :accessor project-repo)))
 
@@ -182,7 +182,7 @@
                        :source (project-source project)
                        :project project
                        :version form)))))
-    (setf (flat-file-project-releases-map project) releases-map)))
+    (setf (ff-project-releases-map project) releases-map)))
 
 (defun %populate-project-metadata! (project)
   "Open the metadata file, read it, and shove everything in the correct slots."
@@ -194,11 +194,11 @@
             (:repo
              (setf (project-repo project) (make-repo-from-description data)))))))))
 
-(defmethod slot-unbound (class (project flat-file-project) (slot-name (eql 'releases-map)))
+(defmethod slot-unbound (class (project ff-project) (slot-name (eql 'releases-map)))
   (%populate-project-releases! project)
-  (flat-file-project-releases-map project))
+  (ff-project-releases-map project))
 
-(defmethod slot-unbound (class (project flat-file-project) (slot-name (eql 'repo)))
+(defmethod slot-unbound (class (project ff-project) (slot-name (eql 'repo)))
   (%populate-project-metadata! project)
   (project-repo project))
 
@@ -212,27 +212,27 @@
 (defun %project-releases-pathname (project)
   (merge-pathnames "releases" (%project-root-pathname project)))
 
-(defmethod project-release ((project flat-file-project) (version-string list) &optional error)
+(defmethod project-release ((project ff-project) (version-string list) &optional error)
   (declare (ignore error))
   (apply #'project-vcs-release project version-string))
 
-(defmethod project-release ((project flat-file-project) version &optional (error t))
-  (or (gethash version (flat-file-project-releases-map project))
+(defmethod project-release ((project ff-project) version &optional (error t))
+  (or (gethash version (ff-project-releases-map project))
       (when error
         (error 'project-missing-version
                :source (project-source project)
                :project project
                :version version))))
 
-(defmethod project-releases ((project flat-file-project))
-  (hash-table-values (flat-file-project-releases-map project)))
+(defmethod project-releases ((project ff-project))
+  (hash-table-values (ff-project-releases-map project)))
 
-(defmethod project-vcs-release ((project flat-file-project) &key commit branch tag)
+(defmethod project-vcs-release ((project ff-project) &key commit branch tag)
   (let ((ref (cond
                (commit `(:commit ,commit))
                (branch `(:branch ,branch))
                (tag `(:tag ,tag)))))
-    (ensure-gethash ref (flat-file-project-vcs-releases-map project)
+    (ensure-gethash ref (ff-project-vcs-releases-map project)
                     (make-instance 'vcs-release
                                    :source (project-source project)
                                    :project project
