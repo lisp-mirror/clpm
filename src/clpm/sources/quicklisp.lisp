@@ -241,10 +241,6 @@ in the same Quicklisp distribution versions as system-release."
 
 ;; * Flat file methods
 
-(defmethod ff-source-repo-pathname ((source ql-flat-source))
-  (merge-pathnames "repo/"
-                   (source-lib-directory source)))
-
 (defmethod ff-source-project-class ((source ql-flat-source))
   'ql-flat-project)
 

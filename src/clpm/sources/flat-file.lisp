@@ -3,7 +3,6 @@
 ;;;; This software is part of CLPM. See README.org for more information. See
 ;;;; LICENSE for license information.
 
-;; * define-package
 (uiop:define-package #:clpm/sources/flat-file
     (:use #:cl
           #:alexandria
@@ -35,6 +34,9 @@
 
 (in-package #:clpm/sources/flat-file)
 
+
+;; * Source definition
+
 (defclass ff-source (clpm-source)
   ((projects-map
     :initform (make-hash-table :test 'equal)
@@ -45,62 +47,103 @@
     :reader ff-source-systems-map
     :documentation "Maps project names to project instances"))
   (:documentation
-   "A source that stores its metadata in a series of files."))
+   "A source that stores its metadata in a series of files. The root directory
+for these files is provided by FF-SOURCE-REPO-PATHNAME."))
 
-(defgeneric ff-source-project-class (source))
+;; ** flat file specific functions
 
-(defmethod ff-source-project-class ((source ff-source))
-  'ff-project)
+(defgeneric ff-source-project-class (source)
+  (:documentation
+   "The class to use when instantiating projects for the source.")
+  (:method ((source ff-source))
+    'ff-project))
 
-(defgeneric ff-source-system-class (source))
+(defgeneric ff-source-release-class (source)
+  (:documentation
+   "The class to use when instantiating releases for the source.")
+  (:method ((source ff-source))
+    'ff-release))
 
-(defmethod ff-source-system-class ((source ff-source))
-  'ff-system)
+(defgeneric ff-source-system-class (source)
+  (:documentation
+   "The class to use when instantiating systems for the source.")
+  (:method ((source ff-source))
+    'ff-system))
 
-(defgeneric ff-source-system-file-class (source))
+(defgeneric ff-source-system-file-class (source)
+  (:documentation
+   "The class to use when instantiating system files for the source.")
+  (:method ((source ff-source))
+    'ff-system-file))
 
-(defmethod ff-source-system-file-class ((source ff-source))
-  'ff-system-file)
+(defgeneric ff-source-system-release-class (source)
+  (:documentation
+   "The class to use when instantiating system releases for the source.")
+  (:method ((source ff-source))
+    'ff-system-release))
 
-(defgeneric ff-source-system-release-class (source))
+(defgeneric ff-source-repo-pathname (source)
+  (:documentation
+   "Returns the pathname to the root directory of the source's files.")
+  (:method ((source ff-source))
+    "Defaults to the repo/ directory in the source's lib directory."
+    (merge-pathnames "repo/"
+                     (source-lib-directory source))))
 
-(defmethod ff-source-system-release-class ((source ff-source))
-  'ff-system-release)
+(defgeneric ff-source-repo-project-index-pathname (source)
+  (:documentation
+   "The pathname to the project index file for the source.")
+  (:method ((source ff-source))
+    "Defaults to ptoject-index in the source's repo."
+    (merge-pathnames "project-index" (ff-source-repo-pathname source))))
 
-(defgeneric ff-source-release-class (source))
+(defgeneric ff-source-repo-projects-pathname (source)
+  (:documentation
+   "The pathname to the directory where data for projects are stored for the
+source.")
+  (:method ((source ff-source))
+    (merge-pathnames "projects/" (ff-source-repo-pathname source))))
 
-(defmethod ff-source-release-class ((source ff-source))
-  'ff-release)
+(defgeneric ff-source-repo-project-pathname (source project-name)
+  (:documentation
+   "The pathname to the directory where data for the project is stored for this
+source.")
+  (:method ((source ff-source) project-name)
+    (merge-pathnames (make-pathname :directory (list :relative (urlencode project-name)))
+                     (ff-source-repo-projects-pathname source))))
 
-(defgeneric ff-source-repo-pathname (source))
+(defgeneric ff-source-repo-system-index-pathname (source)
+  (:documentation
+   "The pathname to the project index file for the source.")
+  (:method ((source ff-source))
+    (merge-pathnames "system-index" (ff-source-repo-pathname source))))
 
-(defun ff-source-repo-project-index-pathname (source)
-  (merge-pathnames "project-index" (ff-source-repo-pathname source)))
+(defgeneric ff-source-repo-systems-pathname (source)
+  (:documentation
+   "The pathname to the directory where data for systems are stored for the
+source.")
+  (:method ((source ff-source))
+    (merge-pathnames "systems/" (ff-source-repo-pathname source))))
 
-(defun ff-source-repo-project-pathname (source project-name)
-  (merge-pathnames (make-pathname :directory (list :relative (urlencode project-name)))
-                   (ff-source-repo-projects-pathname source)))
+(defgeneric ff-source-repo-system-pathname (source system-name)
+  (:documentation
+   "The pathname to the directory where data for the system is stored for this
+source.")
+  (:method ((source ff-source) system-name)
+    (merge-pathnames (make-pathname :directory (list :relative (urlencode system-name)))
+                     (ff-source-repo-systems-pathname source))))
 
-(defun ff-source-repo-projects-pathname (source)
-  (merge-pathnames "projects/" (ff-source-repo-pathname source)))
+(defgeneric ff-source-repo-metadata-pathname (source)
+  (:documentation
+   "The pathname to the metadata file for this source.")
+  (:method ((source ff-source))
+    (merge-pathnames "metadata" (ff-source-repo-pathname source))))
 
-(defun ff-source-repo-system-index-pathname (source)
-  (merge-pathnames "system-index" (ff-source-repo-pathname source)))
-
-(defun ff-source-repo-system-pathname (source system-name)
-  (merge-pathnames (make-pathname :directory (list :relative (urlencode system-name)))
-                   (ff-source-repo-systems-pathname source)))
-
-(defun ff-source-repo-systems-pathname (source)
-  (merge-pathnames "systems/" (ff-source-repo-pathname source)))
-
-(defun ff-source-repo-metadata-pathname (source)
-  (merge-pathnames "metadata" (ff-source-repo-pathname source)))
+;; ** Standard source functions
 
 (defmethod source-project ((source ff-source) project-name &optional (error t))
   (ensure-gethash
    project-name (ff-source-projects-map source)
-
    (let ((pathname (ff-source-repo-project-pathname source project-name)))
      (unless (uiop:probe-file* pathname)
        (if error

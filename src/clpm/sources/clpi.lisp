@@ -138,10 +138,6 @@
 
 ;; * Flat file methods
 
-(defmethod ff-source-repo-pathname ((source clpi-source))
-  (merge-pathnames "repo/"
-                   (source-lib-directory source)))
-
 (defmethod ff-source-release-class ((source clpi-source))
   'clpi-release)
 
