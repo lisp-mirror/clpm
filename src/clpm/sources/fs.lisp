@@ -52,7 +52,7 @@ objects.")
     :accessor fs-source-systems-by-name
     :documentation "A hash table that maps system names to fs-system objects."))
   (:documentation "A source that contains systems located on the file
-system. Contains one project (:ALL) and one release (\"newest\")."))
+system. Contains one project (:ALL) and one release (:NEWEST)."))
 
 (defmethod initialize-instance :after ((source fs-source)
                                        &key root-dir
@@ -63,7 +63,7 @@ system. Contains one project (:ALL) and one release (\"newest\")."))
                                  :name :all
                                  :source source))
          (release (make-instance 'fs-release
-                                 :version "newest"
+                                 :version :newest
                                  :project project
                                  :source source)))
     (setf (fs-project-release project) release)
@@ -124,7 +124,7 @@ can be relative (to the source's root dir) or absolute."
 
 (defmethod source-to-form ((source fs-source))
   (let* ((project (source-project source :all))
-         (release (project-release project "newest"))
+         (release (project-release project :newest))
          (system-files (release-system-files release)))
     (append (list :file-system)
             (unless (uiop:pathname-equal (fs-source-root-dir source)
@@ -158,10 +158,9 @@ can be relative (to the source's root dir) or absolute."
 release (that is constructed by the source.)"))
 
 (defmethod project-release ((project fs-project) version-string &optional (error t))
-  "If the version string is \"newest\", return our singleton release, otherwise
-nil."
+  "If the version is :newest, return our singleton release, otherwise nil."
   (cond
-    ((equal version-string "newest")
+    ((equal version-string :newest)
      (fs-project-release project))
     (error
      (error 'project-missing-version
