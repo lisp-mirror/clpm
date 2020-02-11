@@ -10,7 +10,7 @@
           #:clpm/sources/clpi
           #:clpm/sources/defs
           #:clpm/sources/fs
-          #:clpm/sources/ql-flat
+          #:clpm/sources/quicklisp
           #:clpm/utils)
   (:import-from #:uiop
                 #:read-file-form
