@@ -28,7 +28,7 @@
 ;; * Definitions
 ;; ** Source
 
-(defclass ql-flat-source (flat-file-source)
+(defclass ql-flat-source (ff-source)
   ((name
     :initarg :name
     :reader source-name)
@@ -76,7 +76,7 @@
       (with-open-file (s (merge-pathnames
                           (make-pathname :directory (list :relative "projects" (project-name project))
                                          :name "dist-to-snapshot")
-                          (flat-file-source-repo-pathname (project-source project))))
+                          (ff-source-repo-pathname (project-source project))))
         (loop
           (let ((form (read s nil :eof)))
             (when (eql form :eof)
@@ -117,13 +117,13 @@
              (ql-flat-project-snapshot-to-ql-version-map project))))
 
 (defun ql-flat-source-metadata (source)
-  (let ((metadata-pathname (flat-file-source-repo-metadata-pathname source)))
+  (let ((metadata-pathname (ff-source-repo-metadata-pathname source)))
     (when (probe-file metadata-pathname)
       (uiop:with-safe-io-syntax ()
         (uiop:read-file-forms metadata-pathname)))))
 
 (defun ql-flat-source-update-metadata (source &rest args &key &allow-other-keys)
-  (let ((metadata-pathname (flat-file-source-repo-metadata-pathname source))
+  (let ((metadata-pathname (ff-source-repo-metadata-pathname source))
         (existing-metadata (or (ql-flat-source-metadata source)
                                (list (cons :api-version "0.1")))))
     (loop
@@ -241,17 +241,17 @@ in the same Quicklisp distribution versions as system-release."
 
 ;; * Flat file methods
 
-(defmethod flat-file-source-repo-pathname ((source ql-flat-source))
+(defmethod ff-source-repo-pathname ((source ql-flat-source))
   (merge-pathnames "repo/"
                    (source-lib-directory source)))
 
-(defmethod flat-file-source-project-class ((source ql-flat-source))
+(defmethod ff-source-project-class ((source ql-flat-source))
   'ql-flat-project)
 
-(defmethod flat-file-source-release-class ((source ql-flat-source))
+(defmethod ff-source-release-class ((source ql-flat-source))
   'ql-flat-release)
 
-(defmethod flat-file-source-system-release-class ((source ql-flat-source))
+(defmethod ff-source-system-release-class ((source ql-flat-source))
   'ql-flat-system-release)
 
 (defmethod source-project :around ((source ql-flat-source) project-name &optional (error t))
@@ -380,7 +380,7 @@ in the same Quicklisp distribution versions as system-release."
       (maphash (lambda (project-name details)
                  (let ((releases-pathname
                          (merge-pathnames "releases"
-                                          (flat-file-source-repo-project-pathname source project-name))))
+                                          (ff-source-repo-project-pathname source project-name))))
                    (ensure-directories-exist releases-pathname)
                    (with-open-file (s releases-pathname
                                       :direction :output
@@ -393,7 +393,7 @@ in the same Quicklisp distribution versions as system-release."
       (maphash (lambda (project-name dist-to-snapshot-alist)
                  (let ((dist-to-snapshot-pathname
                          (merge-pathnames "dist-to-snapshot"
-                                          (flat-file-source-repo-project-pathname source project-name))))
+                                          (ff-source-repo-project-pathname source project-name))))
                    (ensure-directories-exist dist-to-snapshot-pathname)
                    (with-open-file (s dist-to-snapshot-pathname
                                       :direction :output
@@ -410,7 +410,7 @@ in the same Quicklisp distribution versions as system-release."
           (*print-case* :downcase))
       (maphash (lambda (system-name details)
                  (let ((pn (merge-pathnames "releases"
-                                            (flat-file-source-repo-system-pathname source system-name))))
+                                            (ff-source-repo-system-pathname source system-name))))
                    (ensure-directories-exist pn)
                    (with-open-file (s pn
                                     :direction :output
@@ -422,7 +422,7 @@ in the same Quicklisp distribution versions as system-release."
                map))))
 
 (defun ql-flat-load-existing-project-index (source)
-  (let ((pathname (flat-file-source-repo-project-index-pathname source))
+  (let ((pathname (ff-source-repo-project-index-pathname source))
         (out (make-hash-table :test 'equal)))
     (when (probe-file pathname)
       (uiop:with-safe-io-syntax ()
@@ -435,7 +435,7 @@ in the same Quicklisp distribution versions as system-release."
     out))
 
 (defun ql-flat-load-existing-system-index (source)
-  (let ((pathname (flat-file-source-repo-system-index-pathname source))
+  (let ((pathname (ff-source-repo-system-index-pathname source))
         (out (make-hash-table :test 'equal)))
     (when (probe-file pathname)
       (uiop:with-safe-io-syntax ()
@@ -462,8 +462,8 @@ in the same Quicklisp distribution versions as system-release."
           (sync-state (make-ql-sync-state
                        :project-index-map project-index-map
                        :system-index-map system-index-map))
-          (project-index-pathname (flat-file-source-repo-project-index-pathname source))
-          (system-index-pathname (flat-file-source-repo-system-index-pathname source)))
+          (project-index-pathname (ff-source-repo-project-index-pathname source))
+          (system-index-pathname (ff-source-repo-system-index-pathname source)))
       (when latest-version-synced
         (setf (ql-sync-state-previous-dist-version sync-state)
               (ql-repo-dist-version repo latest-version-synced))

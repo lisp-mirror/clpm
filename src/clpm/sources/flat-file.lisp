@@ -18,88 +18,90 @@
           #:split-sequence)
   (:export #:flat-file-project
            #:flat-file-release
-           #:flat-file-source
-           #:flat-file-source-project-class
-           #:flat-file-source-release-class
-           #:flat-file-source-repo-metadata-pathname
-           #:flat-file-source-repo-pathname
-           #:flat-file-source-repo-project-index-pathname
-           #:flat-file-source-repo-project-pathname
-           #:flat-file-source-repo-projects-pathname
-           #:flat-file-source-repo-system-index-pathname
-           #:flat-file-source-repo-system-pathname
-           #:flat-file-source-repo-systems-pathname
+           #:ff-source
+           #:ff-source-project-class
+           #:ff-source-release-class
+           #:ff-source-repo-metadata-pathname
+           #:ff-source-repo-pathname
+           #:ff-source-repo-project-index-pathname
+           #:ff-source-repo-project-pathname
+           #:ff-source-repo-projects-pathname
+           #:ff-source-repo-system-index-pathname
+           #:ff-source-repo-system-pathname
+           #:ff-source-repo-systems-pathname
            #:flat-file-system-release
            #:flat-file-system-release-dependencies
-           #:flat-file-source-system-release-class))
+           #:ff-source-system-release-class))
 
 (in-package #:clpm/sources/flat-file)
 
-(defclass flat-file-source ()
+(defclass ff-source (clpm-source)
   ((projects-map
     :initform (make-hash-table :test 'equal)
-    :reader flat-file-source-projects-map
+    :reader ff-source-projects-map
     :documentation "Maps project names to project instances")
    (systems-map
     :initform (make-hash-table :test 'equal)
-    :reader flat-file-source-systems-map
-    :documentation "Maps project names to project instances")))
+    :reader ff-source-systems-map
+    :documentation "Maps project names to project instances"))
+  (:documentation
+   "A source that stores its metadata in a series of files."))
 
-(defgeneric flat-file-source-project-class (source))
+(defgeneric ff-source-project-class (source))
 
-(defmethod flat-file-source-project-class ((source flat-file-source))
+(defmethod ff-source-project-class ((source ff-source))
   'flat-file-project)
 
-(defgeneric flat-file-source-system-class (source))
+(defgeneric ff-source-system-class (source))
 
-(defmethod flat-file-source-system-class ((source flat-file-source))
+(defmethod ff-source-system-class ((source ff-source))
   'flat-file-system)
 
-(defgeneric flat-file-source-system-file-class (source))
+(defgeneric ff-source-system-file-class (source))
 
-(defmethod flat-file-source-system-file-class ((source flat-file-source))
+(defmethod ff-source-system-file-class ((source ff-source))
   'flat-file-system-file)
 
-(defgeneric flat-file-source-system-release-class (source))
+(defgeneric ff-source-system-release-class (source))
 
-(defmethod flat-file-source-system-release-class ((source flat-file-source))
+(defmethod ff-source-system-release-class ((source ff-source))
   'flat-file-system-release)
 
-(defgeneric flat-file-source-release-class (source))
+(defgeneric ff-source-release-class (source))
 
-(defmethod flat-file-source-release-class ((source flat-file-source))
+(defmethod ff-source-release-class ((source ff-source))
   'flat-file-release)
 
-(defgeneric flat-file-source-repo-pathname (source))
+(defgeneric ff-source-repo-pathname (source))
 
-(defun flat-file-source-repo-project-index-pathname (source)
-  (merge-pathnames "project-index" (flat-file-source-repo-pathname source)))
+(defun ff-source-repo-project-index-pathname (source)
+  (merge-pathnames "project-index" (ff-source-repo-pathname source)))
 
-(defun flat-file-source-repo-project-pathname (source project-name)
+(defun ff-source-repo-project-pathname (source project-name)
   (merge-pathnames (make-pathname :directory (list :relative (urlencode project-name)))
-                   (flat-file-source-repo-projects-pathname source)))
+                   (ff-source-repo-projects-pathname source)))
 
-(defun flat-file-source-repo-projects-pathname (source)
-  (merge-pathnames "projects/" (flat-file-source-repo-pathname source)))
+(defun ff-source-repo-projects-pathname (source)
+  (merge-pathnames "projects/" (ff-source-repo-pathname source)))
 
-(defun flat-file-source-repo-system-index-pathname (source)
-  (merge-pathnames "system-index" (flat-file-source-repo-pathname source)))
+(defun ff-source-repo-system-index-pathname (source)
+  (merge-pathnames "system-index" (ff-source-repo-pathname source)))
 
-(defun flat-file-source-repo-system-pathname (source system-name)
+(defun ff-source-repo-system-pathname (source system-name)
   (merge-pathnames (make-pathname :directory (list :relative (urlencode system-name)))
-                   (flat-file-source-repo-systems-pathname source)))
+                   (ff-source-repo-systems-pathname source)))
 
-(defun flat-file-source-repo-systems-pathname (source)
-  (merge-pathnames "systems/" (flat-file-source-repo-pathname source)))
+(defun ff-source-repo-systems-pathname (source)
+  (merge-pathnames "systems/" (ff-source-repo-pathname source)))
 
-(defun flat-file-source-repo-metadata-pathname (source)
-  (merge-pathnames "metadata" (flat-file-source-repo-pathname source)))
+(defun ff-source-repo-metadata-pathname (source)
+  (merge-pathnames "metadata" (ff-source-repo-pathname source)))
 
-(defmethod source-project ((source flat-file-source) project-name &optional (error t))
+(defmethod source-project ((source ff-source) project-name &optional (error t))
   (ensure-gethash
-   project-name (flat-file-source-projects-map source)
+   project-name (ff-source-projects-map source)
 
-   (let ((pathname (flat-file-source-repo-project-pathname source project-name)))
+   (let ((pathname (ff-source-repo-project-pathname source project-name)))
      (unless (uiop:probe-file* pathname)
        (if error
            (error 'source-missing-project
@@ -107,23 +109,23 @@
                   :project-name project-name)
            ;; Do not cache a negative hit.
            (return-from source-project nil)))
-     (make-instance (flat-file-source-project-class source)
+     (make-instance (ff-source-project-class source)
                     :source source
                     :name project-name))))
 
-(defmethod source-ensure-system ((source flat-file-source) system-name)
+(defmethod source-ensure-system ((source ff-source) system-name)
   (ensure-gethash
-   system-name (flat-file-source-systems-map source)
-   (make-instance (flat-file-source-system-class source)
+   system-name (ff-source-systems-map source)
+   (make-instance (ff-source-system-class source)
                   :source source
                   :name system-name)))
 
-(defmethod source-system ((source flat-file-source) system-name &optional (error t))
+(defmethod source-system ((source ff-source) system-name &optional (error t))
   (ensure-gethash
-   system-name (flat-file-source-systems-map source)
+   system-name (ff-source-systems-map source)
 
    (let ((pathname (merge-pathnames "releases"
-                                    (flat-file-source-repo-system-pathname source system-name))))
+                                    (ff-source-repo-system-pathname source system-name))))
      (unless (probe-file pathname)
        (if error
            (error 'source-missing-system
@@ -131,19 +133,19 @@
                   :system-name system-name)
            ;; Do not cache a negative hit.
            (return-from source-system nil)))
-     (make-instance (flat-file-source-system-class source)
+     (make-instance (ff-source-system-class source)
                     :source source
                     :name system-name))))
 
-(defmethod source-projects ((source flat-file-source))
+(defmethod source-projects ((source ff-source))
   (let ((dir (directory (merge-pathnames (make-pathname :directory '(:relative :wild))
-                                         (flat-file-source-repo-projects-pathname source)))))
+                                         (ff-source-repo-projects-pathname source)))))
     (mapcar (lambda (pn)
               (source-project source (last-elt (pathname-directory pn))))
             dir)))
 
-(defmethod source-systems ((source flat-file-source))
-  (let ((dir (directory (uiop:wilden (flat-file-source-repo-systems-pathname source)))))
+(defmethod source-systems ((source ff-source))
+  (let ((dir (directory (uiop:wilden (ff-source-repo-systems-pathname source)))))
     (mapcar (lambda (pn)
               (source-system source (urldecode (last-elt (pathname-directory pn)))))
             dir)))
@@ -151,7 +153,7 @@
 
 ;; * Projects
 
-(defclass flat-file-project ()
+(defclass flat-file-project (clpm-project)
   ((source
     :initarg :source
     :reader project-source
@@ -176,7 +178,7 @@
       (with-open-file (s (%project-releases-pathname project))
         (with-forms-from-stream (s form)
           (setf (gethash (first form) releases-map)
-                (apply #'make-instance (flat-file-source-release-class (project-source project))
+                (apply #'make-instance (ff-source-release-class (project-source project))
                        :source (project-source project)
                        :project project
                        :version form)))))
@@ -202,7 +204,7 @@
 
 (defun %project-root-pathname (project)
   (uiop:ensure-directory-pathname
-   (flat-file-source-repo-project-pathname (project-source project) (project-name project))))
+   (ff-source-repo-project-pathname (project-source project) (project-name project))))
 
 (defun %project-metadata-pathname (project)
   (merge-pathnames "metadata" (%project-root-pathname project)))
@@ -295,7 +297,7 @@
 
 ;; * Systems
 
-(defclass flat-file-system ()
+(defclass flat-file-system (clpm-system)
   ((source
     :initarg :source
     :reader system-source
@@ -316,7 +318,7 @@
   (let ((map (make-hash-table :test 'equal)))
     (uiop:with-safe-io-syntax ()
       (with-open-file (s (merge-pathnames "releases"
-                                          (flat-file-source-repo-system-pathname
+                                          (ff-source-repo-system-pathname
                                            (system-source system)
                                            (system-name system)))
                          :if-does-not-exist nil)
@@ -325,7 +327,7 @@
             (destructuring-bind (release-spec &rest initargs &key &allow-other-keys) form
               (setf (gethash release-spec map)
                     (apply #'make-instance
-                           (flat-file-source-system-release-class (system-source system))
+                           (ff-source-system-release-class (system-source system))
                            :source (system-source system)
                            :system-name (system-name system)
                            :release-spec release-spec
@@ -395,7 +397,7 @@
 
 (defmethod slot-unbound (class (system-release flat-file-system-release) (slot-name (eql 'system-file)))
   (setf (slot-value system-release slot-name)
-        (make-instance (flat-file-source-system-file-class (system-release-source system-release))
+        (make-instance (ff-source-system-file-class (system-release-source system-release))
                        :source (system-release-source system-release)
                        :release (system-release-release system-release)
                        :asd-enough-namestring (system-release-asd-pathname system-release))))
@@ -403,7 +405,7 @@
 
 ;; * System files
 
-(defclass flat-file-system-file ()
+(defclass flat-file-system-file (clpm-system-file)
   ((source
     :initarg :source
     :reader system-file-source

@@ -28,7 +28,7 @@
 ;; * Definitions
 ;; ** Source
 
-(defclass clpi-source (flat-file-source)
+(defclass clpi-source (ff-source)
   ((name
     :initarg :name
     :reader source-name)
@@ -138,14 +138,14 @@
 
 ;; * Flat file methods
 
-(defmethod flat-file-source-repo-pathname ((source clpi-source))
+(defmethod ff-source-repo-pathname ((source clpi-source))
   (merge-pathnames "repo/"
                    (source-lib-directory source)))
 
-(defmethod flat-file-source-release-class ((source clpi-source))
+(defmethod ff-source-release-class ((source clpi-source))
   'clpi-release)
 
-(defmethod flat-file-source-system-release-class ((source clpi-source))
+(defmethod ff-source-system-release-class ((source clpi-source))
   'clpi-system-release)
 
 ;; (defmethod source-project :around ((source ql-flat-source) project-name &optional (error t))
@@ -165,8 +165,8 @@
 (defmethod sync-source ((source clpi-source))
   (let* ((root-url (source-url source))
          (base-url (puri:merge-uris "package-index/v0.3/" root-url))
-         (project-index-pn (flat-file-source-repo-project-index-pathname source))
-         (system-index-pn (flat-file-source-repo-system-index-pathname source))
+         (project-index-pn (ff-source-repo-project-index-pathname source))
+         (system-index-pn (ff-source-repo-system-index-pathname source))
          (index-modified-p nil))
 
     (when (ensure-file-fetched project-index-pn
@@ -185,11 +185,11 @@
               (let ((releases-url (puri:merge-uris (uiop:strcat "projects/" project-name "/releases")
                                                    base-url))
                     (releases-pn (merge-pathnames "releases"
-                                                  (flat-file-source-repo-project-pathname source project-name)))
+                                                  (ff-source-repo-project-pathname source project-name)))
                     (metadata-url (puri:merge-uris (uiop:strcat "projects/" project-name "/metadata")
                                                    base-url))
                     (metadata-pn (merge-pathnames "metadata"
-                                                  (flat-file-source-repo-project-pathname source project-name))))
+                                                  (ff-source-repo-project-pathname source project-name))))
                 (ensure-file-fetched releases-pn releases-url)
                 (ensure-file-fetched metadata-pn metadata-url)))))
 
@@ -200,6 +200,6 @@
               (let ((url (puri:merge-uris (uiop:strcat "systems/" system-name "/releases")
                                           base-url))
                     (pn (merge-pathnames "releases"
-                                         (flat-file-source-repo-system-pathname source system-name))))
+                                         (ff-source-repo-system-pathname source system-name))))
                 (ensure-file-fetched pn url))))))
       t)))
