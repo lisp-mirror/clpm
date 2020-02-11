@@ -55,20 +55,20 @@
         (0
          (log:config '(clpm) :warn
                      :this :stream *error-output* :immediate-flush :own
-                     :pattern "%;<;;>;5p [%g{}{}{:downcase}] - %m%n"))
+                     :pattern "%;<;;>;5p [%g{}{}{:downcase}] - %<{pretty}%m%>%n"))
         (1
          (log:config '(clpm) :info
                      :this :stream *error-output* :immediate-flush :own
-                     :pattern "%;<;;>;5p [%g{}{}{:downcase}] - %m%n")
+                     :pattern "%;<;;>;5p [%g{}{}{:downcase}] - %<{pretty}%m%>%n")
          (log:debug "Setting CLPM log level to info"))
         (2
          (log:config '(clpm) :debug
                      :this :stream *error-output* :immediate-flush :own
-                     :pattern "%;<;;>;5p [%g{}{}{:downcase}] - %m%n")
+                     :pattern "%;<;;>;5p [%g{}{}{:downcase}] - %<{pretty}%m%>%n")
          (log:debug "Setting CLPM log level to debug"))
         (t
          (log:config '(clpm) :trace
                      :this :stream *error-output* :immediate-flush :own
-                     :pattern "%;<;;>;5p [%g{}{}{:downcase}] - %m%n")
+                     :pattern "%;<;;>;5p [%g{}{}{:downcase}] - %<{pretty}%m%>%n")
          (log:debug "Setting CLPM log level to trace")))
       (dispatch-subcommand *commands* arguments options *default-ui*))))
