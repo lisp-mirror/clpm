@@ -50,7 +50,7 @@
 
 ;; ** Release
 
-(defclass clpi-release (flat-file-release
+(defclass clpi-release (ff-release
                         tarball-release)
   ((url
     :initarg :url

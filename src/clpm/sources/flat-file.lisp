@@ -17,7 +17,7 @@
           #:puri
           #:split-sequence)
   (:export #:ff-project
-           #:flat-file-release
+           #:ff-release
            #:ff-source
            #:ff-source-project-class
            #:ff-source-release-class
@@ -70,7 +70,7 @@
 (defgeneric ff-source-release-class (source))
 
 (defmethod ff-source-release-class ((source ff-source))
-  'flat-file-release)
+  'ff-release)
 
 (defgeneric ff-source-repo-pathname (source))
 
@@ -241,7 +241,7 @@
 
 ;; * Releases
 
-(defclass flat-file-release (clpm-release)
+(defclass ff-release (clpm-release)
   ((source
     :initarg :source
     :reader release-source
@@ -263,18 +263,18 @@
     :initarg :systems
     :documentation "List of system names provided by this release.")
    (systems-map
-    :reader flat-file-release-systems-map
+    :reader ff-release-systems-map
     :documentation "Map of system names to system objects provided by this
     release.")))
 
-(defmethod slot-unbound (class (release flat-file-release) (slot-name (eql 'systems-map)))
+(defmethod slot-unbound (class (release ff-release) (slot-name (eql 'systems-map)))
   (let ((out (make-hash-table :test 'equal)))
     (dolist (system-name (slot-value release 'system-names))
       (setf (gethash system-name out) (source-system (release-source release) system-name)))
     (setf (slot-value release slot-name) out)))
 
-(defmethod release-system-release ((release flat-file-release) system-name &optional (error t))
-  (let ((system (gethash system-name (flat-file-release-systems-map release))))
+(defmethod release-system-release ((release ff-release) system-name &optional (error t))
+  (let ((system (gethash system-name (ff-release-systems-map release))))
     (when (and error (not system))
       (error 'release-missing-system-release
              :source (release-source release)
@@ -288,10 +288,10 @@
           (error "Unknown error! Cannot find the correct system release!"))
         system-release))))
 
-(defmethod release-systems ((release flat-file-release))
-  (hash-table-values (flat-file-release-systems-map release)))
+(defmethod release-systems ((release ff-release))
+  (hash-table-values (ff-release-systems-map release)))
 
-(defmethod release-system-files ((release flat-file-release))
+(defmethod release-system-files ((release ff-release))
   (remove-duplicates (mapcar #'system-release-system-file (release-system-releases release))))
 
 

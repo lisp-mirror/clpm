@@ -87,7 +87,7 @@
 
 ;; ** Release
 
-(defclass ql-flat-release (flat-file-release
+(defclass ql-flat-release (ff-release
                            tarball-release-with-md5
                            tarball-release-with-size)
   ((url
