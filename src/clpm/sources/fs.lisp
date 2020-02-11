@@ -32,7 +32,7 @@
   ((root-dir
     :initarg :root-dir
     :initform (error ":root-dir must be provided.")
-    :accessor fs-source/root-dir
+    :accessor fs-source-root-dir
     :documentation "The root directory of this source.")
    (project
     :accessor fs-source-project
@@ -111,7 +111,7 @@ file with the same primary name and construct a new system for it."
   "Given a pathname to an asd file, register it with the source. asd-pathname
 can be relative (to the source's root dir) or absolute."
   (unless (uiop:relative-pathname-p asd-pathname)
-    (setf asd-pathname (enough-namestring asd-pathname (merge-pathnames (fs-source/root-dir fs-source)))))
+    (setf asd-pathname (enough-namestring asd-pathname (merge-pathnames (fs-source-root-dir fs-source)))))
   (let* ((primary-name-ht (fs-source-system-files-by-primary-name fs-source))
          (namestring-ht (fs-source-system-files-by-namestring fs-source))
          (namestring (namestring asd-pathname))
@@ -127,9 +127,9 @@ can be relative (to the source's root dir) or absolute."
          (release (project-release project "newest"))
          (system-files (release-system-files release)))
     (append (list :file-system)
-            (unless (uiop:pathname-equal (fs-source/root-dir source)
+            (unless (uiop:pathname-equal (fs-source-root-dir source)
                                          (uiop:make-pathname* :directory '(:relative)))
-              (list :root-pathname (namestring (fs-source/root-dir source))))
+              (list :root-pathname (namestring (fs-source-root-dir source))))
             (list
              :system-files (mapcar #'system-file-asd-enough-namestring system-files)))))
 
@@ -237,7 +237,7 @@ release."
 (defmethod system-file-absolute-asd-pathname ((system-file fs-system-file))
   "Merge the enough pathname with the source's root dir."
   (merge-pathnames (fs-system-file/enough-namestring system-file)
-                   (merge-pathnames (fs-source/root-dir (system-file-source system-file)))))
+                   (merge-pathnames (fs-source-root-dir (system-file-source system-file)))))
 
 (defmethod system-file-system-releases ((system-file fs-system-file))
   "Grovel over the system file if necessary to determine every system it
