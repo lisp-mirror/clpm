@@ -10,7 +10,7 @@
           #:clpm/data
           #:clpm/repos
           #:clpm/sources/defs
-          #:clpm/sources/vcs-release
+          #:clpm/sources/vcs
           #:clpm/utils
           #:do-urlencode
           #:puri

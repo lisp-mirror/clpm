@@ -1,7 +1,5 @@
 ;;;; Sources for projects taken from source control. A VCS source requires a
-;;;; repo to be checked out before much can be done with it, so it shares a lot
-;;;; of code with fs-sources. But it ensures that the repo is checked out before
-;;;; it falls back to fs methods
+;;;; repo to be checked out before much can be done with it.
 ;;;;
 ;;;; This software is part of CLPM. See README.org for more information. See
 ;;;; LICENSE for license information.
@@ -14,6 +12,8 @@
           #:anaphora
           #:clpm/archives
           #:clpm/groveler
+          #:clpm/install/defs
+          #:clpm/log
           #:clpm/repos
           #:clpm/requirement
           #:clpm/sources/defs
@@ -28,6 +28,7 @@
 
 (in-package #:clpm/sources/vcs)
 
+(setup-logger)
 
 ;; * sources
 
@@ -40,7 +41,9 @@
     :initform (make-hash-table :test 'equalp)
     :accessor vcs-source-systems-by-name
     :documentation "A hash table mapping system names to system objects."))
-  (:documentation "The source for any orphaned VCS projects."))
+  (:documentation
+   "A source for any bare VCS projects. Projects must be registered with the
+source using VCS-SOURCE-REGISTER_PROJECT!."))
 
 (defun vcs-source-register-project! (vcs-source repo project-name)
   "Registers a project with the vcs source and returns it."
@@ -108,8 +111,24 @@
 
 ;; * releases
 
-(defclass vcs-release (clpm-release)
-  ((system-files-by-namestring
+(defclass vcs-release ()
+  ((source
+    :initarg :source
+    :reader release-source)
+   (project
+    :initarg :project
+    :reader release-project)
+   (ref
+    :initarg :ref
+    :reader vcs-release-ref)
+   (commit
+    :initarg :commit
+    :accessor vcs-release-commit)
+   (installed-p
+    :initform nil
+    :accessor vcs-release-installed-p)
+
+   (system-files-by-namestring
     :accessor vcs-release-system-files-by-namestring)
    (system-files-by-primary-name
     :accessor vcs-release-system-files-by-primary-name)
@@ -117,19 +136,10 @@
     :initform (make-hash-table :test 'equal)
     :accessor vcs-release-system-releases-by-name)))
 
-(defclass remote-vcs-release (vcs-release)
-  ((tag
-    :initarg :tag
-    :initform nil
-    :accessor vcs-release/tag)
-   (branch
-    :initarg :branch
-    :initform nil
-    :accessor vcs-release/branch)
-   (commit
-    :initarg :commit
-    :initform nil
-    :accessor vcs-release/commit)))
+(defmethod initialize-instance :after ((release vcs-release) &rest initargs &key ref)
+  (declare (ignore initargs))
+  (when (and (listp ref) (eql (first ref) :commit))
+    (setf (vcs-release-commit release) (second ref))))
 
 (defun populate-release-system-files! (release)
   (ensure-release-installed! release)
@@ -142,10 +152,11 @@
                        (system-file (make-instance 'vcs-system-file
                                                    :relative-pathname namestring
                                                    :release release
-                                                   :source (release-source release))))
+                                                   :source (release-source release)))
+                       (primary-system-name (pathname-name x)))
                   (setf (gethash namestring ht-by-namestring)
                         system-file)
-                  (setf (gethash (pathname-name x) ht-by-primary-name)
+                  (setf (gethash primary-system-name ht-by-primary-name)
                         system-file))))
     (setf (vcs-release-system-files-by-namestring release) ht-by-namestring)
     (setf (vcs-release-system-files-by-primary-name release) ht-by-primary-name)))
@@ -166,11 +177,10 @@
 already created."
   (gethash system-file-namestring (vcs-release-system-files-by-namestring release)))
 
-(defmethod release-lib-pathname ((release remote-vcs-release))
-  (assert (vcs-release/commit release))
+(defmethod release-lib-pathname ((release vcs-release))
   (let* ((project (release-project release))
          (repo (project-repo project))
-         (commit-string (vcs-release/commit release)))
+         (commit-string (vcs-release-commit release)))
     (uiop:resolve-absolute-location
      `(,(repo-lib-base-pathname repo)
        ,(subseq commit-string 0 2)
@@ -189,16 +199,13 @@ already created."
                                  (vcs-release-system-files-by-primary-name release))))
       (when system-file
         (let* ((source (release-source release))
-               (system (ensure-gethash system-name (vcs-source-systems-by-name source)
-                                       (make-instance 'vcs-system
-                                                      :name system-name
-                                                      :source source)))
+               (system (source-ensure-system source system-name))
                (system-release (make-instance 'vcs-system-release
                                               :release release
                                               :source (release-source release)
                                               :system system
                                               :system-file system-file)))
-          (push release (vcs-system-releases system))
+          (system-register-release! system release)
           (setf (gethash system-name (vcs-system-file-system-releases-by-name system-file))
                 system-release)
           (setf (gethash system-name (vcs-release-system-releases-by-name release))
@@ -211,22 +218,21 @@ already created."
             :release release
             :system-name system-name))))
 
-(defmethod release-version ((release remote-vcs-release))
-  (acond
-    ((vcs-release/commit release)
-     `(:commit ,it))
-    ((vcs-release/tag release)
-     `(:tag ,it))
-    ((vcs-release/branch release)
-     `(:branch ,it))))
+(defmethod release-version ((release vcs-release))
+  (list :commit (vcs-release-commit release)))
 
 
 ;; * system files
 
 (defclass vcs-system-file (clpm-system-file)
-  ((relative-pathname
+  ((source
+    :initarg :source
+    :accessor system-file-source)
+   (release
+    :initarg :release
+    :accessor system-file-release)
+   (relative-pathname
     :initarg :relative-pathname
-    :accessor vcs-system-file/relative-pathname
     :accessor system-file-asd-enough-namestring)
    (system-releases-by-name
     :initform (make-hash-table :test 'equalp)
@@ -237,7 +243,7 @@ already created."
 
 (defmethod system-file-absolute-asd-pathname ((system-file vcs-system-file))
   "Merge the enough pathname with the release's lib pathname."
-  (merge-pathnames (vcs-system-file/relative-pathname system-file)
+  (merge-pathnames (system-file-asd-enough-namestring system-file)
                    (release-lib-pathname (system-file-release system-file))))
 
 (defmethod system-file-system-releases ((system-file vcs-system-file))
@@ -275,8 +281,19 @@ already created."
 
 ;; * system-releases
 
-(defclass vcs-system-release (semantic-versioned-system-release clpm-system-release)
-  ((reqs
+(defclass vcs-system-release (clpm-system-release)
+  ((source
+    :initarg :source
+    :reader system-release-source)
+   (release
+    :initarg :release
+    :reader system-release-release)
+   (system
+    :initarg :system
+    :reader system-release-system)
+   (system-version
+    :accessor system-release-system-version)
+   (reqs
     :accessor system-release-requirements)
    (system-file
     :initarg :system-file
@@ -285,6 +302,7 @@ already created."
 (defun parse-system-release-info-from-groveler! (system-release info)
   "Take the info provided by the groveler and modify system-release in place to
 include it."
+  (log:debug "Parsing from groveler: ~S" info)
   (destructuring-bind (system-name
                        &key version depends-on defsystem-depends-on loaded-systems
                        &allow-other-keys)
@@ -303,6 +321,9 @@ include it."
 (defmethod system-release-absolute-asd-pathname ((system-release vcs-system-release))
   (system-file-absolute-asd-pathname (system-release-system-file system-release)))
 
+(defmethod system-release-satisfies-version-spec-p ((system-release vcs-system-release) version-spec)
+  t)
+
 (defmethod slot-unbound (class (system-release vcs-system-release)
                          (slot-name (eql 'clpm/sources/defs:system-version)))
   (grovel-system-release! system-release)
@@ -317,38 +338,29 @@ include it."
 
 ;; * Installing
 
-(defmethod ensure-release-installed! ((release remote-vcs-release))
-  (let* ((project (release-project release))
-         (repo (project-repo project)))
+;; TODO: Split into a method that resolves to a commit and one that ensure the
+;; commit is installed.
+(defmethod ensure-release-installed! ((release vcs-release))
+  (unless (vcs-release-installed-p release)
+    (let* ((project (release-project release))
+           (repo (project-repo project))
+           (ref (vcs-release-ref release)))
 
-    (ensure-ref-present-locally! repo
-                                 :tag (vcs-release/tag release)
-                                 :branch (vcs-release/branch release)
-                                 :commit (vcs-release/commit release))
+      (ensure-ref-present-locally! repo ref)
 
-    (let ((commit-id (resolve-ref-to-commit repo
-                                            :tag (vcs-release/tag release)
-                                            :branch (vcs-release/branch release)
-                                            :commit (vcs-release/commit release))))
-      (setf (vcs-release/commit release) commit-id
-            (vcs-release/branch release) nil
-            (vcs-release/tag release) nil)
-      (setf (gethash `(:commit ,commit-id)
-                     (vcs-project-releases-by-spec (release-project release)))
-            release))
-    (let ((install-root (release-lib-pathname release)))
-      (unless (uiop:probe-file* install-root)
-        (log:info "installing ~A, commit ~A to ~A"
-                  (project-name project)
-                  (vcs-release/commit release)
-                  install-root)
-        (multiple-value-bind (stream archive-type)
-            (repo-archive-stream repo
-                                 :tag (vcs-release/tag release)
-                                 :branch (vcs-release/branch release)
-                                 :commit (vcs-release/commit release))
-          (with-open-stream (strem stream)
-            (unarchive archive-type stream install-root)))))))
+      (let ((commit-id (resolve-ref-to-commit repo ref)))
+        (setf (vcs-release-commit release) commit-id))
+      (let ((install-root (release-lib-pathname release)))
+        (unless (uiop:probe-file* install-root)
+          (log:info "installing ~A, commit ~A to ~A"
+                    (project-name project)
+                    (vcs-release-commit release)
+                    install-root)
+          (multiple-value-bind (stream archive-type)
+              (repo-archive-stream repo `(:commit ,(vcs-release-commit release)))
+            (with-open-stream (stream stream)
+              (unarchive archive-type stream install-root))))))
+    (setf (vcs-release-installed-p release) t)))
 
-(defun ensure-vcs-release-installed! (release)
+(defmethod install-release ((release vcs-release))
   (ensure-release-installed! release))
