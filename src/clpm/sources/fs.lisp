@@ -33,7 +33,8 @@
     :initarg :root-dir
     :initform (error ":root-dir must be provided.")
     :accessor fs-source-root-dir
-    :documentation "The root directory of this source.")
+    :documentation "The root directory of this source. If relative, it is
+resolved with respect to *DEFAULT-PATHNAME-DEFAULTS*.")
    (project
     :accessor fs-source-project
     :documentation "The single project in this source.")
@@ -51,8 +52,11 @@ objects.")
     :initform (make-hash-table :test 'equalp)
     :accessor fs-source-systems-by-name
     :documentation "A hash table that maps system names to fs-system objects."))
-  (:documentation "A source that contains systems located on the file
-system. Contains one project (:ALL) and one release (:NEWEST)."))
+  (:documentation
+   "A source that contains systems located on the file system. Contains one
+project (:ALL) and one release (:NEWEST). Does not do any autodiscovery of
+system files, system files must be registered with the source using
+FS-SOURCE-REGISTER-ASD."))
 
 (defmethod initialize-instance :after ((source fs-source)
                                        &key root-dir
@@ -70,8 +74,8 @@ system. Contains one project (:ALL) and one release (:NEWEST)."))
     (setf (fs-source-project source) project)))
 
 (defmethod source-project ((source fs-source) project-name &optional (error t))
-  "If the project name is \"all\", return the singleton project. Otherwise
-return nil. "
+  "If the project name is :ALL, return the singleton project. Otherwise return
+nil or error."
   (cond
     ((eql :all project-name)
      (fs-source-project source))
@@ -151,7 +155,13 @@ can be relative (to the source's root dir) or absolute."
 ;; * Project
 
 (defclass fs-project (clpm-project)
-  ((release
+  ((source
+    :initarg :source
+    :reader project-source)
+   (name
+    :initarg :name
+    :reader project-name)
+   (release
     :initarg :release
     :accessor fs-project-release))
   (:documentation "A project on the filesystem. Contains a singleton
@@ -224,9 +234,14 @@ release."
 ;; * System files
 
 (defclass fs-system-file (clpm-system-file)
-  ((enough-namestring
+  ((source
+    :initarg :source
+    :reader system-file-source)
+   (release
+    :initarg :release
+    :reader system-file-release)
+   (enough-namestring
     :initarg :enough-namestring
-    :accessor fs-system-file/enough-namestring
     :accessor system-file-asd-enough-namestring)
    (groveled-p
     :initform nil
@@ -235,7 +250,7 @@ release."
 
 (defmethod system-file-absolute-asd-pathname ((system-file fs-system-file))
   "Merge the enough pathname with the source's root dir."
-  (merge-pathnames (fs-system-file/enough-namestring system-file)
+  (merge-pathnames (system-file-asd-enough-namestring system-file)
                    (merge-pathnames (fs-source-root-dir (system-file-source system-file)))))
 
 (defmethod system-file-system-releases ((system-file fs-system-file))
@@ -261,7 +276,7 @@ contains."
         (source (system-file-source system-file)))
     (maphash (lambda (k v)
                (when (equal (asdf:primary-system-name k)
-                            (pathname-name (fs-system-file/enough-namestring system-file)))
+                            (pathname-name (system-file-asd-enough-namestring system-file)))
                  (push (fs-system-system-release v) out)))
              (fs-source-systems-by-name source))
     out))
@@ -270,7 +285,13 @@ contains."
 ;; * System objects
 
 (defclass fs-system (clpm-system)
-  ((system-release
+  ((source
+    :initarg :source
+    :reader system-source)
+   (name
+    :initarg :name
+    :reader system-name)
+   (system-release
     :accessor fs-system-system-release))
   (:documentation "A single system located on the file system."))
 
