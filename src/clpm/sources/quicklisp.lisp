@@ -116,37 +116,6 @@
     (gethash (release-version release)
              (ql-flat-project-snapshot-to-ql-version-map project))))
 
-(defun ql-flat-source-metadata (source)
-  (let ((metadata-pathname (ff-source-repo-metadata-pathname source)))
-    (when (probe-file metadata-pathname)
-      (uiop:with-safe-io-syntax ()
-        (uiop:read-file-forms metadata-pathname)))))
-
-(defun ql-flat-source-update-metadata (source &rest args &key &allow-other-keys)
-  (let ((metadata-pathname (ff-source-repo-metadata-pathname source))
-        (existing-metadata (or (ql-flat-source-metadata source)
-                               (list (cons :api-version "0.1")))))
-    (loop
-      :for key :in args :by #'cddr
-      :for value :in (rest args) :by #'cddr
-      :do
-         (setf (assoc-value existing-metadata key) value))
-    (uiop:with-safe-io-syntax ()
-      (with-open-file (s metadata-pathname
-                         :direction :output
-                         :if-exists :supersede
-                         :if-does-not-exist :create)
-        (let ((*print-right-margin* nil)
-              (*print-case* :downcase))
-          (dolist (pair existing-metadata)
-            (prin1 pair s)
-            (terpri s)))))
-
-    existing-metadata))
-
-(defun ql-flat-source-latest-version-synced (source)
-  (assoc-value (ql-flat-source-metadata source) :latest-version-synced))
-
 (defun intersection-non-empty-p (set1 set2 &key test)
   (some (rcurry #'member set2 :test test) set1))
 
@@ -454,7 +423,7 @@ in the same Quicklisp distribution versions as system-release."
          (project-index-map (ql-flat-load-existing-project-index source))
          (system-index-map (ql-flat-load-existing-system-index source)))
     (ensure-directories-exist sync-cache-pathname)
-    (let ((latest-version-synced (ql-flat-source-latest-version-synced source))
+    (let ((latest-version-synced (ff-source-metadata source :latest-version-synced))
           (sync-state (make-ql-sync-state
                        :project-index-map project-index-map
                        :system-index-map system-index-map))
@@ -487,5 +456,5 @@ in the same Quicklisp distribution versions as system-release."
       (let ((prev-latest-version-synced latest-version-synced)
             (latest-version-synced (ql-dist-version-version
                                     (ql-sync-state-previous-dist-version sync-state))))
-        (ql-flat-source-update-metadata source :latest-version-synced latest-version-synced)
+        (setf (ff-source-metadata source :latest-version-synced) latest-version-synced)
         (not (equal latest-version-synced prev-latest-version-synced))))))

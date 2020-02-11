@@ -18,6 +18,7 @@
   (:export #:ff-project
            #:ff-release
            #:ff-source
+           #:ff-source-metadata
            #:ff-source-project-class
            #:ff-source-release-class
            #:ff-source-repo-metadata-pathname
@@ -38,7 +39,9 @@
 ;; * Source definition
 
 (defclass ff-source (clpm-source)
-  ((projects-map
+  ((metadata
+    :documentation "An alist.")
+   (projects-map
     :initform (make-hash-table :test 'equal)
     :reader ff-source-projects-map
     :documentation "Maps project names to project instances")
@@ -51,6 +54,39 @@
 for these files is provided by FF-SOURCE-REPO-PATHNAME."))
 
 ;; ** flat file specific functions
+
+(defmethod slot-unbound (class (source ff-source) (slot-name (eql 'metadata)))
+  (setf (slot-value source slot-name)
+        (uiop:read-file-forms (ff-source-repo-metadata-pathname source))))
+
+(defgeneric ff-source-metadata (source key &optional errorp default)
+  (:documentation "Return the data stored in the source's metadata under the
+key. If ERRORP is non-NIL (default T), an error is produced if the key does not
+exist. If ERRORP is NIL and the key does not exist, DEFAULT is returned.")
+  (:method ((source ff-source) key &optional (errorp t) default)
+    (let ((cell (assoc key (slot-value source 'metadata) :test 'equal)))
+      (cond
+        (cell (cdr cell))
+        (errorp (error "Key ~S does not exist in source metadata" key))
+        (t default)))))
+
+(defgeneric (setf ff-source-metadata) (value source key &optional errorp default)
+  (:documentation "Sets a value in the source's metadata and writes it to
+disk.")
+  (:method (value (source ff-source) key &optional (errorp t) default)
+    (declare (ignore errorp default))
+    (setf (assoc-value (slot-value source 'metadata) key :test 'equal)
+          value)
+    (with-open-file (s (ff-source-repo-metadata-pathname source)
+                       :direction :output
+                       :if-exists :supersede)
+      (uiop:with-safe-io-syntax ()
+        (let ((*print-right-margin* nil)
+              (*print-case* :downcase))
+          (dolist (pair (slot-value source 'metadata))
+            (prin1 pair s)
+            (terpri s)))))
+    value))
 
 (defgeneric ff-source-project-class (source)
   (:documentation
