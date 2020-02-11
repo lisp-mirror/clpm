@@ -52,7 +52,7 @@ objects.")
     :accessor fs-source-systems-by-name
     :documentation "A hash table that maps system names to fs-system objects."))
   (:documentation "A source that contains systems located on the file
-  system. Contains one project (\"all\") and one release (\"newest\")."))
+system. Contains one project (:ALL) and one release (\"newest\")."))
 
 (defmethod initialize-instance :after ((source fs-source)
                                        &key root-dir
@@ -60,7 +60,7 @@ objects.")
   "Construct the singleton project and release."
   (assert (uiop:directory-pathname-p root-dir))
   (let* ((project (make-instance 'fs-project
-                                 :name "all"
+                                 :name :all
                                  :source source))
          (release (make-instance 'fs-release
                                  :version "newest"
@@ -73,7 +73,7 @@ objects.")
   "If the project name is \"all\", return the singleton project. Otherwise
 return nil. "
   (cond
-    ((equal "all" project-name)
+    ((eql :all project-name)
      (fs-source-project source))
     (error
      (error 'source-missing-project
@@ -123,7 +123,7 @@ can be relative (to the source's root dir) or absolute."
           (gethash namestring namestring-ht) system-file)))
 
 (defmethod source-to-form ((source fs-source))
-  (let* ((project (source-project source "all"))
+  (let* ((project (source-project source :all))
          (release (project-release project "newest"))
          (system-files (release-system-files release)))
     (append (list :file-system)
