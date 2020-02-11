@@ -41,6 +41,14 @@
         #+ecl ext:interactive-interrupt
         #+allegro excl:interrupt-signal
         (lambda (c) (declare (ignore c)) (uiop:quit 2)))
+       ;; On warning, print it and optionally the backtrace.
+       (warning (lambda (c)
+                  (log:warn "~A" c)
+                  (log:debug "~A" (with-output-to-string (s)
+                                    (uiop:print-condition-backtrace c :stream s)))
+                  ;; Invoke muffle warning so that we don't get a duplicate
+                  ;; warning printed.
+                  (muffle-warning c)))
        ;; On error, print the backtrace and quit.
        (error (lambda (c)
                 (uiop:print-condition-backtrace c)
