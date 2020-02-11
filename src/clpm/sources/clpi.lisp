@@ -67,7 +67,7 @@
 
 ;; ** System Release
 
-(defclass clpi-system-release (flat-file-system-release)
+(defclass clpi-system-release (ff-system-release)
   ())
 
 
@@ -125,7 +125,7 @@
 
 (defmethod system-release-requirements ((system-release clpi-system-release))
   (let ((deps (remove-if (rcurry #'member (list "asdf" "uiop") :test #'string-equal)
-                         (flat-file-system-release-dependencies system-release))))
+                         (ff-system-release-dependencies system-release))))
     (mapcar (lambda (dep-name)
               (make-instance 'system-requirement
                              :name dep-name))

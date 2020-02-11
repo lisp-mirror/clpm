@@ -29,8 +29,8 @@
            #:ff-source-repo-system-index-pathname
            #:ff-source-repo-system-pathname
            #:ff-source-repo-systems-pathname
-           #:flat-file-system-release
-           #:flat-file-system-release-dependencies
+           #:ff-system-release
+           #:ff-system-release-dependencies
            #:ff-source-system-release-class))
 
 (in-package #:clpm/sources/flat-file)
@@ -55,17 +55,17 @@
 (defgeneric ff-source-system-class (source))
 
 (defmethod ff-source-system-class ((source ff-source))
-  'flat-file-system)
+  'ff-system)
 
 (defgeneric ff-source-system-file-class (source))
 
 (defmethod ff-source-system-file-class ((source ff-source))
-  'flat-file-system-file)
+  'ff-system-file)
 
 (defgeneric ff-source-system-release-class (source))
 
 (defmethod ff-source-system-release-class ((source ff-source))
-  'flat-file-system-release)
+  'ff-system-release)
 
 (defgeneric ff-source-release-class (source))
 
@@ -283,7 +283,7 @@
     (when system
       (let ((system-release (gethash (list (project-name (release-project release))
                                            (release-version release))
-                                     (flat-file-system-releases-map system))))
+                                     (ff-system-releases-map system))))
         (unless system-release
           (error "Unknown error! Cannot find the correct system release!"))
         system-release))))
@@ -297,7 +297,7 @@
 
 ;; * Systems
 
-(defclass flat-file-system (clpm-system)
+(defclass ff-system (clpm-system)
   ((source
     :initarg :source
     :reader system-source
@@ -308,10 +308,10 @@
     :documentation "The name of the system.")
 
    (system-releases-map
-    :reader flat-file-system-releases-map
+    :reader ff-system-releases-map
     :documentation "Maps release specs to system-release objects.")))
 
-(defmethod slot-unbound (class (system flat-file-system) (slot-name (eql 'system-releases-map)))
+(defmethod slot-unbound (class (system ff-system) (slot-name (eql 'system-releases-map)))
   "Read the system file, instantiating system-release objects for each release
   of the system."
 
@@ -335,30 +335,30 @@
                            initargs)))))))
     (setf (slot-value system slot-name) map)))
 
-(defmethod system-register-release! ((system flat-file-system) release)
-  (setf (gethash (release-version release) (flat-file-system-releases-map system)) release))
+(defmethod system-register-release! ((system ff-system) release)
+  (setf (gethash (release-version release) (ff-system-releases-map system)) release))
 
-(defmethod system-releases ((system flat-file-system))
+(defmethod system-releases ((system ff-system))
   (mapcar #'system-release-release (system-system-releases system)))
 
-(defmethod system-system-releases ((system flat-file-system))
-  (hash-table-values (flat-file-system-releases-map system)))
+(defmethod system-system-releases ((system ff-system))
+  (hash-table-values (ff-system-releases-map system)))
 
 
 ;; * System releases
 
-(defclass flat-file-system-release (clpm-system-release)
+(defclass ff-system-release (clpm-system-release)
   ((source
     :initarg :source
     :reader system-release-source
     :documentation "The source that provides this system release.")
    (system-name
     :initarg :system-name
-    :reader flat-file-system-release-system-name
+    :reader ff-system-release-system-name
     :documentation "The name of the system this system release is for.")
    (release-spec
     :initarg :release-spec
-    :reader flat-file-system-release-release-spec
+    :reader ff-system-release-release-spec
     :documentation "A specification of which release this system release belongs to.")
 
    (system-version
@@ -380,22 +380,22 @@
    (dependencies
     :initarg :dependencies
     :initform nil
-    :reader flat-file-system-release-dependencies)
+    :reader ff-system-release-dependencies)
    (system-file
     :reader system-release-system-file)))
 
-(defmethod slot-unbound (class (system-release flat-file-system-release) (slot-name (eql 'system)))
+(defmethod slot-unbound (class (system-release ff-system-release) (slot-name (eql 'system)))
   (setf (slot-value system-release slot-name)
         (source-system (system-release-source system-release)
-                       (flat-file-system-release-system-name system-release))))
+                       (ff-system-release-system-name system-release))))
 
-(defmethod slot-unbound (class (system-release flat-file-system-release) (slot-name (eql 'release)))
+(defmethod slot-unbound (class (system-release ff-system-release) (slot-name (eql 'release)))
   (destructuring-bind (project-name version)
-      (flat-file-system-release-release-spec system-release)
+      (ff-system-release-release-spec system-release)
     (setf (slot-value system-release slot-name)
           (source-project-release (system-release-source system-release) project-name version))))
 
-(defmethod slot-unbound (class (system-release flat-file-system-release) (slot-name (eql 'system-file)))
+(defmethod slot-unbound (class (system-release ff-system-release) (slot-name (eql 'system-file)))
   (setf (slot-value system-release slot-name)
         (make-instance (ff-source-system-file-class (system-release-source system-release))
                        :source (system-release-source system-release)
@@ -405,7 +405,7 @@
 
 ;; * System files
 
-(defclass flat-file-system-file (clpm-system-file)
+(defclass ff-system-file (clpm-system-file)
   ((source
     :initarg :source
     :reader system-file-source
@@ -419,9 +419,9 @@
     :reader system-file-asd-enough-namestring
     :documentation "The namestring pointing to the asd file within the release.")))
 
-(defmethod system-file-system-releases ((system-file flat-file-system-file))
+(defmethod system-file-system-releases ((system-file ff-system-file))
   (release-system-releases (system-file-release system-file)))
 
-(defmethod system-file-absolute-asd-pathname ((system-file flat-file-system-file))
+(defmethod system-file-absolute-asd-pathname ((system-file ff-system-file))
   (merge-pathnames (system-file-asd-enough-namestring system-file)
                    (release-lib-pathname (system-file-release system-file))))
