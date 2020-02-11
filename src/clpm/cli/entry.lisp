@@ -52,7 +52,6 @@
        ;; On error, print the backtrace and quit.
        (error (lambda (c)
                 (uiop:print-condition-backtrace c)
-                (format *error-output* "~&~A~%" c)
                 (uiop:quit 1))))
     (multiple-value-bind (arguments options)
         ;; We need to ignore unrecognized options here since we don't yet
