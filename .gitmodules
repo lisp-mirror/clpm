@@ -157,3 +157,18 @@
 [submodule "ext/cl-colors2"]
 	path = ext/cl-colors2
 	url = https://notabug.org/cage/cl-colors2.git
+[submodule "ext/dexador"]
+	path = ext/dexador
+	url = https://github.com/fukamachi/dexador.git
+[submodule "ext/quri"]
+	path = ext/quri
+	url = https://github.com/fukamachi/quri.git
+[submodule "ext/cl-cookie"]
+	path = ext/cl-cookie
+	url = https://github.com/fukamachi/cl-cookie.git
+[submodule "ext/trivial-mimes"]
+	path = ext/trivial-mimes
+	url = https://github.com/Shinmera/trivial-mimes.git
+[submodule "ext/cl-reexport"]
+	path = ext/cl-reexport
+	url = https://github.com/takagi/cl-reexport.git
