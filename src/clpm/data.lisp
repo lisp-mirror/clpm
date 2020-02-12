@@ -18,7 +18,7 @@
 home."
   (setf *clpm-data-root*
         (or (uiop:getenv-absolute-directory "CLPM_DATA_DIR")
-            (uiop:xdg-data-home "common-lisp" "clpm/"))))
+            (uiop:xdg-data-home "clpm/"))))
 
 (defun clear-clpm-data-root ()
   "Clear the ~*clpm-data-root*~ variable."

@@ -26,11 +26,11 @@
 
 (defun system-config-directories ()
   "Returns the pathnames to the system-wide default config directories."
-  (uiop:system-config-pathnames "common-lisp" "clpm/"))
+  (uiop:system-config-pathnames "clpm/"))
 
 (defun user-config-directories ()
   "Returns the pathnames to the user's XDG default config directories."
-  (uiop:xdg-config-pathnames "common-lisp" "clpm/"))
+  (uiop:xdg-config-pathnames "clpm/"))
 
 (defparameter *default-clpm-config-directories*
   (list 'user-config-directories
