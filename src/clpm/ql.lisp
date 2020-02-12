@@ -60,16 +60,14 @@
     (if (puri:uri-p url)
         (setf url (puri:copy-uri url))
         (setf url (puri:parse-uri url)))
-    ;; If the URL is already https, set force https to be *at least*
-    ;; :metadata-only.
-    (when (and (not force-https)
-               (eql (puri:uri-scheme url) :https))
-      (setf force-https :metadata-only)
+    ;; If the URL is already https, set force https to be T
+    (when (eql (puri:uri-scheme url) :https)
+      (setf force-https t)
       (setf (ql-repo-force-https repo) force-https))
     ;; If the scheme is not already https, set it to https if necessary.
     (ecase force-https
       (nil)
-      ((t :metadata-only)
+      (t
        (setf (puri:uri-scheme url) :https)))
     ;; Compute the versions url
     (let* ((path (puri:uri-path url))
@@ -210,7 +208,7 @@
             (destructuring-bind (project url size file-md5 content-sha1 prefix &rest system-files)
                 (split-sequence #\Space line)
               (setf url (puri:parse-uri url))
-              (when (eql t (ql-repo-force-https (ql-dist-version-repo dist-version)))
+              (when (ql-repo-force-https (ql-dist-version-repo dist-version))
                 (setf (puri:uri-scheme url) :https))
               (setf size (parse-integer size))
               (setf (gethash project ht)
