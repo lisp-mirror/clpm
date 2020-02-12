@@ -5,16 +5,20 @@
 
 (uiop:define-package #:clpm/deploy
     (:use #:cl)
-  (:import-from #:deploy))
+  (:import-from #:deploy)
+  (:export #:*default-clpm-home*))
 
 (in-package #:clpm/deploy)
+
+(defvar *default-clpm-home* nil)
 
 (uiop:register-image-restore-hook
  (lambda ()
    ;; Silence Deploy
    (setf deploy:*status-output* nil)
    ;; Compute the data directory for Deploy based on CLPM_HOME
-   (let ((clpm-home (uiop:getenv "CLPM_HOME")))
+   (let ((clpm-home (or (uiop:getenv "CLPM_HOME")
+                        *default-clpm-home*)))
      (unless clpm-home
        (setf clpm-home (merge-pathnames (make-pathname :directory '(:relative :up "lib" "clpm"))
                                         (deploy:runtime-directory))))

@@ -17,4 +17,12 @@
         *root-pathname*
         *build-root-pathname*)
 
+(asdf:load-system :clpm)
+
+(when (and (uiop:featurep :linux)
+           (equal uiop:*command-line-arguments* (list "release")))
+  (format uiop:*stderr* "Performing release build. Setting default CLPM home.~%~%")
+  (setf (symbol-value (uiop:find-symbol* '#:*default-clpm-home* '#:clpm/deploy))
+        "/usr/local/lib/clpm"))
+
 (asdf:make :clpm)
