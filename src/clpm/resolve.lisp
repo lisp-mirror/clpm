@@ -67,8 +67,9 @@
                                        (member x (context-releases context)))
                                      release-alist
                                      :key #'car)))
-      (if (and existing-release (member (project-name (release-project (car existing-release)))
-                                        update-projects :test #'equal))
+      (if (and existing-release
+               (not (member (project-name (release-project (car existing-release)))
+                            update-projects :test #'equal)))
           (list* existing-release (remove existing-release release-alist))
           release-alist))))
 
