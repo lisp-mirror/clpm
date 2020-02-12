@@ -421,7 +421,7 @@ in the same Quicklisp distribution versions as system-release."
          (project-index-map (ql-flat-load-existing-project-index source))
          (system-index-map (ql-flat-load-existing-system-index source)))
     (ensure-directories-exist sync-cache-pathname)
-    (let ((latest-version-synced (ff-source-metadata source :latest-version-synced))
+    (let ((latest-version-synced (ff-source-metadata source :latest-version-synced nil))
           (sync-state (make-ql-sync-state
                        :project-index-map project-index-map
                        :system-index-map system-index-map))

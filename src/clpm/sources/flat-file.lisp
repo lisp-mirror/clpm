@@ -56,8 +56,10 @@ for these files is provided by FF-SOURCE-REPO-PATHNAME."))
 ;; ** flat file specific functions
 
 (defmethod slot-unbound (class (source ff-source) (slot-name (eql 'metadata)))
-  (setf (slot-value source slot-name)
-        (uiop:read-file-forms (ff-source-repo-metadata-pathname source))))
+  (let ((pn (ff-source-repo-metadata-pathname source)))
+    (when (probe-file pn)
+      (setf (slot-value source slot-name)
+            (uiop:read-file-forms pn)))))
 
 (defgeneric ff-source-metadata (source key &optional errorp default)
   (:documentation "Return the data stored in the source's metadata under the
