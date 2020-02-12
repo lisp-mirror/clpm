@@ -1,4 +1,5 @@
 #!/bin/sh
 
-tar cvf build/clpm.tar build/bin/ build/lib/ build/man/ LICENSE README.org install.sh
-gzip build/clpm.tar
+BASE="${1:-.}"
+tar -cvf "$BASE/build/clpm.tar" "$BASE/build/bin/" "$BASE/build/lib/" "$BASE/build/man/" "$BASE/LICENSE" "$BASE/README.org" "$BASE/install.sh"
+gzip "$BASE/build/clpm.tar"
