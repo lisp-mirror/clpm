@@ -13,7 +13,9 @@
 
 (defvar *default-clpm-home* nil)
 
-(deploy:define-resource-directory groveler "src/clpm-groveler/")
+(deploy:define-resource-directory deploy-groveler "src/clpm-groveler/")
+
+(deploy:define-resource-directory deploy-client "src/clpm-client/")
 
 (uiop:register-image-restore-hook
  (lambda ()
