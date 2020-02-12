@@ -12,8 +12,10 @@
   (:export #:http-client
            #:http-client-available-p
            #:http-client-can-handle-url-p
+           #:http-client-manages-streams-p
            #:http-fetch-error
            #:http-request
+           #:%http-client-manages-streams-p
            #:%http-request
            #:http-simple-fetch-error
            #:register-http-client))
@@ -97,6 +99,10 @@ the ones where ~http-client-available-p~ returns NIL."
   (:documentation
    "Returns T iff the client is able to fetch the resource located at ~url~."))
 
+(defgeneric %http-client-manages-streams-p (client)
+  (:documentation
+   "Returns T iff the client handles closing streams itself."))
+
 (define-condition http-fetch-error (error)
   ()
   (:documentation "An error condition raised when there is a problem fetching a
@@ -116,3 +122,6 @@ resource over HTTP."))
   (%http-request (get-preferred-http-client url) url
                  :additional-headers additional-headers
                  :want-stream want-stream))
+
+(defun http-client-manages-streams-p (url)
+  (%http-client-manages-streams-p (get-preferred-http-client url)))

@@ -40,6 +40,9 @@
   (or (not (featurep :drakma-no-ssl))
       (eql (uri-scheme url) :http)))
 
+(defmethod %http-client-manages-streams-p ((client drakma-client))
+  nil)
+
 (defmethod %http-request ((client drakma-client) url
                           &key additional-headers
                             want-stream)

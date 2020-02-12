@@ -120,28 +120,30 @@ Returns T if the contents of PATHNAME were modified, NIL otherwise."
               additional-headers))
       (ensure-directories-exist pathname)
       (unwind-protect
-           (progn
-             (multiple-value-bind (http-stream status-code)
-                 (http-request url
-                               :want-stream t
-                               :additional-headers additional-headers)
-               (log:debug "Status code: ~S" status-code)
-               (with-open-stream (http-stream http-stream)
-                 (case status-code
-                   (200
-                    (with-open-file (file-stream tmp-pathname :direction :output
-                                                              :if-exists :supersede
-                                                              :element-type '(unsigned-byte 8))
-                      ;; Save the data to the file.
-                      (copy-stream http-stream file-stream
-                                   :element-type '(unsigned-byte 8)
-                                   :buffer-size 8192))
-                    (rename-file tmp-pathname pathname)
-                    t)
-                   (304
-                    ;; No changes
-                    nil)
-                   (t
-                    (error "Can't handle HTTP code ~A" status-code))))))
+           (multiple-value-bind (http-stream status-code)
+               (http-request url
+                             :want-stream t
+                             :additional-headers additional-headers)
+             (unwind-protect
+                  (progn
+                    (log:debug "Status code: ~S" status-code)
+                    (case status-code
+                      (200
+                       (with-open-file (file-stream tmp-pathname :direction :output
+                                                                 :if-exists :supersede
+                                                                 :element-type '(unsigned-byte 8))
+                         ;; Save the data to the file.
+                         (copy-stream http-stream file-stream
+                                      :element-type '(unsigned-byte 8)
+                                      :buffer-size 8192))
+                       (rename-file tmp-pathname pathname)
+                       t)
+                      (304
+                       ;; No changes
+                       nil)
+                      (t
+                       (error "Can't handle HTTP code ~A" status-code))))
+               (unless (http-client-manages-streams-p url)
+                 (close http-stream))))
         (when (probe-file tmp-pathname)
           (delete-file tmp-pathname))))))

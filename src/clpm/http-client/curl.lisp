@@ -45,6 +45,9 @@ its version can be successfully queried."
   "Can handle every URL."
   t)
 
+(defmethod %http-client-manages-streams-p ((client curl-client))
+  nil)
+
 (defun header-pair-to-string (pair)
   "Convert a header name/value pair to a string of the form
 

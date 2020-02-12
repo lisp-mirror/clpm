@@ -11,6 +11,7 @@
 (defparameter *default-linux-feature-set*
   '(:clpm
     :clpm-curl
+    :clpm-dexador
     :clpm-drakma
     :clpm-firejail
     :clpm-openssl))
@@ -18,6 +19,7 @@
 (defparameter *default-windows-feature-set*
   '(:clpm
     :clpm-curl
+    :clpm-dexador
     :deploy-console))
 
 #+:linux
@@ -33,7 +35,8 @@
            (member feature clpm-features)))
     (unless (present :clpm)
       (error ":CLPM must be present on the features list."))
-    (unless (or (present :clpm-drakma)
+    (unless (or (present :clpm-dexador)
+                (present :clpm-drakma)
                 (present :clpm-curl))
       (error "At least one HTTP client must be included."))))
 
@@ -46,9 +49,16 @@
                (not (present :clpm-openssl)))
       (pushnew :drakma-no-ssl clpm-features))
 
+    ;; If there is not going to be OpenSSL support built in, tell Dexador to not
+    ;; load CL+SSL.
+    (when (and (present :clpm-dexador)
+               (not (present :clpm-openssl)))
+      (pushnew :dexador-no-ssl clpm-features))
+
     ;; If no Lisp clients that use openssl are present, remove it from the
     ;; feature set.
-    (unless (present :clpm-drakma)
+    (unless (or (present :clpm-drakma)
+                (present :clpm-dexador))
       (setf clpm-features (remove :clpm-openssl clpm-features))))
   clpm-features)
 
