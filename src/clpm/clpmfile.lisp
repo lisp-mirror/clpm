@@ -14,9 +14,9 @@
           #:clpm/requirement
           #:clpm/source
           #:clpm/utils)
-  (:export #:clpmfile/all-requirements
-           #:clpmfile/sources
-           #:clpmfile/user-requirements
+  (:export #:clpmfile-all-requirements
+           #:clpmfile-sources
+           #:clpmfile-user-requirements
            #:read-clpmfile)
   ;; (:export #:clpmfile/all-requirements
   ;;          #:clpmfile/user-asd-files
@@ -42,24 +42,24 @@
 (defclass clpmfile ()
   ((pathname
     :initarg :pathname
-    :accessor clpmfile/pathname
+    :accessor clpmfile-pathname
     :documentation
-    "The pathname to this file or nil.")
+    "The pathname to this file.")
    (user-global-sources
     :initarg :user-global-sources
     :initform nil
-    :accessor clpmfile/user-global-sources
+    :accessor clpmfile-user-global-sources
     :documentation
     "The sources defined by the user in the clpmfile. A list of source
     objects.")
    (fs-source
-    :accessor clpmfile/fs-source
+    :accessor clpmfile-fs-source
     :documentation
     "The filesystem source rooted at this clpmfile's directory.")
    (user-asd-files
     :initarg :user-asd-files
     :initform nil
-    :accessor clpmfile/user-asd-files
+    :accessor clpmfile-user-asd-files
     :documentation
     "The asd files the user has specified in the clpmfile. A list where each
     element is `(path-to-asd-file &key systems)`. If `:systems` is nil, the file
@@ -67,25 +67,32 @@
    (user-requirements
     :initarg :user-requirements
     :initform nil
-    :accessor clpmfile/user-requirements
+    :accessor clpmfile-user-requirements
     :documentation
-    "A list of requirements specified by the user."))
+    "A list of requirements specified by the user.")
+   (vcs-source
+    :accessor clpmfile-vcs-source
+    :documentation
+    "A VCS source to where raw vcs requirements can be homed."))
   (:documentation
    "Representation of a clpmfile."))
 
-(defmethod initialize-instance :after ((clpmfile clpmfile) &key pathname &allow-other-keys)
+(defmethod initialize-instance :after ((clpmfile clpmfile) &key &allow-other-keys)
   "Set the ~clpmfile~'s filesystem source based on the directory where the
 clpmfile is located."
-  (setf (clpmfile/fs-source clpmfile)
+  (setf (clpmfile-fs-source clpmfile)
         (make-instance 'fs-source
-                       :root-dir (uiop:pathname-directory-pathname
-                                  (uiop:make-pathname* :directory '(:relative)))
-                       :name "%clpmfile")))
+                       :root-pathname (uiop:pathname-directory-pathname
+                                       (uiop:make-pathname* :directory '(:relative)))
+                       :name :clpmfile-fs))
+  (setf (clpmfile-vcs-source clpmfile)
+        (make-instance 'vcs-source
+                       :name :clpmfile-vcs)))
 
-(defun clpmfile/asd-file-requirements (clpmfile)
+(defun clpmfile-asd-file-requirements (clpmfile)
   "Return a list of requirements gathered from the ~:asd~ statements in
 ~clpmfile~."
-  (let ((fs-source (clpmfile/fs-source clpmfile)))
+  (let ((fs-source (clpmfile-fs-source clpmfile)))
     (mapcan (lambda (x)
               (destructuring-bind (asd-file &key systems)
                   x
@@ -100,20 +107,21 @@ clpmfile is located."
                     (list (make-instance 'fs-system-file-requirement
                                          :source fs-source
                                          :name (merge-pathnames asd-file
-                                                                (clpmfile/pathname clpmfile))
+                                                                (clpmfile-pathname clpmfile))
                                          :why t)))))
-            (clpmfile/user-asd-files clpmfile))))
+            (clpmfile-user-asd-files clpmfile))))
 
-(defun clpmfile/all-requirements (clpmfile)
+(defun clpmfile-all-requirements (clpmfile)
   "Return a list of all requirements specified by ~clpmfile~."
   (append
-   (clpmfile/asd-file-requirements clpmfile)
-   (clpmfile/user-requirements clpmfile)))
+   (clpmfile-asd-file-requirements clpmfile)
+   (clpmfile-user-requirements clpmfile)))
 
-(defun clpmfile/sources (clpmfile)
+(defun clpmfile-sources (clpmfile)
   "Return a list of all the sources associated with ~clpmfile~."
-  (list* (clpmfile/fs-source clpmfile)
-         (clpmfile/user-global-sources clpmfile)))
+  (list* (clpmfile-fs-source clpmfile)
+         (clpmfile-vcs-source clpmfile)
+         (clpmfile-user-global-sources clpmfile)))
 
 
 ;; * Deserializing
@@ -145,7 +153,7 @@ clpmfile is located."
 ;;     (when (and
 ;;            source-allowed-p
 ;;            (not (eql type :source)))
-;;       (nreversef (clpmfile/user-global-sources clpmfile))
+;;       (nreversef (clpmfile-user-global-sources clpmfile))
 ;;       (setf source-allowed-p nil))
 ;;     (ecase type
 ;;       (:source
@@ -161,8 +169,8 @@ clpmfile is located."
 ;;        (apply #'parse-project-statement clpmfile args))
 ;;       (:asd
 ;;        (apply #'parse-asd-statement clpmfile args))))
-;;   (nreversef (clpmfile/user-asd-files clpmfile))
-;;   (nreversef (clpmfile/user-requirements clpmfile))
+;;   (nreversef (clpmfile-user-asd-files clpmfile))
+;;   (nreversef (clpmfile-user-requirements clpmfile))
 ;;   clpmfile)
 
 (defun find-source-or-error (sources source-name)
@@ -184,10 +192,31 @@ source."
     (unless (probe-file (merge-pathnames asd-file))
       (error "The argument to :ASD must exist"))
     ;; Register the system with the fs-source
-    (fs-source-register-asd (clpmfile/fs-source clpmfile)
+    (fs-source-register-asd (clpmfile-fs-source clpmfile)
                             asd-file)
     (push `(,asd-file ,@(when systems (list :systems systems)))
-          (clpmfile/user-asd-files clpmfile))))
+          (clpmfile-user-asd-files clpmfile))))
+
+(defmethod parse-clpmfile-form (clpmfile (type (eql :gitlab)) args)
+
+  "Parse a :gitlab statement from a clpmfile into a vcs-project-requirement
+instance."
+  (destructuring-bind (name &key (host "gitlab.com") path branch commit tag systems)
+      args
+    (let ((source (clpmfile-vcs-source clpmfile))
+          (repo (make-repo-from-description (list :gitlab :host host :path path))))
+      ;; Register the git project.
+      (vcs-source-register-project! source repo name)
+      (assert (xor branch commit tag))
+      (push (make-instance 'vcs-project-requirement
+                           :systems systems
+                           :name name
+                           :source source
+                           :branch branch
+                           :commit commit
+                           :tag tag
+                           :why t)
+            (clpmfile-user-requirements clpmfile)))))
 
 (defmethod parse-clpmfile-form (clpmfile (type (eql :project)) args)
   (destructuring-bind (name &key source vcs version systems) args
@@ -197,31 +226,31 @@ source."
           (push (make-instance 'vcs-project-requirement
                                :name (string-downcase (string name))
                                :source (when source
-                                         (find-source-or-error (clpmfile/user-global-sources clpmfile)
+                                         (find-source-or-error (clpmfile-user-global-sources clpmfile)
                                                                source))
                                :branch branch
                                :commit commit
                                :tag tag
                                :systems systems
                                :why t)
-                (clpmfile/user-requirements clpmfile)))
+                (clpmfile-user-requirements clpmfile)))
         (push (make-instance 'project-requirement
                              :name (string-downcase (string name))
                              :source (when source
-                                       (find-source-or-error (clpmfile/user-global-sources clpmfile)
+                                       (find-source-or-error (clpmfile-user-global-sources clpmfile)
                                                              source))
                              :version-spec (when version
                                              (cons (first version)
                                                    (second version)))
                              :why t)
-              (clpmfile/user-requirements clpmfile)))))
+              (clpmfile-user-requirements clpmfile)))))
 
 (defmethod parse-clpmfile-form (clpmfile (type (eql :source)) args)
   "Load a :source statement from a clpmfile and add it to the list of sources."
   (unless (stringp (first args))
     (error "The first argument to :SOURCE must be a string"))
   (push (load-source-from-form args)
-        (clpmfile/user-global-sources clpmfile)))
+        (clpmfile-user-global-sources clpmfile)))
 
 (defmethod parse-clpmfile-form (clpmfile (type (eql :system)) args)
   "Parse a ~:system~ statement from a ~clpmfile~ into a ~system-requirement~
@@ -230,11 +259,11 @@ instance."
     (push (make-instance 'system-requirement
                          :name (string-downcase (string name))
                          :source (when source
-                                   (find-source-or-error (clpmfile/user-global-sources clpmfile)
+                                   (find-source-or-error (clpmfile-user-global-sources clpmfile)
                                                          source))
                          :version-spec version
                          :why t)
-          (clpmfile/user-requirements clpmfile))))
+          (clpmfile-user-requirements clpmfile))))
 
 (defun read-clpmfile-from-stream (stream pathname)
   (let ((clpmfile (make-instance 'clpmfile :pathname pathname))
@@ -252,11 +281,11 @@ instance."
             (error "Global sources must be specified immediately after the API declaration"))
           (when (and source-allowed-p
                      (not (eql type :source)))
-            (nreversef (clpmfile/user-global-sources clpmfile))
+            (nreversef (clpmfile-user-global-sources clpmfile))
             (setf source-allowed-p nil))
           (parse-clpmfile-form clpmfile type args)))
-      (nreversef (clpmfile/user-asd-files clpmfile))
-      (nreversef (clpmfile/user-requirements clpmfile))
+      (nreversef (clpmfile-user-asd-files clpmfile))
+      (nreversef (clpmfile-user-requirements clpmfile))
       clpmfile)))
 
 (defun read-clpmfile (pathname)
@@ -271,19 +300,19 @@ instance."
     (terpri stream)
     (prin1 :user-global-sources stream)
     (write-char #\Space stream)
-    (write (clpmfile/user-global-sources obj) :stream stream)
+    (write (clpmfile-user-global-sources obj) :stream stream)
     (write-char #\Space stream)
     (terpri stream)
 
     (prin1 :user-asd-files stream)
     (write-char #\Space stream)
-    (write (clpmfile/user-asd-files obj) :stream stream)
+    (write (clpmfile-user-asd-files obj) :stream stream)
     (write-char #\Space stream)
     (terpri stream)
 
     (prin1 :user-requirements stream)
     (write-char #\Space stream)
-    (write (clpmfile/user-requirements obj) :stream stream)))
+    (write (clpmfile-user-requirements obj) :stream stream)))
 
 
 ;; (defun find-source-or-error (sources source-name)
@@ -306,12 +335,12 @@ instance."
 ;;                            (:system 'system-requirement))
 ;;                          :name (string-downcase (string name))
 ;;                          :source (when source
-;;                                    (find-source-or-error (clpmfile/user-global-sources clpmfile)
+;;                                    (find-source-or-error (clpmfile-user-global-sources clpmfile)
 ;;                                                          source))
 ;;                          :version-spec (when version
 ;;                                          (cons (first version)
 ;;                                                (second version)))))
-;;     (push req (clpmfile/user-requirements clpmfile))))
+;;     (push req (clpmfile-user-requirements clpmfile))))
 
 ;; (defun parse-project-statement (clpmfile name
 ;;                                 &key source vcs version
@@ -322,22 +351,22 @@ instance."
 ;;         (push (make-instance 'vcs-project-requirement
 ;;                              :name (string-downcase (string name))
 ;;                              :source (when source
-;;                                        (find-source-or-error (clpmfile/user-global-sources clpmfile)
+;;                                        (find-source-or-error (clpmfile-user-global-sources clpmfile)
 ;;                                                              source))
 ;;                              :branch branch
 ;;                              :commit commit
 ;;                              :tag tag
 ;;                              :systems systems)
-;;               (clpmfile/user-requirements clpmfile)))
+;;               (clpmfile-user-requirements clpmfile)))
 ;;       (push (make-instance 'project-requirement
 ;;                            :name (string-downcase (string name))
 ;;                            :source (when source
-;;                                      (find-source-or-error (clpmfile/user-global-sources clpmfile)
+;;                                      (find-source-or-error (clpmfile-user-global-sources clpmfile)
 ;;                                                            source))
 ;;                            :version-spec (when version
 ;;                                            (cons (first version)
 ;;                                                  (second version))))
-;;             (clpmfile/user-requirements clpmfile))))
+;;             (clpmfile-user-requirements clpmfile))))
 
 ;; (defun parse-system-statement (clpmfile name &key source)
 ;;   "Parse a ~:system~ statement from a ~clpmfile~ into a ~system-requirement~
@@ -345,9 +374,9 @@ instance."
 ;;   (push (make-instance 'system-requirement
 ;;                        :name (string-downcase (string name))
 ;;                        :source (when source
-;;                                  (find-source-or-error (clpmfile/user-global-sources clpmfile)
+;;                                  (find-source-or-error (clpmfile-user-global-sources clpmfile)
 ;;                                                        source)))
-;;         (clpmfile/user-requirements clpmfile)))
+;;         (clpmfile-user-requirements clpmfile)))
 
 ;; (defun parse-gitlab-statement (clpmfile name
 ;;                                &key (host "gitlab.com") path branch commit tag systems)
@@ -366,7 +395,7 @@ instance."
 ;;                          :branch branch
 ;;                          :commit commit
 ;;                          :tag tag)
-;;           (clpmfile/user-requirements clpmfile))))
+;;           (clpmfile-user-requirements clpmfile))))
 
 
 ;; (defun parse-source-statement (clpmfile &rest args)
@@ -375,7 +404,7 @@ instance."
 ;;   (unless (stringp (first args))
 ;;     (error "The first argument to :SOURCE must be a string"))
 ;;   (push (load-source-from-form args)
-;;         (clpmfile/user-global-sources clpmfile)))
+;;         (clpmfile-user-global-sources clpmfile)))
 
 ;; (defun parse-clpmfile-forms (clpmfile forms)
 ;;   "Given a list of ~forms~, parse them and register them appropriately with
@@ -404,7 +433,7 @@ instance."
 ;;     (when (and
 ;;            source-allowed-p
 ;;            (not (eql type :source)))
-;;       (nreversef (clpmfile/user-global-sources clpmfile))
+;;       (nreversef (clpmfile-user-global-sources clpmfile))
 ;;       (setf source-allowed-p nil))
 ;;     (ecase type
 ;;       (:source
@@ -420,8 +449,8 @@ instance."
 ;;        (apply #'parse-project-statement clpmfile args))
 ;;       (:asd
 ;;        (apply #'parse-asd-statement clpmfile args))))
-;;   (nreversef (clpmfile/user-asd-files clpmfile))
-;;   (nreversef (clpmfile/user-requirements clpmfile))
+;;   (nreversef (clpmfile-user-asd-files clpmfile))
+;;   (nreversef (clpmfile-user-requirements clpmfile))
 ;;   clpmfile)
 
 ;; (defgeneric parse-system-file-statement (lockfile type &key &allow-other-keys)
@@ -430,7 +459,7 @@ instance."
 
 ;; (defmethod parse-system-file-statement (lockfile (type (eql :project))
 ;;                                         &key name source version system-files)
-;;   (let* ((source (find source (clpmfile/user-global-sources (lockfile/clpmfile lockfile))
+;;   (let* ((source (find source (clpmfile-user-global-sources (lockfile/clpmfile lockfile))
 ;;                        :key #'source-name
 ;;                        :test #'equal))
 ;;          (release (source-project-release source name version)))
@@ -440,8 +469,8 @@ instance."
 
 ;; (defmethod parse-system-file-statement (lockfile (type (eql :local-asd))
 ;;                                         &key path)
-;;   (fs-source-register-asd (clpmfile/fs-source (lockfile/clpmfile lockfile)) path)
-;;   (let* ((source (clpmfile/fs-source (lockfile/clpmfile lockfile)))
+;;   (fs-source-register-asd (clpmfile-fs-source (lockfile/clpmfile lockfile)) path)
+;;   (let* ((source (clpmfile-fs-source (lockfile/clpmfile lockfile)))
 ;;          (project (source-project source "all"))
 ;;          (release (project-release project "newest"))
 ;;          (system-file (release-system-file release path)))
@@ -489,7 +518,7 @@ instance."
 ;;         ;;(user-reqs-form (find :user-reqs forms :key #'car))
 ;;         (all-system-files-form (find :all-system-files forms :key #'car)))
 ;;     (setf (lockfile/clpmfile lockfile) clpmfile)
-;;     (setf (clpmfile/user-global-sources clpmfile)
+;;     (setf (clpmfile-user-global-sources clpmfile)
 ;;           (mapcar #'load-source-from-form (cdr sources-form)))
 ;;     (mapc (lambda (x)
 ;;             (apply #'parse-system-file-statement
@@ -553,11 +582,11 @@ instance."
 ;;       (write '(:api-version "0.2") :stream stream)
 ;;       (terpri stream)
 
-;;       (write `(:user-global-sources ,@(mapcar #'source-to-form (clpmfile/user-global-sources clpmfile)))
+;;       (write `(:user-global-sources ,@(mapcar #'source-to-form (clpmfile-user-global-sources clpmfile)))
 ;;              :stream stream)
 ;;       (terpri stream)
 
-;;       (write `(:user-asd-files ,@(clpmfile/user-asd-files clpmfile))
+;;       (write `(:user-asd-files ,@(clpmfile-user-asd-files clpmfile))
 ;;              :stream stream)
 ;;       (terpri stream)
 
@@ -577,7 +606,7 @@ instance."
 ;; (defun clpmfile/lockfile-pathname (clpmfile)
 ;;   "The pathname to the lockfile associated with this clpmfile."
 ;;   (merge-pathnames (make-pathname :type "lock")
-;;                    (clpmfile/pathname clpmfile)))
+;;                    (clpmfile-pathname clpmfile)))
 
 ;; (defun lockfile-clpmfile-pathname (lockfile-pathname)
 ;;   "The pathname to the clpmfile associated with this lockfile pathname."
@@ -587,10 +616,10 @@ instance."
 ;;   "Return the lockfile object associated with this clpmfile."
 ;;   (read-lockfile (clpmfile/lockfile-pathname clpmfile)))
 
-;; (defun clpmfile/asd-file-requirements (clpmfile)
+;; (defun clpmfile-asd-file-requirements (clpmfile)
 ;;   "Return a list of requirements gathered from the ~:asd~ statements in
 ;; ~clpmfile~."
-;;   (let ((fs-source (clpmfile/fs-source clpmfile)))
+;;   (let ((fs-source (clpmfile-fs-source clpmfile)))
 ;;     (mapcan (lambda (x)
 ;;               (destructuring-bind (asd-file &key systems)
 ;;                   x
@@ -603,14 +632,14 @@ instance."
 ;;                     (list (make-instance 'fs-system-file-requirement
 ;;                                          :source fs-source
 ;;                                          :name (merge-pathnames asd-file
-;;                                                                 (clpmfile/pathname clpmfile)))))))
-;;             (clpmfile/user-asd-files clpmfile))))
+;;                                                                 (clpmfile-pathname clpmfile)))))))
+;;             (clpmfile-user-asd-files clpmfile))))
 
 ;; (defun clpmfile/all-requirements (clpmfile)
 ;;   "Return a list of all requirements specified by ~clpmfile~."
 ;;   (append
-;;    (clpmfile/asd-file-requirements clpmfile)
-;;    (clpmfile/user-requirements clpmfile)))
+;;    (clpmfile-asd-file-requirements clpmfile)
+;;    (clpmfile-user-requirements clpmfile)))
 
 ;; (defun read-clpmfile (pathname)
 ;;   "Read a ~clpmfile~ instance from ~pathname~."

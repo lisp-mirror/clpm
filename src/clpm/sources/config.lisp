@@ -11,6 +11,7 @@
           #:clpm/sources/defs
           #:clpm/sources/fs
           #:clpm/sources/quicklisp
+          #:clpm/sources/vcs
           #:clpm/utils)
   (:import-from #:uiop
                 #:read-file-form
@@ -20,39 +21,28 @@
 
 (in-package #:clpm/sources/config)
 
-(defun validate-source (source)
-  "Ensures that the source has a name, and a type."
-  (let* ((name (source-name source)))
-    (assert (and (stringp name)
-                 (not (string-equal "" name))))))
-
 (defun resolve-type (type)
   (ecase type
     (:clpi
      'clpi-source)
+    (:file-system
+     'fs-source)
     (:quicklisp
-     'ql-flat-source)))
+     'ql-flat-source)
+    (:vcs
+     'vcs-source)))
 
 (defun load-source-from-form (f)
-  (if (and (listp f) (eql (first f) :file-system))
-      (fs-source-from-form f)
-      (destructuring-bind (name &rest args &key type url &allow-other-keys)
-          f
-        (assert (stringp name))
-        (assert (stringp url))
-        (assert (keywordp type))
-        (let* ((trimmed-args (remove-from-plist args :url :type))
-               (new-args (loop
-                           :for key :in trimmed-args :by #'cddr
-                           :for value :in (rest trimmed-args) :by #'cddr
-                           :collect key
-                           :collect value))
-               (source (apply #'make-instance (resolve-type type)
-                              :name name
-                              :url url
-                              new-args)))
-          (validate-source source)
-          source))))
+  (destructuring-bind (name &rest args &key type &allow-other-keys)
+      f
+    (assert (or (eql type :file-system)
+                (eql type :vcs)
+                (stringp name)))
+    (assert (keywordp type))
+    (apply #'make-instance
+           (resolve-type type)
+           :name name
+           (remove-from-plist args :type))))
 
 (defun load-sources ()
   (let ((pn (clpm-config-pathname '("sources.conf"))))

@@ -10,14 +10,14 @@
           #:clpm/sources/config
           #:clpm/sources/defs
           #:clpm/sources/fs
-          ;;#:clpm/sources/vcs
-          )
+          #:clpm/sources/vcs)
   (:reexport #:clpm/sources/config)
   (:reexport #:clpm/sources/defs)
   (:reexport #:clpm/sources/fs)
-  ;;(:reexport #:clpm/sources/vcs)
+  (:reexport #:clpm/sources/vcs)
   (:export #:get-source
-           #:sources))
+           #:sources
+           #:with-sources))
 
 (in-package #:clpm/source)
 
@@ -37,12 +37,17 @@
      nil)
     ((typep source-designator 'clpm-source)
      source-designator)
-    ((stringp source-designator)
+    (t
      (let ((source (find source-designator (sources) :key #'source-name :test #'equal)))
        (when (and (not source) errorp)
          (error "Unable to find source named ~S" source-designator))
-       source))
-    (errorp
-     (error "Unable to translate ~S to a source object" source-designator))))
+       source))))
+
+(defun call-with-sources (sources thunk)
+  (let ((*sources* sources))
+    (funcall thunk)))
+
+(defmacro with-sources ((sources) &body body)
+  `(call-with-sources ,sources (lambda () ,@body)))
 
 (uiop:register-clear-configuration-hook 'clear-sources)

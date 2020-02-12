@@ -33,7 +33,10 @@
 ;; * sources
 
 (defclass vcs-source (clpm-source)
-  ((projects-by-name
+  ((name
+    :initarg :name
+    :reader source-name)
+   (projects-by-name
     :initform (make-hash-table :test 'equal)
     :accessor vcs-source-projects-by-name
     :documentation "hash table mapping project names to project objects.")
@@ -45,6 +48,14 @@
    "A source for any bare VCS projects. Projects must be registered with the
 source using VCS-SOURCE-REGISTER_PROJECT!."))
 
+(defmethod initialize-instance :after ((source vcs-source)
+                                       &rest initargs
+                                       &key projects)
+  (declare (ignore initargs))
+  (dolist (project projects)
+    (destructuring-bind (project-name . repo-form) project
+      (vcs-source-register-project! source (make-repo-from-description repo-form) project-name))))
+
 (defun vcs-source-register-project! (vcs-source repo project-name)
   "Registers a project with the vcs source and returns it."
   (let ((projects-by-name (vcs-source-projects-by-name vcs-source)))
@@ -53,6 +64,13 @@ source using VCS-SOURCE-REGISTER_PROJECT!."))
                                    :repo repo
                                    :source vcs-source
                                    :name project-name))))
+
+(defmethod source-ensure-system ((source vcs-source) system-name)
+  (ensure-gethash
+   system-name (vcs-source-systems-by-name source)
+   (make-instance 'vcs-system
+                  :source source
+                  :name system-name)))
 
 (defmethod source-project ((source vcs-source) project-name &optional (error t))
   (or (gethash project-name (vcs-source-projects-by-name source))
@@ -65,7 +83,7 @@ source using VCS-SOURCE-REGISTER_PROJECT!."))
   (or (gethash system-name (vcs-source-systems-by-name source))
       (some (lambda (project)
               (some (lambda (release)
-                      (when-let ((system-release (release-system-release release system-name)))
+                      (when-let ((system-release (release-system-release release system-name nil)))
                         (system-release-system system-release)))
                     (project-releases project)))
             (hash-table-values (vcs-source-projects-by-name source)))
@@ -74,11 +92,34 @@ source using VCS-SOURCE-REGISTER_PROJECT!."))
                :source source
                :system-name system-name))))
 
+(defmethod source-to-form ((source vcs-source))
+  (let ((projects nil))
+    (maphash (lambda (project-name project)
+               (push (cons project-name
+                           (repo-to-form (project-repo project)))
+                     projects))
+             (vcs-source-projects-by-name source))
+    (list (source-name source)
+          :type :vcs
+          :projects projects)))
+
+(defmethod sync-source ((source vcs-source))
+  nil)
+
 
 ;; * projects
 
 (defclass vcs-project (clpm-project)
-  ((releases-by-spec
+  ((source
+    :initarg :source
+    :reader project-source)
+   (name
+    :initarg :name
+    :reader project-name)
+   (repo
+    :initarg :repo
+    :reader project-repo)
+   (releases-by-spec
     :initform (make-hash-table :test 'equal)
     :accessor vcs-project-releases-by-spec)))
 
@@ -89,24 +130,23 @@ source using VCS-SOURCE-REGISTER_PROJECT!."))
   "A release named by a string is assumed to refer to a commit."
   (project-release project `(:commit ,version) error))
 
-(defmethod project-release ((project vcs-project) (version list) &optional (error t))
-  "The version can be one of (:tag TAG-NAME), (:branch BRANCH-NAME), or (:commit
-  COMMIT-STRING)"
-  ;; TODO: This is likely not right...
+(defmethod project-release ((project vcs-project) (version list) &optional error)
   (declare (ignore error))
-  (destructuring-bind (version-type version-string)
-      version
-    (check-type version-type (member :tag :branch :commit))
-    (check-type version-string string)
-    (ensure-gethash version (vcs-project-releases-by-spec project)
-                    (apply #'make-instance
-                           'remote-vcs-release
-                           :project project
-                           :source (project-source project)
-                           version))))
+  (apply #'project-vcs-release project version))
 
 (defmethod project-releases ((project vcs-project))
   (hash-table-values (vcs-project-releases-by-spec project)))
+
+(defmethod project-vcs-release ((project vcs-project) &key commit branch tag)
+  (let ((ref (cond
+               (commit `(:commit ,commit))
+               (branch `(:branch ,branch))
+               (tag `(:tag ,tag)))))
+    (ensure-gethash ref (vcs-project-releases-by-spec project)
+                    (make-instance 'vcs-release
+                                   :source (project-source project)
+                                   :project project
+                                   :ref ref))))
 
 
 ;; * releases
@@ -266,7 +306,13 @@ already created."
 ;; * systems
 
 (defclass vcs-system (clpm-system)
-  ((releases
+  ((source
+    :initarg :source
+    :reader system-source)
+   (name
+    :initarg :name
+    :reader system-name)
+   (releases
     :initform nil
     :accessor vcs-system-releases)))
 
@@ -274,6 +320,9 @@ already created."
   (mapcar #'(lambda (x)
               (release-system-release x (system-name system)))
           (vcs-system-releases system)))
+
+(defmethod system-register-release! ((system vcs-system) release)
+  (pushnew release (vcs-system-releases system)))
 
 (defmethod system-releases ((system vcs-system))
   (copy-list (vcs-system-releases system)))

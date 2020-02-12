@@ -329,7 +329,6 @@ in place with the same name. Return the new requirement if it was modified."
         (error "Unknown context API version")))
     (let ((out (apply #'make-instance
                       'context
-                      :sources (sources)
                       (when pathname
                         (list :pathname pathname)))))
       ;; The next forms are either tags or lists. The tags denote sections.
@@ -341,7 +340,8 @@ in place with the same name. Return the new requirement if it was modified."
           :do (check-section-valid section form)
               (setf section form)
         :else
-          :do (process-form out section form))
+          :do (with-sources ((reverse (context-sources out)))
+                (process-form out section form)))
       (nreversef (context-sources out))
       out)))
 

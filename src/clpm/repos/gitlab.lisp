@@ -102,3 +102,9 @@
        ,(gitlab-repo-host repo)
        ,@split-path)
      :ensure-directory t)))
+
+(defmethod repo-to-form ((repo gitlab-repo))
+  `(:gitlab
+    ,@(when (not (equal (gitlab-repo-host repo) "gitlab.com"))
+        (list :host (gitlab-repo-host repo)))
+    :path ,(gitlab-repo-path repo)))

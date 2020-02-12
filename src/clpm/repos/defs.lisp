@@ -10,6 +10,7 @@
            #:ref-present-p
            #:repo-archive-stream
            #:repo-lib-base-pathname
+           #:repo-to-form
            #:resolve-ref-to-commit))
 
 (in-package #:clpm/repos/defs)
@@ -21,5 +22,7 @@
 (defgeneric repo-archive-stream (repo ref))
 
 (defgeneric repo-lib-base-pathname (repo))
+
+(defgeneric repo-to-form (repo))
 
 (defgeneric resolve-ref-to-commit (repo ref))

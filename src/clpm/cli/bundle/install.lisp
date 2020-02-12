@@ -31,9 +31,9 @@
 
 (defun build-lockfile (clpmfile)
   "Given a clpmfile instance, make a lockfile instance for it."
-  (let* ((sources (clpmfile/sources clpmfile))
+  (let* ((sources (clpmfile-sources clpmfile))
          (reqs (append
-                (clpmfile/all-requirements clpmfile)))
+                (clpmfile-all-requirements clpmfile)))
          (context (make-instance 'context
                                  :sources sources
                                  :requirements reqs)))
@@ -58,7 +58,7 @@
         (progn
           ;; The lock file doesn't exist. Create it!
           (log:info "syncing sources")
-          (mapc #'sync-source (clpmfile/sources clpmfile))
+          (mapc #'sync-source (clpmfile-sources clpmfile))
           (log:info "Creating lockfile")
           (setf lockfile (build-lockfile clpmfile))
           (log:info "context: ~S" lockfile)
