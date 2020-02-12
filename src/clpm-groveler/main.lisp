@@ -3,8 +3,8 @@
 ;;;; This software is part of CLPM. See README.org for more information. See
 ;;;; LICENSE for license information.
 
-(uiop:define-package #:clpm-deps/main
-    (:nicknames #:clpm-deps)
+(uiop:define-package #:clpm-groveler/main
+    (:nicknames #:clpm-groveler)
   (:use #:cl)
   (:import-from #:uiop
                 #:pathname-equal)
@@ -13,7 +13,7 @@
            #:start-rel
            #:system-direct-deps))
 
-(in-package #:clpm-deps/main)
+(in-package #:clpm-groveler)
 
 (defvar *directly-loaded-systems* (make-hash-table :test 'equal))
 (defvar *file-being-loaded* nil)

@@ -67,7 +67,6 @@ dependency."))
          (input (sub-lisp-input sub-lisp))
          (output (sub-lisp-output sub-lisp))
          (asd-pathname (deps-asd-pathname)))
-    (ensure-deps-system-in-cache!)
     (uiop:with-safe-io-syntax ()
       ;; Load ASDF
       (format input "(progn (require :asdf) (values))~%")
@@ -78,15 +77,15 @@ dependency."))
       (format input "(progn (setf asdf:*default-source-registries* nil) (values))~%")
       ;; Load the groveler
       (format input "(progn (asdf:load-asd ~S) (values))~%" asd-pathname)
-      (format input "(progn (asdf:load-system :clpm-deps) (values))~%")
+      (format input "(progn (asdf:load-system :clpm-groveler) (values))~%")
       ;; Start the groveler's REPL.
-      (format input "(progn (clpm-deps:start-rel) (values))~%")
-      (format input "(print \"clpm-deps ready\")~%")
+      (format input "(progn (clpm-groveler:start-rel) (values))~%")
+      (format input "(print \"clpm-groveler ready\")~%")
       (finish-output input)
       ;; Wait until the process reports that it is ready.
       (loop
         :for val := (read output)
-        :until (equal val "clpm-deps ready")))
+        :until (equal val "clpm-groveler ready")))
     (aprog1 (make-instance 'groveler
                            :sub-lisp sub-lisp)
       (exit-hooks:add-exit-hook (lambda ()
@@ -107,7 +106,7 @@ dependency."))
      start
        (log:debug "Loading ~S into groveler" asd-pathname)
        (uiop:with-safe-io-syntax ()
-         (format in-stream "(print (multiple-value-list (clpm-deps:safe-load-asd ~S))) ~%"
+         (format in-stream "(print (multiple-value-list (clpm-groveler:safe-load-asd ~S))) ~%"
                  asd-pathname)
          (format in-stream "(finish-output)~%")
          (finish-output in-stream)
@@ -145,7 +144,7 @@ dependency."))
          (out-stream (sub-lisp-output sub-lisp)))
     (log:debug "Querying groveler for dependencies of ~S" system-name)
     (uiop:with-safe-io-syntax ()
-      (format in-stream "(print (clpm-deps:system-direct-deps (asdf:find-system ~S)))~%"
+      (format in-stream "(print (clpm-groveler:system-direct-deps (asdf:find-system ~S)))~%"
               system-name)
       (format in-stream "(finish-output)~%")
       (finish-output in-stream)
@@ -162,7 +161,7 @@ dependency."))
        start
          (log:debug "Querying groveler for systems in file ~S" asd-pathname)
          (uiop:with-safe-io-syntax ()
-           (format in-stream "(print (multiple-value-list (clpm-deps:determine-systems-from-file ~S)))~%"
+           (format in-stream "(print (multiple-value-list (clpm-groveler:determine-systems-from-file ~S)))~%"
                    asd-pathname)
            (format in-stream "(finish-output)~%")
            (finish-output in-stream)

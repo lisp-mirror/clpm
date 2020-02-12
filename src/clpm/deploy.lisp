@@ -4,13 +4,16 @@
 ;;;; LICENSE for license information.
 
 (uiop:define-package #:clpm/deploy
-    (:use #:cl)
+    (:use #:cl
+          #:clpm/deps)
   (:import-from #:deploy)
   (:export #:*default-clpm-home*))
 
 (in-package #:clpm/deploy)
 
 (defvar *default-clpm-home* nil)
+
+(deploy:define-resource-directory groveler "src/clpm-groveler/")
 
 (uiop:register-image-restore-hook
  (lambda ()
@@ -24,6 +27,8 @@
                                         (deploy:runtime-directory))))
      (setf deploy:*data-location* (uiop:truenamize (uiop:ensure-directory-pathname
                                                     (uiop:ensure-absolute-pathname clpm-home))))
+     (setf *clpm-groveler-asd-pathname* (merge-pathnames "clpm-groveler/clpm-groveler.asd"
+                                                         deploy:*data-location*))
      (unless (uiop:probe-file* clpm-home)
        (format *error-output*
                "Unable to find CLPM_HOME. Please set CLPM_HOME environment variable.~%")
