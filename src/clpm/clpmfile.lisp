@@ -15,8 +15,11 @@
           #:clpm/source
           #:clpm/utils)
   (:export #:clpmfile-all-requirements
+           #:clpmfile-lockfile-pathname
+           #:clpmfile-pathname
            #:clpmfile-sources
            #:clpmfile-user-requirements
+           #:get-clpmfile
            #:read-clpmfile)
   ;; (:export #:clpmfile/all-requirements
   ;;          #:clpmfile/user-asd-files
@@ -117,11 +120,26 @@ clpmfile is located."
    (clpmfile-asd-file-requirements clpmfile)
    (clpmfile-user-requirements clpmfile)))
 
+(defun clpmfile-lockfile-pathname (clpmfile)
+  (merge-pathnames (make-pathname :type "lock")
+                   (clpmfile-pathname clpmfile)))
+
 (defun clpmfile-sources (clpmfile)
   "Return a list of all the sources associated with ~clpmfile~."
   (list* (clpmfile-fs-source clpmfile)
          (clpmfile-vcs-source clpmfile)
          (clpmfile-user-global-sources clpmfile)))
+
+(defgeneric get-clpmfile (clpmfile-designator))
+
+(defmethod get-clpmfile ((clpmfile-designator clpmfile))
+  clpmfile-designator)
+
+(defmethod get-clpmfile ((clpmfile-designator pathname))
+  (read-clpmfile clpmfile-designator))
+
+(defmethod get-clpmfile ((clpmfile-designator string))
+  (get-clpmfile (pathname clpmfile-designator)))
 
 
 ;; * Deserializing

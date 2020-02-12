@@ -10,7 +10,6 @@
           #:clpm/cli/bundle/exec
           #:clpm/cli/bundle/install
           ;;#:clpm/cli/bundle/pathnames
-          ;;#:clpm/cli/bundle/update
-          ))
+          #:clpm/cli/bundle/update))
 
 (in-package #:clpm/cli/bundle)
