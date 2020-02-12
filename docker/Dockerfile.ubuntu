@@ -14,10 +14,24 @@ COPY docker/customize-target-features.lisp /usr/local/src/sbcl-${SBCL_VERSION}/
 RUN rebuild-sbcl
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends build-essential libssl-dev libz-dev \
+    && apt-get install -y --no-install-recommends build-essential libssl-dev libz-dev git \
     && rm -rf /var/lists/apt
 
-WORKDIR /clpm
-COPY . /clpm
-RUN --mount=type=cache,target=/clpm/build/cl-cache \
-    /clpm/scripts/clpm-lake build package
+# We copy the git repository in to make sure we have a completely clean build
+# and no lingering local changes.
+WORKDIR /
+COPY .git /clpm-git
+
+# This is the git ref we build from.
+ARG ref=master
+# This is the "tag" (output from git describe)
+ARG describe
+
+RUN git clone /clpm-git /clpm-$describe
+WORKDIR /clpm-$describe
+RUN git checkout $ref \
+    && git submodule init \
+    && git submodule update
+RUN ./scripts/clpm-lake build
+WORKDIR /
+RUN /clpm-$describe/package.sh clpm-$describe

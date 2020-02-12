@@ -20,8 +20,8 @@
 (defun clpm-version ()
   (asdf:component-version (asdf:find-system :clpm)))
 
-(defun git-tag ()
-  (uiop:run-program '("git" "describe" "--tags" "HEAD")
+(defun git-tag (&optional (ref "HEAD"))
+  (uiop:run-program `("git" "describe" "--tags" ,ref)
                     :output '(:string :stripped t)))
 
 
@@ -30,7 +30,7 @@
 
 (defun docker-build (tuple path
                      &key tag dockerfile context
-                       iid-file platform)
+                       iid-file platform build-args)
 
   (apply #'uiop:run-program
          `("docker"
@@ -45,6 +45,9 @@
                `("-f" ,dockerfile))
            ,@(when iid-file
                `("--iidfile" ,iid-file))
+           ,@(mapcan (lambda (cell)
+                       (list "--build-arg" #?"${(car cell)}=${(cdr cell)}"))
+                     build-args)
            ,path)
          :output :interactive
          :error-output :interactive
@@ -96,7 +99,7 @@
    :error-output :interactive
    :input :interactive))
 
-(defun build-clpm-with-docker (tuple &key dockerfile context platform)
+(defun build-clpm-with-docker (tuple ref &key dockerfile context platform)
   (let ((output-dir (merge-pathnames #?"build/releases/${(git-tag)}/"
                                      (uiop:getcwd))))
     (ensure-directories-exist output-dir)
@@ -109,18 +112,20 @@
                       :dockerfile dockerfile
                       :context context
                       :platform platform
-                      :iid-file (namestring iid-pn))
+                      :iid-file (namestring iid-pn)
+                      :build-args (list (cons "ref" ref)
+                                        (cons "describe" (git-tag ref))))
         (let ((iid (uiop:read-file-string iid-pn)))
           (docker-create iid
                          :cid-file (namestring cid-pn)
                          :context context)
           (let ((cid (uiop:read-file-string cid-pn)))
             (if (equal (second tuple) "windows")
-                (docker-cp cid "/clpm/build/clpm.msi"
+                (docker-cp cid #?"/clpm-${(git-tag ref)}/build/clpm.msi"
                            (namestring (merge-pathnames (format nil "clpm-~{~A~^-~}-~A.msi" tuple (git-tag))
                                                         output-dir))
                            :context context)
-                (docker-cp cid "/clpm/build/clpm.tar.gz"
+                (docker-cp cid #?"/clpm-${(git-tag ref)}/build/clpm.tar.gz"
                            (namestring (merge-pathnames (format nil "clpm-~{~A~^-~}-~A.tar.gz" tuple (git-tag))
                                                         output-dir))
                            :context context))
@@ -178,13 +183,13 @@ specified by the tuple."
   (let ((task-name (format nil "docker-build-~{~A~^-~}" tuple)))
     `(progn
        (pushnew ,task-name *docker-build-tasks* :test #'equal)
-       (task (,task-name) ()
+       (task (,task-name (ref "master")) ()
          ,(format nil "Build CLPM in a docker container for ~{~A~^ ~}" tuple)
          (let* ((overrides-cell (assoc ',tuple *docker-config* :test #'equal))
                 (plist (cdr overrides-cell))
                 (default-plist (cdr (assoc ',tuple *docker-default-config*))))
            (when overrides-cell
-             (apply #'build-clpm-with-docker ',tuple (append plist default-plist))))))))
+             (apply #'build-clpm-with-docker ',tuple ref (append plist default-plist))))))))
 
 (defmacro make-docker-build-tasks ()
   "Make tasks for all tuples defined in *DOCKER-DEFAULT-CONFIG*"
@@ -241,7 +246,7 @@ specified by the tuple."
 
 (task "build" ()
   "Build CLPM"
-  (sh "sbcl --load scripts/build.lisp"))
+  (sh "sbcl --no-sysinit --no-userinit --load scripts/build.lisp"))
 
 (task "package" ()
   "Package CLPM"
