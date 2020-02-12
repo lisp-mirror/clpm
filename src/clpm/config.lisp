@@ -116,6 +116,12 @@ directory in ~*clpm-config-directories*~."
      :type (list (or string pathname))
      :documentation
      "Used to inform ASDF where to find systems for this context. Outputs the same contents to every file in a source-registry.conf format (see ASDF manual).")
+    ((:contexts :* :sources)
+     :wildcard-types (string)
+     :type (or (list string) (eql t))
+     :default t
+     :documentation
+     "A list of global source names that this context can use, or T to represent all global sources.")
 
     ((:curl)
      :type hash-table)

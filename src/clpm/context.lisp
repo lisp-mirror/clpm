@@ -249,20 +249,29 @@ in place with the same name. Return the new requirement if it was modified."
 
 (defun load-anonymous-context-from-pathname (pn)
   (with-open-file (s pn)
-    (load-context-from-stream s pn)))
+    (load-context-from-stream s :pathname pn)))
+
+(defun context-downselect-sources (name sources)
+  (let ((allowed-source-names (config-value :contexts name :sources)))
+    (if (eql t allowed-source-names)
+        sources
+        (remove-if-not (lambda (x) (member (source-name x) allowed-source-names :test 'equal))
+                       sources))))
 
 (defun load-global-context (name &optional (error t))
+  ;; Currently, global contexts are tricky because they write their sources to
+  ;; file, but we want to use the sources defined in the user's config. For now,
+  ;; just pass an override into load-context-from-stream.
   (let ((pn (global-context-pathname name)))
     (with-open-file (s pn
                        :if-does-not-exist (if error :error nil))
       (if s
-          (let ((out (load-context-from-stream s)))
+          (let ((out (load-context-from-stream s :sources (context-downselect-sources name (sources)))))
             (setf (context-name out) name)
-            (setf (context-sources out) (sources))
             out)
           (make-instance 'context
                          :name name
-                         :sources (sources))))))
+                         :sources (context-downselect-sources name (sources)))))))
 
 (defgeneric check-section-valid (prev-section current-section)
   (:method (prev-section current-section)
@@ -318,10 +327,9 @@ in place with the same name. Return the new requirement if it was modified."
     (when (typep source 'fs-source)
       (push (project-release (source-project source :all) :newest)
             (context-releases context)))
-    (push source
-          (context-sources context))))
+    (setf (context-sources context) (append (context-sources context) (list source)))))
 
-(defun load-context-from-stream (stream &optional pathname)
+(defun load-context-from-stream (stream &key pathname (sources nil sources-provided-p))
   (uiop:with-safe-io-syntax ()
     ;; The first form in the stream must be an API declaration.
     (let ((f (read stream nil)))
@@ -329,6 +337,7 @@ in place with the same name. Return the new requirement if it was modified."
         (error "Unknown context API version")))
     (let ((out (apply #'make-instance
                       'context
+                      :sources sources
                       (when pathname
                         (list :pathname pathname)))))
       ;; The next forms are either tags or lists. The tags denote sections.
@@ -340,9 +349,9 @@ in place with the same name. Return the new requirement if it was modified."
           :do (check-section-valid section form)
               (setf section form)
         :else
-          :do (with-sources ((reverse (context-sources out)))
-                (process-form out section form)))
-      (nreversef (context-sources out))
+          :do (unless (and (eql section :sources) sources-provided-p)
+                (with-sources ((context-sources out))
+                  (process-form out section form))))
       out)))
 
 
