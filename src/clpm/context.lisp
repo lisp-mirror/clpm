@@ -16,6 +16,7 @@
            #:context-add-requirement!
            #:context-diff
            #:context-diff-has-diff-p
+           #:context-diff-to-plist
            #:context-name
            #:context-releases
            #:context-requirements
@@ -190,6 +191,34 @@ in place with the same name. Return the new requirement if it was modified."
   (or (context-diff-added-releases diff)
       (context-diff-removed-releases diff)))
 
+(defun context-diff-to-plist (diff &key stringify-commits-p)
+  (let ((removed-releases (context-diff-removed-releases diff))
+        (added-releases (context-diff-added-releases diff))
+        (changed-releases nil))
+    (dolist (r added-releases)
+      (when-let ((matching-release (find (release-project r) removed-releases
+                                         :key #'release-project)))
+        (removef removed-releases matching-release)
+        (removef added-releases r)
+        (push (cons matching-release r) changed-releases)))
+
+    (labels ((release-to-plist (r)
+               (let ((version (release-version r)))
+                 (list :version (if (and (listp version) stringify-commits-p)
+                                    (format nil "commit ~A" (second version))
+                                    version)
+                       :source (source-name (release-source r)))))
+             (release-to-form (r)
+               (list* (project-name (release-project r)) (release-to-plist r)))
+             (changed-release-to-form (cell)
+               (destructuring-bind (old . new) cell
+                 (list (project-name (release-project old))
+                       :old (release-to-plist old) :new (release-to-plist new)))))
+      (list
+       :added-releases (sort (mapcar #'release-to-form added-releases) 'string< :key #'car)
+       :removed-releases (sort (mapcar #'release-to-form removed-releases) 'string< :key #'car)
+       :changed-releases (sort (mapcar #'changed-release-to-form changed-releases) 'string< :key #'car)))))
+
 (defun print-diff-release (r stream)
   (format stream "~A~50,1,4<~A~;~A~^~;~A~;~A~^~>"
           (make-color-string :green)
@@ -208,41 +237,90 @@ in place with the same name. Return the new requirement if it was modified."
             (release-version to)
             +reset-color-string+)))
 
+(defun make-diff-format-string (spacing name-length
+                                old-version-length new-version-length
+                                old-source-length new-source-length
+                                &key use-color-p)
+  (let ((counter 0)
+        (spacing (+ spacing (if use-color-p (length (make-color-string :green)) 0))))
+    (flet ((num (x)
+             (format nil "~D" x))
+           (color (x)
+             (when use-color-p (make-color-string x))))
+      (uiop:strcat
+       ;; Project name column
+       (color :green) "~@[~A~]~" (num (incf counter (+ name-length spacing))) "T"
+       ;; Old version column
+       (color :red) "~@[~A~]~" (num (incf counter (+ old-version-length spacing))) "T"
+       ;; New version column
+       (color :blue) "~@[~A~]~" (num (incf counter (+ new-version-length spacing))) "T"
+       ;; Old source column
+       (color :red) "~@[~A~]~" (num (incf counter (+ old-source-length spacing))) "T"
+       ;; New source column
+       (color :blue) "~@[~A~]~" (num (incf counter (+ new-source-length spacing))) "T"
+       ;; Reset color
+       (when use-color-p +reset-color-string+)))))
+
 (defun print-context-diff (diff stream)
   ;; Compute the maximum project length.
-  (let ((removed-releases (context-diff-removed-releases diff))
-        (added-releases (context-diff-added-releases diff))
-        (changed-releases nil))
-    (dolist (r added-releases)
-      (when-let ((matching-release (find (release-project r) removed-releases
-                                         :key #'release-project)))
-        (removef removed-releases matching-release)
-        (removef added-releases r)
-        (push (cons r matching-release) changed-releases)))
-
-    (when changed-releases
-      (format stream "~AChanged releases:~A~%"
-              (make-color-string :magenta :effect :bright)
-              +reset-color-string+)
-      (dolist (pair changed-releases)
-        (print-diff-release-change pair stream)
-        (terpri stream)))
-    (when added-releases
-      (format stream "~AAdded releases:~A~%"
-              (make-color-string :magenta :effect :bright)
-              +reset-color-string+)
-      (dolist (r added-releases)
-        (print-diff-release r stream)
-        (terpri stream)))
-    (when removed-releases
-      (format stream "~ARemoved releases:~A~%"
-              (make-color-string :magenta :effect :bright)
-              +reset-color-string+)
-      (dolist (r removed-releases)
-        (print-diff-release r stream)
-        (terpri stream)))
-    (format stream "~A" +reset-color-string+)
-    (finish-output stream)))
+  (flet ((max-length (list &key (key 'identity))
+           (reduce #'max list :key (compose 'length key)
+                              :initial-value 0)))
+    (let* ((plist (context-diff-to-plist diff :stringify-commits-p t))
+           (max-name-length (max (length "Project")
+                                 (max-length (getf plist :added-releases) :key #'car)
+                                 (max-length (getf plist :removed-releases) :key #'car)
+                                 (max-length (getf plist :changed-releases) :key #'car)))
+           (max-old-version-length (max (length "Old Version")
+                                        (max-length (getf plist :removed-releases)
+                                                    :key (lambda (x)
+                                                           (getf (rest x) :version)))
+                                        (max-length (getf plist :changed-releases)
+                                                    :key (lambda (x)
+                                                           (getf (getf (rest x) :old) :version)))))
+           (max-new-version-length (max (length "New Version")
+                                        (max-length (getf plist :added-releases)
+                                                    :key (lambda (x)
+                                                           (getf (rest x) :version)))
+                                        (max-length (getf plist :changed-releases)
+                                                    :key (lambda (x)
+                                                           (getf (getf (rest x) :new) :version)))))
+           (max-old-source-length (max (length "Old Source")
+                                       (max-length (getf plist :removed-releases)
+                                                   :key (lambda (x)
+                                                          (getf (rest x) :source)))
+                                       (max-length (getf plist :changed-releases)
+                                                   :key (lambda (x)
+                                                          (getf (getf (rest x) :old) :source)))))
+           (max-new-source-length (max (length "New Source")
+                                       (max-length (getf plist :added-releases)
+                                                   :key (lambda (x)
+                                                          (getf (rest x) :source)))
+                                       (max-length (getf plist :changed-releases)
+                                                   :key (lambda (x)
+                                                          (getf (getf (rest x) :new) :source)))))
+           (format-string (make-diff-format-string 4 max-name-length
+                                                   max-old-version-length max-new-version-length
+                                                   max-old-source-length max-new-source-length
+                                                   :use-color-p (interactive-stream-p stream)))
+           (no-color-format-string (make-diff-format-string 4 max-name-length
+                                                            max-old-version-length max-new-version-length
+                                                            max-old-source-length max-new-source-length)))
+      ;; Print all the added releases:
+      (format stream no-color-format-string "Project" "Old Version" "New Version" "Old Source" "New Source")
+      (terpri stream)
+      (dolist (diff (getf plist :added-releases))
+        (format stream format-string (car diff) nil (getf (cdr diff) :version) nil (getf (cdr diff) :source))
+        (terpri stream))
+      (dolist (diff (getf plist :changed-releases))
+        (let ((old (getf (cdr diff) :old))
+              (new (getf (cdr diff) :new)))
+          (format stream format-string (car diff) (getf old :version) (getf new :version)
+                  (getf old :source) (getf new :source)))
+        (terpri stream))
+      (dolist (diff (getf plist :removed-releases))
+        (format stream format-string (car diff) (getf (cdr diff) :version) nil (getf (cdr diff) :source) nil)
+        (terpri stream)))))
 
 
 ;; * Deserializing
