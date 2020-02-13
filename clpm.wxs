@@ -33,11 +33,6 @@
         <Directory Id='BaseFolder' Name='CLPM'>
           <Directory Id='VersionFolder' Name='0.2.0'>
             <Directory Id='INSTALLDIR'>
-              <Component Id='CLPM_SetHOME' Guid='E75E9C41-C6B9-44FE-90B3-8055B22341D0' DiskId='1' Win64='yes'>
-                <CreateFolder/>
-                <Environment Id='Env_CLPM_HOME' System='yes' Action='set' Name='CLPM_HOME' Part='all' Value='[INSTALLDIR]'/>
-              </Component>
-
               <Directory Id='BINDIR' Name='bin'>
                 <Component Id='CLPM_SetPATH' Guid='5514D118-8FAD-497C-ACFB-BAC6C0161E69' DiskId='1' Win64='yes'>
                   <CreateFolder/>
@@ -50,6 +45,10 @@
               <Directory Id='LIBDIR' Name='lib'>
                 <Component Id='CLPM_Libs' Guid='35C91C7A-ED22-40B5-A761-730C57CCF803' DiskId='1' Win64='yes'>
                   <CreateFolder/>
+                </Component>
+                <Component Id='CLPM_SetHOME' Guid='E75E9C41-C6B9-44FE-90B3-8055B22341D0' DiskId='1' Win64='yes'>
+                  <CreateFolder/>
+                  <Environment Id='Env_CLPM_HOME' System='yes' Action='set' Name='CLPM_HOME' Part='all' Value='[LIBDIR]'/>
                 </Component>
               </Directory>
             </Directory>
