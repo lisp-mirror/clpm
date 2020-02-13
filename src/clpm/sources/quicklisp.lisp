@@ -34,16 +34,11 @@
     :reader source-name)
    (url
     :initarg :url
-    :accessor ql-flat-source-url)
-   (force-https
-    :initarg :force-https
-    :initform nil
-    :accessor ql-flat-source-force-https)))
+    :accessor ql-flat-source-url)))
 
 (defmethod initialize-instance :after ((source ql-flat-source)
                                        &rest initargs
-                                       &key url
-                                         force-https)
+                                       &key url)
   (declare (ignore initargs))
   (unless url
     (error "URL is required"))
@@ -51,16 +46,10 @@
     (if (puri:uri-p url)
         (setf url (puri:copy-uri url))
         (setf url (puri:parse-uri url)))
-    ;; If the URL is already https, set force https to be T.
-    (when (and (eql (puri:uri-scheme url) :https))
-      (setf force-https t)
-      (setf (ql-flat-source-force-https source) force-https))
-    ;; If the scheme is not already https, set it to https if necessary.
-    (ecase force-https
-      (nil)
-      (t
-       (setf (puri:uri-scheme url) :https)))
     (setf (ql-flat-source-url source) url)))
+
+(defun ql-flat-source-https-p (source)
+  (eql (puri:uri-scheme (ql-flat-source-url source)) :https))
 
 ;; ** Project
 
@@ -179,8 +168,7 @@ in the same Quicklisp distribution versions as system-release."
 (defmethod source-to-form ((source ql-flat-source))
   (list (source-name source)
         :url (uri-to-string (ql-flat-source-url source))
-        :type :quicklisp
-        :force-https (ql-flat-source-force-https source)))
+        :type :quicklisp))
 
 (defmethod system-release-> ((sr-1 ql-flat-system-release) (sr-2 ql-flat-system-release))
   (release-> (system-release-release sr-1) (system-release-release sr-2)))
@@ -416,7 +404,7 @@ in the same Quicklisp distribution versions as system-release."
                                                (source-cache-directory source)))
          (repo (make-instance 'ql-repo
                               :url (ql-flat-source-url source)
-                              :force-https (ql-flat-source-force-https source)
+                              :force-https (ql-flat-source-https-p source)
                               :cache-pathname sync-cache-pathname))
          (project-index-map (ql-flat-load-existing-project-index source))
          (system-index-map (ql-flat-load-existing-system-index source)))
