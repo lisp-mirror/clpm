@@ -8,6 +8,7 @@
           #:clpm/cli/bundle
           ;;#:clpm/cli/client
           ;;#:clpm/cli/config
+          #:clpm/cli/context
           #:clpm/cli/entry
           #:clpm/cli/install
           #:clpm/cli/license-info

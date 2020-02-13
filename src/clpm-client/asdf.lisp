@@ -33,7 +33,7 @@ prompting.
 
 + NIL :: Do nothing.")
 
-(defvar *clpm-installed-systems* (make-hash-table :test 'equal)
+(defvar *clpm-installed-systems* nil
   "A cache to hold a mapping from primary system names to .asd pathnames for
 systems installed by CLPM during this session. Used because there doesn't seem
 to be an exposed, stable way to update ASDF's source registry once we install a
@@ -61,6 +61,16 @@ new system.")
       (setf (gethash (pathname-name p) *clpm-installed-systems*)
             (pathname p)))))
 
+(defun populate-installed-systems ()
+  (setf *clpm-installed-systems* (make-hash-table :test 'equal))
+  (let ((pathnames (ignore-errors
+                    (run-clpm `("context" "pathnames" "--output=sexp" ,*clpm-context*)
+                              :output '(:string :stripped t)))))
+    (when pathnames
+      (dolist (p (uiop:with-safe-io-syntax () (read-from-string pathnames)))
+        (setf (gethash (pathname-name p) *clpm-installed-systems*)
+              (pathname p))))))
+
 (defun clpm-system-search (system-name)
   "A search function for ASDF's *SYSTEM-DEFINITION-SEARCH-FUNCTIONS* list.
 
@@ -68,6 +78,10 @@ Given a system name, it tries to find it using the CLPM executable (see:
 *CLPM-EXECUTABLE*). If the system cannot be found, it either does nothing,
 signals a condition, and/or installs the system with CLPM-INSTALL-SYSTEM (see:
 *CLPM-SYSTEM-NOT-FOUND-BEHAVIOR*)."
+  ;; If this is the first time we've called this, try to seed the installed
+  ;; systems hash table first.
+  (unless *clpm-installed-systems*
+    (populate-installed-systems))
   (let ((primary-name (asdf:primary-system-name system-name)))
     (unless (or (equal "asdf" primary-name)
                 (equal "uiop" primary-name))

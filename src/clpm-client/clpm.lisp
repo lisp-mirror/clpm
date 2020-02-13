@@ -35,9 +35,10 @@ change this to be an absolute path to the executable.")
 (defun compute-clpm-executable ()
   "If we're running inside a bundle exec environment, try to use the same clpm
 executable that spawned us."
-  (setf *clpm-executable*
-        (or (uiop:getenv "CLPM_BUNDLE_BIN_PATH")
-            "clpm")))
+  (or *clpm-executable*
+      (setf *clpm-executable*
+            (or (uiop:getenv "CLPM_BUNDLE_BIN_PATH")
+                "clpm"))))
 
 (uiop:register-image-restore-hook 'compute-clpm-executable)
 

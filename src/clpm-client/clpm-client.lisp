@@ -12,6 +12,7 @@
         #:clpm-client/cleanup
         #:clpm-client/clpm)
   (:export #:*clpm-cleanup-on-dump-p*
+           #:*clpm-context*
            #:*clpm-executable*
            #:*clpm-system-not-found-behavior*
            #:activate-clpm

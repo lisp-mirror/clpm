@@ -79,6 +79,10 @@
              ht)
     (sort out #'string<)))
 
+(defun parse-options-ignoring-unrecognized (ui)
+  (handler-bind ((adopt:unrecognized-option #'adopt:discard-option))
+    (adopt:parse-options ui)))
+
 (defun dispatch-subcommand (working-ht arguments options ui)
   (let* ((subcommand-name (first arguments))
          (dir-or-fun (gethash subcommand-name working-ht)))
@@ -93,7 +97,7 @@
            (gethash :ui dir-or-fun)
          (when thunk
            (multiple-value-bind (sub-args sub-options)
-               (adopt:parse-options default-ui)
+               (parse-options-ignoring-unrecognized default-ui)
              (funcall thunk sub-args sub-options)))
          (dispatch-subcommand dir-or-fun (rest arguments) options default-ui)))
       ((gethash :help options)
