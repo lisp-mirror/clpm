@@ -43,14 +43,14 @@
    :install-source
    :long "source"
    :parameter "SOURCE-NAME"
-   :help "The name of the source to install from."
+   :help "The name of the source to install from"
    :reduce #'adopt:last))
 
-(defparameter *option-install-system*
+(defparameter *option-install-project*
   (adopt:make-option
-   :install-system
-   :short #\s
-   :help "Install a system instead of a project"
+   :install-project
+   :short #\p
+   :help "Install a project instead of a system"
    :reduce (constantly t)))
 
 (defparameter *option-install-yes*
@@ -105,7 +105,7 @@
    :contents (list *group-common*
                    *option-install-version*
                    *option-install-source*
-                   *option-install-system*
+                   *option-install-project*
                    *option-install-no-deps*
                    *option-install-yes*
                    *option-install-branch*
@@ -120,9 +120,9 @@
 
 (define-cli-command (("install") *install-ui*) (args options)
   (let* ((version-string (gethash :install-version options))
-         (package-name (first args))
+         (name (first args))
          (source-name (gethash :install-source options))
-         (install-system-p (gethash :install-system options))
+         (install-project-p (gethash :install-project options))
          (no-deps-p (gethash :install-no-deps options))
          (context-name (or (gethash :context options)
                            "default"))
@@ -130,17 +130,17 @@
          (commit (gethash :install-commit options))
          (branch (gethash :install-branch options))
          (tag (gethash :install-tag options)))
-    (unless package-name
-      (error "A package or system name is required"))
+    (unless name
+      (error "A project or system name is required"))
 
-    (log:debug "Installing version ~S of ~:[project~;system~] ~S"
+    (log:debug "Installing version ~S of ~:[system~;project~] ~S"
                version-string
-               install-system-p
-               package-name)
-    (install (if install-system-p
-                 :system
-                 :project)
-             package-name
+               install-project-p
+               name)
+    (install (if install-project-p
+                 :project
+                 :system)
+             name
              :version-spec version-string
              :source source-name
              :context context-name
