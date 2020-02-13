@@ -111,11 +111,14 @@
                    *option-install-branch*
                    *option-install-tag*
                    *option-install-commit*
-                   *option-context*)))
+                   *option-context*
+                   *option-output*)))
 
-(defun make-validate-fun (yes-p)
+(defun make-validate-fun (yes-p output)
   (lambda (diff)
-    (print-context-diff diff *standard-output*)
+    (unless (equal output "sexp")
+      ;; We can't print this in a sexp format at the moment.
+      (print-context-diff diff *standard-output*))
     (or yes-p (y-or-n-p "Proceed?"))))
 
 (define-cli-command (("install") *install-ui*) (args options)
@@ -129,7 +132,8 @@
          (yes-p (gethash :install-yes options))
          (commit (gethash :install-commit options))
          (branch (gethash :install-branch options))
-         (tag (gethash :install-tag options)))
+         (tag (gethash :install-tag options))
+         (output (gethash :output options)))
     (unless name
       (error "A project or system name is required"))
 
@@ -137,16 +141,20 @@
                version-string
                install-project-p
                name)
-    (install (if install-project-p
-                 :project
-                 :system)
-             name
-             :version-spec version-string
-             :source source-name
-             :context context-name
-             :no-deps-p no-deps-p
-             :commit commit
-             :branch branch
-             :tag tag
-             :validate (make-validate-fun yes-p))
+    (let ((updated-context (install (if install-project-p
+                                        :project
+                                        :system)
+                                    name
+                                    :version-spec version-string
+                                    :source source-name
+                                    :context context-name
+                                    :no-deps-p no-deps-p
+                                    :commit commit
+                                    :branch branch
+                                    :tag tag
+                                    :validate (make-validate-fun yes-p output))))
+      (when (equal output "sexp")
+        (uiop:with-safe-io-syntax ()
+          (prin1 (context-asd-pathnames updated-context)))))
+
     t))

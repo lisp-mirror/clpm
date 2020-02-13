@@ -38,7 +38,7 @@ performs the following steps:
 
 2. Runs all hooks in ~*clpm-cleanup-hooks*~.
 
-3. Removes ~'cleanup-clpm~ from ~uiop:*image-dump-hook*~
+3. Removes ~'cleanup-clpm!~ from ~uiop:*image-dump-hook*~
 
 4. Deletes all packages that start with ~clpm-client/~."
   (when (or *clpm-cleanup-on-dump-p* force)
@@ -49,7 +49,7 @@ performs the following steps:
     ;; Remove ourselves from UIOP's image dump hook
     ;; (setf asdf:*system-definition-search-functions*
     ;;       (remove 'clpm-system-search asdf:*system-definition-search-functions*))
-    (setf uiop:*image-dump-hook* (remove 'cleanup-clpm uiop:*image-dump-hook*))
+    (setf uiop:*image-dump-hook* (remove 'cleanup-clpm! uiop:*image-dump-hook*))
     ;; Find all clpm-client packages and delete them.
     (let ((packages (remove-if-not 'clpm-package-p (list-all-packages))))
       (handler-bind ((package-error #'continue))

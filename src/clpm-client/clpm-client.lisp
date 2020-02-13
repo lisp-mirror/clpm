@@ -6,8 +6,6 @@
 (uiop:define-package #:clpm-client/clpm-client
     (:nicknames #:clpm-client)
   (:use #:cl
-        ;; Everything must depend on header so that it comes first in the
-        ;; concatenated file.
         #:clpm-client/header
         #:clpm-client/asdf
         #:clpm-client/bundle

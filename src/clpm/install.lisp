@@ -69,4 +69,5 @@
       (when (funcall validate diff)
         (mapc #'install-release (context-releases new-context))
         (context-write-asdf-files new-context)
-        (save-global-context new-context)))))
+        (save-global-context new-context))
+      new-context)))

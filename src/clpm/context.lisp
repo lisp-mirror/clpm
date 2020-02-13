@@ -14,6 +14,7 @@
           #:clpm/source)
   (:export #:context
            #:context-add-requirement!
+           #:context-asd-pathnames
            #:context-diff
            #:context-diff-has-diff-p
            #:context-diff-to-plist
@@ -121,10 +122,13 @@ in place with the same name. Return the new requirement if it was modified."
 
 ;; * ASDF Integration
 
-(defun context-to-asdf-source-registry.d-forms (context)
+(defun context-asd-pathnames (context)
   (let* ((releases (context-releases context))
-         (system-files (flatten (mapcar #'release-system-files releases)))
-         (system-file-pathnames (mapcar #'system-file-absolute-asd-pathname system-files))
+         (system-files (flatten (mapcar #'release-system-files releases))))
+    (mapcar #'system-file-absolute-asd-pathname system-files)))
+
+(defun context-to-asdf-source-registry.d-forms (context)
+  (let* ((system-file-pathnames (context-asd-pathnames context))
          (system-file-directories (remove-duplicates (mapcar #'uiop:pathname-directory-pathname system-file-pathnames)
                                                      :test #'uiop:pathname-equal)))
     (mapcar (lambda (x) (list :directory x)) system-file-directories)))
@@ -366,12 +370,13 @@ in place with the same name. Return the new requirement if it was modified."
 (defgeneric process-form (context section form))
 
 (defmethod process-form (context (section (eql :requirements)) form)
-  (destructuring-bind (type &key name version source branch tag commit pathname) form
+  (destructuring-bind (type &key name version source branch tag commit pathname no-deps-p) form
     (push (cond
             ((eql type :asd-system)
              (make-instance 'fs-system-requirement
                             :name name
                             :pathname pathname
+                            :no-deps-p no-deps-p
                             :why t))
             ((or branch tag commit)
              (make-instance 'vcs-project-requirement
@@ -380,6 +385,7 @@ in place with the same name. Return the new requirement if it was modified."
                             :commit commit
                             :branch branch
                             :tag tag
+                            :no-deps-p no-deps-p
                             :why t))
             (t
              (make-instance (ecase type
@@ -388,6 +394,7 @@ in place with the same name. Return the new requirement if it was modified."
                             :name name
                             :source (get-source source)
                             :version-spec version
+                            :no-deps-p no-deps-p
                             :why t)))
           (context-requirements context))))
 
