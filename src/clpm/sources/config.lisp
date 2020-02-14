@@ -39,7 +39,7 @@
                 (eql type :vcs)
                 (stringp name)))
     (assert (keywordp type))
-    (apply #'make-instance
+    (apply #'make-source
            (resolve-type type)
            :name name
            (remove-from-plist args :type))))

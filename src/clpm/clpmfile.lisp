@@ -84,13 +84,12 @@
   "Set the ~clpmfile~'s filesystem source based on the directory where the
 clpmfile is located."
   (setf (clpmfile-fs-source clpmfile)
-        (make-instance 'fs-source
-                       :root-pathname (uiop:pathname-directory-pathname
-                                       (uiop:make-pathname* :directory '(:relative)))
-                       :name :clpmfile-fs))
+        (make-source 'fs-source
+                     :root-pathname (uiop:pathname-directory-pathname
+                                     (uiop:make-pathname* :directory '(:relative)))
+                     :name :clpmfile-fs))
   (setf (clpmfile-vcs-source clpmfile)
-        (make-instance 'vcs-source
-                       :name :clpmfile-vcs)))
+        (make-source 'vcs-source :name :clpmfile-vcs)))
 
 (defun clpmfile-asd-file-requirements (clpmfile)
   "Return a list of requirements gathered from the ~:asd~ statements in

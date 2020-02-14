@@ -48,6 +48,15 @@
    "A source for any bare VCS projects. Projects must be registered with the
 source using VCS-SOURCE-REGISTER_PROJECT!."))
 
+(defmethod make-source ((type (eql 'vcs-source)) &rest initargs &key name projects)
+  (aprog1 (ensure-gethash (list type name) *source-cache*
+                          (apply #'make-instance
+                                 type
+                                 initargs))
+    (dolist (project projects)
+      (destructuring-bind (project-name . repo-form) project
+        (vcs-source-register-project! it (make-repo-from-description repo-form) project-name)))))
+
 (defmethod initialize-instance :after ((source vcs-source)
                                        &rest initargs
                                        &key projects)

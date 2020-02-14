@@ -36,6 +36,13 @@
     :initarg :url
     :accessor ql-flat-source-url)))
 
+(defmethod make-source ((type (eql 'ql-flat-source)) &rest initargs &key url name)
+  (let ((url-string (if (stringp url) url (uri-to-string url))))
+    (ensure-gethash (list type name url-string) *source-cache*
+                    (apply #'make-instance
+                           type
+                           initargs))))
+
 (defmethod initialize-instance :after ((source ql-flat-source)
                                        &rest initargs
                                        &key url)

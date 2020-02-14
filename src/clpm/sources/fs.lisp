@@ -61,6 +61,15 @@ project (:ALL) and one release (:NEWEST). Does not do any autodiscovery of
 system files, system files must be registered with the source using
 FS-SOURCE-REGISTER-ASD."))
 
+(defmethod make-source ((type (eql 'fs-source)) &rest initargs
+                        &key system-files name root-pathname)
+  (aprog1 (ensure-gethash (list type name root-pathname) *source-cache*
+                          (apply #'make-instance
+                                 type
+                                 initargs))
+    (dolist (system-file system-files)
+      (fs-source-register-asd it system-file))))
+
 (defmethod initialize-instance :after ((source fs-source)
                                        &rest initargs
                                        &key
@@ -125,13 +134,14 @@ can be relative (to the source's root dir) or absolute."
     (setf asd-pathname (enough-namestring asd-pathname (merge-pathnames (fs-source-root-pathname fs-source)))))
   (let* ((primary-name-ht (fs-source-system-files-by-primary-name fs-source))
          (namestring-ht (fs-source-system-files-by-namestring fs-source))
-         (namestring (namestring asd-pathname))
-         (system-file (make-instance 'fs-system-file
-                                     :source fs-source
-                                     :release (fs-project-release (fs-source-project fs-source))
-                                     :enough-namestring namestring)))
-    (setf (gethash (pathname-name namestring) primary-name-ht) system-file
-          (gethash namestring namestring-ht) system-file)))
+         (namestring (namestring asd-pathname)))
+    (aprog1 (ensure-gethash (pathname-name namestring) primary-name-ht
+                            (make-instance 'fs-system-file
+                                           :source fs-source
+                                           :release (fs-project-release (fs-source-project fs-source))
+                                           :enough-namestring namestring))
+
+      (setf (gethash namestring namestring-ht) it))))
 
 (defmethod source-to-form ((source fs-source))
   (let* ((project (source-project source :all))
