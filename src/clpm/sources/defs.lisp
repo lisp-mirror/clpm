@@ -114,7 +114,9 @@
 ;; * Sources
 
 (defclass clpm-source ()
-  ()
+  ((synced-p
+    :initform nil
+    :accessor source-synced-p))
   (:documentation "Base class for any CLPM source. A source contains projects
 and systems."))
 
@@ -165,6 +167,9 @@ source implementation should provide a ~sync-and-retry~ restart.")
       (when project
         (project-release project version-string error)))))
 
+(defgeneric source-synced-p (source)
+  (:documentation "Return T iff the source has been synced already."))
+
 (defgeneric source-system (source system-name &optional error)
   (:documentation "Return an instance of CLPM-SYSTEM. If the system is not
 located in the source and ERROR is T (default), signals an error of type
@@ -184,8 +189,10 @@ initargs and a :type as a keyword."))
 
 (defgeneric sync-source (source)
   (:documentation "Synchronize the local source metadata with the upstream
-metadata. Returns T if the local data has changed, NIL otherwise."))
-
+metadata. Returns T if the local data has changed, NIL otherwise.")
+  (:method :around (source)
+    (multiple-value-prog1 (unless (source-synced-p source) (call-next-method))
+      (setf (source-synced-p source) t))))
 
 
 ;; * Systems
