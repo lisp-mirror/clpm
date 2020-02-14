@@ -13,9 +13,7 @@
 
 (defvar *default-clpm-home* nil)
 
-(deploy:define-resource-directory deploy-groveler "src/clpm-groveler/")
-
-(deploy:define-resource-directory deploy-client "src/clpm-client/")
+(deploy:define-resource-directory deploy-src "src/")
 
 (uiop:register-image-restore-hook
  (lambda ()
@@ -29,7 +27,10 @@
                                         (deploy:runtime-directory))))
      (setf deploy:*data-location* (uiop:truenamize (uiop:ensure-directory-pathname
                                                     (uiop:ensure-absolute-pathname clpm-home))))
-     (setf *clpm-groveler-asd-pathname* (merge-pathnames "clpm-groveler/clpm-groveler.asd"
+     ;; Fixup the logical pathnames
+     (setf (logical-pathname-translations "clpm")
+           `(("clpm:src;**;*.*.*" ,(merge-pathnames "src/**/*.*" deploy:*data-location*))))
+     (setf *clpm-groveler-asd-pathname* (merge-pathnames "src/clpm-groveler/clpm-groveler.asd"
                                                          deploy:*data-location*))
      (unless (uiop:probe-file* clpm-home)
        (format *error-output*

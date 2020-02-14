@@ -13,7 +13,7 @@
   :version (:read-file-form "src/clpm/version.lisp" :at (2 2))
   :description "A Common Lisp Package Manager"
   :license "BSD-2-Clause"
-  :pathname "src/clpm/"
+  :pathname #p"clpm:src;clpm;"
   :class :package-inferred-system
   :defsystem-depends-on (#:clpm-build #:deploy)
   :entry-point "clpm/cli/entry:main"
