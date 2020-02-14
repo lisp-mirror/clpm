@@ -175,3 +175,6 @@
 [submodule "ext/s-xml"]
 	path = ext/s-xml
 	url = https://gitlab.common-lisp.net/s-xml/s-xml.git
+[submodule "ext/uuid"]
+	path = ext/uuid
+	url = https://github.com/dardoria/uuid.git

@@ -60,5 +60,6 @@
                              (:static-file "trivial-mimes")
                              (:static-file "trivial-utf-8")
                              (:static-file "usocket")
+                             (:static-file "uuid")
                              (:static-file "xsubseq")))
                (:file "src/clpm-licenses/main")))
