@@ -16,6 +16,27 @@
 
 (asdf:load-system :s-xml)
 
+(defun directory-tree (pn file-base-id dir-base-id)
+  (let ((files (directory (merge-pathnames "*.*" pn)))
+        (dirs (directory (merge-pathnames "*/" pn)))
+        (out nil))
+    (dolist (file files)
+      (unless (or (uiop:directory-pathname-p file)
+                  (equal "fasl" (pathname-type file)))
+        (let ((enough (enough-namestring file pn)))
+          (push `(("File" "Name" ,enough
+                          "Id" ,(uiop:strcat file-base-id "." enough)
+                          "Source" ,(enough-namestring file *build-root-pathname*)))
+                out))))
+    (dolist (dir dirs)
+      (let ((name (car (last (pathname-directory dir)))))
+        (push `(("Directory" "Name" ,name
+                             "Id" ,(uiop:strcat dir-base-id "." name))
+                ,@(directory-tree dir (uiop:strcat file-base-id "." name)
+                                  (uiop:strcat dir-base-id "." name)))
+              out)))
+    out))
+
 (defun build-wxs ()
   `(("Wix" "xmlns" "http://schemas.microsoft.com/wix/2006/wi")
     (("Product" "Id" "*"
@@ -90,7 +111,11 @@
                             "Action" "set"
                             "Name" "CLPM_HOME"
                             "Part" "all"
-                            "Value" "[LIBDIR]")))))))))
+                            "Value" "[LIBDIR]")))
+           (("Component" "Id" "LibFiles"
+                         "Guid" "FABDC0CC-CFE3-479D-914D-4EB739D8C513")
+            ,@(directory-tree (merge-pathnames "lib/" *build-root-pathname*)
+                              "File_lib" "Directory_lib"))))))))
 
      (("Feature" "Id" "Minimal"
                  "Title" "CLPM Executable"
@@ -113,9 +138,10 @@
      (("UIRef" "Id" "WixUI_FeatureTree")))))
 
 (defun write-wxs ()
-  (with-open-file (s (merge-pathnames "clpm.wsx" *build-root-pathname*)
+  (with-open-file (s (merge-pathnames "clpm.wxs" *build-root-pathname*)
                    :if-exists :supersede :direction :output)
     (format s "<?xml version='1.0'?>~%")
     (s-xml:print-xml (build-wxs) :stream s :pretty t)))
 
+(print (build-wxs))
 (write-wxs)
