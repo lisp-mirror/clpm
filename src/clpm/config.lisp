@@ -137,6 +137,14 @@ directory in ~*clpm-config-directories*~."
     ((:drakma)
      :type hash-table)
 
+    ((:firejail)
+     :type hash-table)
+    ((:firejail :path)
+     :type (or string pathname)
+     :default "firejail"
+     :documentation
+     "The path to the firejail executable.")
+
     ((:git)
      :type hash-table)
     ((:git :path)
@@ -176,7 +184,7 @@ directory in ~*clpm-config-directories*~."
     ((:grovel :sandbox)
      :type hash-table)
     ((:grovel :sandbox :type)
-     :type (member :auto :firejail)
+     :type (member :auto :firejail :none)
      :default :auto
      :documentation
      "The sandbox type to use when groveling.")
