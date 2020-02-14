@@ -68,7 +68,7 @@
      (("Directory" "Id" "TARGETDIR"
                    "Name" "SourceDir")
       (("Directory" "Id" "ProgramFiles64Folder"
-                    "Nmae" "PFiles")
+                    "Name" "PFiles")
        (("Directory" "Id" "BaseFolder"
                      "Name" "CLPM")
         (("Directory" "Id" "VersionFolder"
@@ -122,7 +122,7 @@
                  "ConfigurableDirectory" "INSTALLDIR"
                  "Level" "1")
       (("ComponentRef" "Id" "CLPM_Bin"))
-      (("ComponentRef" "id" "CLPM_Libs"))
+      (("ComponentRef" "Id" "CLPM_Libs"))
       (("Feature" "Id" "SetPath"
                   "Level" "1"
                   "Title" "Set Environment Variable: PATH")
