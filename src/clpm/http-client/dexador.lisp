@@ -6,6 +6,7 @@
 (uiop:define-package #:clpm/http-client/dexador
     (:use #:cl
           #:alexandria
+          #+clpm-openssl
           #:clpm/http-client/cl-plus-ssl
           #:clpm/http-client/defs
           #:clpm/utils
@@ -39,6 +40,7 @@
   (or (eql (puri:uri-scheme url) :http)
       (featurep :windows)
       (and (not (featurep :dexador-no-ssl))
+           #+clpm-openssl
            *openssl-available-p*)))
 
 (defmethod %http-client-manages-streams-p ((client dexador-client))

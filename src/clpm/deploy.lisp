@@ -7,6 +7,9 @@
     (:use #:cl
           #:clpm/deps)
   (:import-from #:deploy)
+  #+clpm-winhttp
+  (:import-from #:winhttp
+                #:winhttp)
   (:export #:*default-clpm-home*))
 
 (in-package #:clpm/deploy)
@@ -14,6 +17,11 @@
 (defvar *default-clpm-home* nil)
 
 (deploy:define-resource-directory deploy-src "src/")
+
+;; Don't deploy the WinHttp dll
+#+clpm-winhttp
+(deploy:define-library winhttp
+  :dont-deploy t)
 
 (uiop:register-image-restore-hook
  (lambda ()

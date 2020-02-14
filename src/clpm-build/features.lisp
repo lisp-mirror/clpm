@@ -55,6 +55,12 @@
                (not (present :clpm-openssl)))
       (pushnew :dexador-no-ssl clpm-features))
 
+    ;; If we're using Dexador on Windows, push a feature saying we're using
+    ;; WinHTTP.
+    (when (and (present :clpm-dexador)
+               (uiop:featurep :win32))
+      (pushnew :clpm-winhttp clpm-features))
+
     ;; If no Lisp clients that use openssl are present, remove it from the
     ;; feature set.
     (unless (or (present :clpm-drakma)
