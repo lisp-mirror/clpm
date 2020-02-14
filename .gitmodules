@@ -172,3 +172,6 @@
 [submodule "ext/cl-reexport"]
 	path = ext/cl-reexport
 	url = https://github.com/takagi/cl-reexport.git
+[submodule "ext/s-xml"]
+	path = ext/s-xml
+	url = https://gitlab.common-lisp.net/s-xml/s-xml.git
