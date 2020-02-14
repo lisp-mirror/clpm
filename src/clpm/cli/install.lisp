@@ -53,14 +53,6 @@
    :help "Install a project instead of a system"
    :reduce (constantly t)))
 
-(defparameter *option-install-yes*
-  (adopt:make-option
-   :install-yes
-   :short #\y
-   :long "yes"
-   :help "Answer yes to all questions"
-   :reduce (constantly t)))
-
 (defparameter *option-install-no-deps*
   (adopt:make-option
    :install-no-deps
@@ -107,7 +99,7 @@
                    *option-install-source*
                    *option-install-project*
                    *option-install-no-deps*
-                   *option-install-yes*
+                   *option-yes*
                    *option-install-branch*
                    *option-install-tag*
                    *option-install-commit*
@@ -129,7 +121,7 @@
          (no-deps-p (gethash :install-no-deps options))
          (context-name (or (gethash :context options)
                            "default"))
-         (yes-p (gethash :install-yes options))
+         (yes-p (gethash :yes options))
          (commit (gethash :install-commit options))
          (branch (gethash :install-branch options))
          (tag (gethash :install-tag options))
@@ -152,7 +144,8 @@
                                     :commit commit
                                     :branch branch
                                     :tag tag
-                                    :validate (make-validate-fun yes-p output))))
+                                    :validate (make-validate-fun yes-p output)
+                                    :save-context-p t)))
       (when (equal output "sexp")
         (uiop:with-safe-io-syntax ()
           (prin1 (context-asd-pathnames updated-context)))))

@@ -14,12 +14,12 @@
           #:clpm/source
           #:clpm/version-strings)
   (:export #:install
-           #:install-release))
+           #:install-release
+           #:install-requirements))
 
 (in-package #:clpm/install)
 
 (setup-logger)
-
 
 (defun make-requirement (type name
                          &key version-spec source no-deps-p commit branch tag)
@@ -53,21 +53,28 @@
 
 (defun install (type name &key version-spec source context no-deps-p
                             commit branch tag
-                            (validate (constantly t)))
+                            (validate (constantly t))
+                            save-context-p)
+  (let ((requirement (make-requirement type name
+                                       :version-spec version-spec :source source
+                                       :no-deps-p no-deps-p :commit commit
+                                       :branch branch :tag tag)))
+    (install-requirements (list requirement) :context context :validate validate
+                                             :save-context-p save-context-p)))
+
+(defun install-requirements (reqs &key
+                                    context
+                                    (validate (constantly t))
+                                    save-context-p)
   (let* ((orig-context (get-context context))
-         (context (copy-context orig-context))
-         (requirement (make-requirement type name
-                                        :version-spec version-spec :source source
-                                        :no-deps-p no-deps-p :commit commit
-                                        :branch branch :tag tag))
-         (update-projects nil)
-         (add-result (context-add-requirement! context requirement)))
-    (when (and (or commit branch tag) add-result)
-      (push name update-projects))
-    (let* ((new-context (resolve-requirements context :update-projects update-projects))
-           (diff (context-diff orig-context new-context)))
-      (when (funcall validate diff)
-        (mapc #'install-release (context-releases new-context))
+         (new-context (copy-context orig-context))
+         (update-projects nil))
+    (dolist (r reqs)
+      (context-add-requirement! new-context r))
+    (setf new-context (resolve-requirements new-context :update-projects update-projects))
+    (when (funcall validate (context-diff orig-context new-context))
+      (mapc #'install-release (context-releases new-context))
+      (when save-context-p
         (context-write-asdf-files new-context)
-        (save-global-context new-context))
-      new-context)))
+        (save-global-context new-context)))
+    new-context))

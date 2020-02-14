@@ -88,7 +88,8 @@
                   &key
                     (unresolved-reqs nil unresolved-reqs-p)
                     (unresolved-grovel-reqs nil unresolved-grovel-reqs-p)
-                    (system-files-pending-groveling nil system-files-pending-groveling-p))
+                    (system-files-pending-groveling nil system-files-pending-groveling-p)
+                    (groveler (node-groveler node)))
   "Given a search node, return a shallow copy of it."
   (make-instance 'node
                  :unresolved-reqs (if unresolved-reqs-p
@@ -104,7 +105,7 @@
                                                       system-files-pending-groveling
                                                       (node-system-files-pending-groveling node)))
                  :groveler-loaded-asds (node-groveler-loaded-asds node)
-                 :groveler (node-groveler node)))
+                 :groveler groveler))
 
 (defun collapse-system-files-needing-groveling (left right)
   (if (or (eql left t)
@@ -171,9 +172,10 @@ incompatible, a new one is created."
        (push asd-namestring (node-groveler-loaded-asds node)))
       (t
        ;; Grovelers are incompatible. Need to launch a new one.
-       (log:debug "Starting new groveler.~%search node asds: ~S~%groveler asds:~S"
+       (log:debug "Starting new groveler.~%search node asds: ~S~%groveler asds: ~S~%Add: ~S"
                   (node-groveler-loaded-asds node)
-                  (groveler-loaded-asds (node-groveler node)))
+                  (groveler-loaded-asds (node-groveler node))
+                  asd-pathname)
        (setf (node-groveler node) (make-groveler))
        (dolist (f (reverse (node-groveler-loaded-asds node)))
          (groveler-load-asd! (node-groveler node) f))

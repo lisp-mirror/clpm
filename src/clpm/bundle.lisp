@@ -5,6 +5,7 @@
 
 (uiop:define-package #:clpm/bundle
     (:use #:cl
+          #:alexandria
           #:clpm/clpmfile
           #:clpm/context
           #:clpm/install
@@ -23,12 +24,13 @@
                  :sources (clpmfile-sources clpmfile)
                  :requirements (clpmfile-all-requirements clpmfile)))
 
-(defun build-lockfile (clpmfile)
+(defun build-lockfile (clpmfile &key local)
   "Given a clpmfile instance, make a lockfile context for it."
   (let* ((lockfile (create-empty-lockfile clpmfile))
          (lockfile-pathname (clpmfile-lockfile-pathname clpmfile)))
-    (log:info "syncing sources")
-    (mapc #'sync-source (clpmfile-sources clpmfile))
+    (unless local
+      (log:info "syncing sources")
+      (mapc #'sync-source (clpmfile-sources clpmfile)))
     (log:info "Resolving requirements")
     (setf lockfile (resolve-requirements lockfile))
     (with-open-file (stream lockfile-pathname
@@ -36,25 +38,32 @@
       (serialize-context-to-stream lockfile stream))
     lockfile))
 
-(defun load-lockfile (pathname)
+(defun load-lockfile (pathname &key local)
   (handler-bind
       ((source-no-such-object
          (lambda (c)
-           (when (find-restart 'sync-and-retry)
+           (when (and (find-restart 'sync-and-retry) (not local))
              (log:info "Syncing source and retrying")
              (invoke-restart 'sync-and-retry c)))))
     (load-anonymous-context-from-pathname pathname)))
 
-(defun bundle-install (clpmfile-designator)
+(defun bundle-install (clpmfile-designator &key local (validate (constantly t)))
   "Given a clpmfile instance, install all releases from its lock file, creating
 the lock file if necessary."
   (let* ((clpmfile (get-clpmfile clpmfile-designator))
          (lockfile-pathname (clpmfile-lockfile-pathname clpmfile))
          (lockfile nil))
     (if (probe-file lockfile-pathname)
-        (setf lockfile (load-lockfile lockfile-pathname))
-        (setf lockfile (build-lockfile clpmfile)))
-    (mapc #'install-release (context-releases lockfile))))
+        (setf lockfile (load-lockfile lockfile-pathname :local local))
+        (setf lockfile (create-empty-lockfile clpmfile)))
+    (unless local
+      (mapc #'sync-source (clpmfile-sources clpmfile)))
+    (setf lockfile (install-requirements (clpmfile-all-requirements clpmfile)
+                                         :context lockfile :validate validate))
+    (with-open-file (stream lockfile-pathname
+                            :direction :output
+                            :if-exists :supersede)
+      (serialize-context-to-stream lockfile stream))))
 
 (defun bundle-update (clpmfile-designator &key
                                             update-projects (validate (constantly t)))

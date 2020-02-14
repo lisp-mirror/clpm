@@ -99,7 +99,8 @@
              (and (ecase type
                     (:project (or (typep req 'project-requirement)
                                   (typep req 'vcs-project-requirement)))
-                    (:system (typep req 'system-requirement)))
+                    (:system (typep req 'system-requirement))
+                    (:asd-system (typep req 'fs-system-requirement)))
                   (equal name (requirement/name req))))
            (context-requirements context)))
 
@@ -188,8 +189,8 @@ in place with the same name. Return the new requirement if it was modified."
          (added-releases (set-difference new-releases old-releases))
          (removed-releases (set-difference old-releases new-releases)))
     (make-instance 'context-diff
-                   :added-releases added-releases
-                   :removed-releases removed-releases)))
+                   :added-releases (remove 'fs-release added-releases :key #'type-of)
+                   :removed-releases (remove 'fs-release removed-releases :key #'type-of))))
 
 (defun context-diff-has-diff-p (diff)
   (or (context-diff-added-releases diff)
@@ -268,7 +269,11 @@ in place with the same name. Return the new requirement if it was modified."
 (defun print-context-diff (diff stream)
   ;; Compute the maximum project length.
   (flet ((max-length (list &key (key 'identity))
-           (reduce #'max list :key (compose 'length key)
+           (reduce #'max list :key (compose (lambda (x)
+                                              (if (stringp x)
+                                                  (length x)
+                                                  (length (format nil "~A" x))))
+                                            key)
                               :initial-value 0)))
     (let* ((plist (context-diff-to-plist diff :stringify-commits-p t))
            (max-name-length (max (length "Project")

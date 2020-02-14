@@ -11,6 +11,7 @@
            #:*option-context*
            #:*option-help*
            #:*option-output*
+           #:*option-yes*
            #:*option-verbose*))
 
 (in-package #:clpm/cli/common-args)
@@ -20,6 +21,14 @@
                      :long "help"
                      :help "Display help and exit"
                      :reduce (constantly t)))
+
+(defparameter *option-yes*
+  (adopt:make-option
+   :yes
+   :short #\y
+   :long "yes"
+   :help "Answer yes to all questions"
+   :reduce (constantly t)))
 
 (defparameter *option-verbose*
   (adopt:make-option :verbose
