@@ -9,7 +9,8 @@
           #:anaphora
           #:puri
           #:split-sequence
-          #:trivial-gray-streams)
+          #:trivial-gray-streams
+          #:uuid)
   (:export #:*live-script-location*
            #:ensure-uri-scheme-https!
            #:mktemp
@@ -80,7 +81,13 @@ process."
 
 #-(and sbcl unix)
 (defun mktemp ()
-  (error "not implemented"))
+  "Make a temporary directory and return its pathname."
+  ;; This is likely not a secure implementation, but it at least gives us a
+  ;; fallback on, for example, Windows.
+  (let ((pn (merge-pathnames (format nil "clpm-grovel/~A/" (make-v4-uuid))
+                             (uiop:temporary-directory))))
+    (ensure-directories-exist pn)
+    pn))
 
 (defun uri-to-string (uri)
   "Convert a puri URI to a string."
