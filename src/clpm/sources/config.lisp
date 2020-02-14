@@ -46,6 +46,6 @@
 
 (defun load-sources ()
   (let ((pn (clpm-config-pathname '("sources.conf"))))
-    (when (probe-file pn)
+    (when pn
       (uiop:with-safe-io-syntax ()
         (mapcar #'load-source-from-form (uiop:read-file-forms pn))))))
