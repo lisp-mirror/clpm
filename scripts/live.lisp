@@ -10,8 +10,6 @@
 
 (in-package #:clpm-scripts)
 
-(load (merge-pathnames "../logical-pathname.lisp" *load-truename*))
-
 (setup-asdf "live")
 
 ;; Load CLPM
