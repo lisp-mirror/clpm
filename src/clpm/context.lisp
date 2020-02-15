@@ -311,7 +311,8 @@ in place with the same name. Return the new requirement if it was modified."
            (format-string (make-diff-format-string 4 max-name-length
                                                    max-old-version-length max-new-version-length
                                                    max-old-source-length max-new-source-length
-                                                   :use-color-p (interactive-stream-p stream)))
+                                                   :use-color-p (and (not (featurep :windows))
+                                                                     (interactive-stream-p stream))))
            (no-color-format-string (make-diff-format-string 4 max-name-length
                                                             max-old-version-length max-new-version-length
                                                             max-old-source-length max-new-source-length)))
