@@ -111,7 +111,8 @@
                          "Guid" "35C91C7A-ED22-40B5-A761-730C57CCF803"
                          "DiskId" "1"
                          "Win64" "yes")
-            (("CreateFolder")))
+            (("CreateFolder"))
+            ,@(directory-files (merge-pathnames "lib/clpm/" *build-root-pathname*)))
            (("Component" "Id" "CLPM_SetHOME"
                          "Guid" "E75E9C41-C6B9-44FE-90B3-8055B22341D0"
                          "DiskId" "1"
@@ -123,20 +124,21 @@
                             "Name" "CLPM_HOME"
                             "Part" "all"
                             "Value" "[LIBDIR]")))
-           (("Component" "Id" "LibFiles"
-                         "Guid" "FABDC0CC-CFE3-479D-914D-4EB739D8C513")
-            ,@(directory-files (merge-pathnames "lib/clpm/" *build-root-pathname*)))
            (("Directory" "Id" "SrcDir"
                          "Name" "src")
             (("Directory" "Id" "ClientDir"
                           "Name" "clpm-client")
              (("Component" "Id" "CLPM_Client"
-                           "Guid" "6B847710-C813-4E8E-861B-7C0B767F4C36")
+                           "Guid" "6B847710-C813-4E8E-861B-7C0B767F4C36"
+                           "DiskId" "1"
+                           "Win64" "yes")
               ,@(directory-files (merge-pathnames "lib/clpm/src/clpm-client/" *build-root-pathname*))))
             (("Directory" "Id" "GrovelerDir"
                           "Name" "clpm-groveler")
              (("Component" "Id" "CLPM_Groveler"
-                           "Guid" "639DDC25-7C6D-4F7B-809E-A7989A3D15BE")
+                           "Guid" "639DDC25-7C6D-4F7B-809E-A7989A3D15BE"
+                           "DiskId" "1"
+                           "Win64" "yes")
               ,@(directory-files (merge-pathnames "lib/clpm/src/clpm-groveler/" *build-root-pathname*)))))))))))
 
      (("Feature" "Id" "Minimal"

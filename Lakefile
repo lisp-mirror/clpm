@@ -121,7 +121,7 @@
                          :context context)
           (let ((cid (uiop:read-file-string cid-pn)))
             (if (equal (second tuple) "windows")
-                (docker-cp cid #?"/clpm-${(git-tag ref)}/build/clpm.msi"
+                (docker-cp cid #?"C:/clpm-${(git-tag ref)}/build/clpm.msi"
                            (namestring (merge-pathnames (format nil "clpm-~{~A~^-~}-~A.msi" tuple (git-tag))
                                                         output-dir))
                            :context context)

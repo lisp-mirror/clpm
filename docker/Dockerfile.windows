@@ -18,6 +18,8 @@ RUN $chocourl = 'https://chocolatey.org/install.ps1'; \
 # Install git so that we can determine release version.
 RUN choco install -y git;
 
+RUN git config --global core.autocrlf false;
+
 # Install WIX. We don't install it through chocolatey because dotnet35 seems to
 # be broken in chocolatey
 RUN Write-Host "Starting download"; \
@@ -28,9 +30,24 @@ RUN Write-Host "Starting download"; \
     cd wix/bin; \
     unzip ../../wix311-binaries.zip;
 
-WORKDIR C:/clpm
-COPY . C:/clpm
+WORKDIR C:/
+COPY .git C:/clpm-git
 
-RUN sbcl --load scripts/build.lisp; \
-    C:\wix\bin\candle clpm.wxs; \
-    C:\wix\bin\light clpm.wixobj -ext C:\wix\bin\WixUIExtension.dll -cultures:en-us -out build\clpm.msi;
+# This is the git ref we bvuild from.
+ARG ref=master
+# This is the "tag" (output from git describe)
+ARG describe
+
+RUN git clone C:/clpm-git C:/clpm-$Env:describe
+WORKDIR C:/clpm-$describe
+RUN git checkout $Env:ref; \
+    git submodule init; \
+    git submodule update;
+
+RUN sbcl --disable-debugger --load scripts/build.lisp --quit; \
+    sbcl --disable-debugger --load scripts/build-wxs.lisp --quit;
+
+WORKDIR C:/clpm-$describe/build
+
+RUN ls; C:\wix\bin\candle clpm.wxs; \
+    C:\wix\bin\light clpm.wixobj -ext C:\wix\bin\WixUIExtension.dll -cultures:en-us -out clpm.msi;
