@@ -178,3 +178,6 @@
 [submodule "ext/uuid"]
 	path = ext/uuid
 	url = https://github.com/dardoria/uuid.git
+[submodule "ext/winhttp"]
+	path = ext/winhttp
+	url = https://github.com/fjames86/winhttp.git
