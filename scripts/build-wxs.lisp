@@ -37,6 +37,17 @@
               out)))
     out))
 
+(defun directory-files (pn)
+  (let ((files (directory (merge-pathnames "*.*" pn)))
+        (out))
+    (dolist (file files)
+      (unless (or (uiop:directory-pathname-p file)
+                  (equal "fasl" (pathname-type file)))
+        (push `(("File" "Name" ,(enough-namestring file pn)
+                        "Source" ,(enough-namestring file *build-root-pathname*)))
+              out)))
+    out))
+
 (defun build-wxs ()
   `(("Wix" "xmlns" "http://schemas.microsoft.com/wix/2006/wi")
     (("Product" "Id" "*"
@@ -114,8 +125,19 @@
                             "Value" "[LIBDIR]")))
            (("Component" "Id" "LibFiles"
                          "Guid" "FABDC0CC-CFE3-479D-914D-4EB739D8C513")
-            ,@(directory-tree (merge-pathnames "lib/" *build-root-pathname*)
-                              "File_lib" "Directory_lib"))))))))
+            ,@(directory-files (merge-pathnames "lib/clpm/" *build-root-pathname*)))
+           (("Directory" "Id" "SrcDir"
+                         "Name" "src")
+            (("Directory" "Id" "ClientDir"
+                          "Name" "clpm-client")
+             (("Component" "Id" "CLPM_Client"
+                           "Guid" "6B847710-C813-4E8E-861B-7C0B767F4C36")
+              ,@(directory-files (merge-pathnames "lib/clpm/src/clpm-client/" *build-root-pathname*))))
+            (("Directory" "Id" "GrovelerDir"
+                          "Name" "clpm-groveler")
+             (("Component" "Id" "CLPM_Groveler"
+                           "Guid" "639DDC25-7C6D-4F7B-809E-A7989A3D15BE")
+              ,@(directory-files (merge-pathnames "lib/clpm/src/clpm-groveler/" *build-root-pathname*)))))))))))
 
      (("Feature" "Id" "Minimal"
                  "Title" "CLPM Executable"
@@ -123,6 +145,8 @@
                  "Level" "1")
       (("ComponentRef" "Id" "CLPM_Bin"))
       (("ComponentRef" "Id" "CLPM_Libs"))
+      (("ComponentRef" "Id" "CLPM_Client"))
+      (("ComponentRef" "Id" "CLPM_Groveler"))
       (("Feature" "Id" "SetPath"
                   "Level" "1"
                   "Title" "Set Environment Variable: PATH")
