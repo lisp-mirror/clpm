@@ -27,4 +27,8 @@
   (setf (symbol-value (uiop:find-symbol* '#:*default-clpm-home* '#:clpm/deploy))
         "/usr/local/lib/clpm"))
 
+(when (uiop:featurep :windows)
+  (uiop:copy-file (merge-pathnames "License.rtf" *root-pathname*)
+                  (merge-pathnames "License.rtf" *build-root-pathname*)))
+
 (asdf:make :clpm)
