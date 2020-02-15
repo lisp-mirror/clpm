@@ -7,15 +7,23 @@
 
 # Use Bionic as Disco upgraded libc, making it more difficult to run the built
 # executable on older systems.
-FROM daewok/sbcl:2.0.0-ubuntu-bionic-build
+FROM daewok/sbcl:2.0.1-ubuntu-bionic-build
 
 COPY docker/customize-target-features.lisp /usr/local/src/sbcl-${SBCL_VERSION}/
 
 RUN rebuild-sbcl
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends build-essential libssl-dev libz-dev git \
+    && apt-get install -y --no-install-recommends build-essential libssl-dev libz-dev git curl \
     && rm -rf /var/lists/apt
+
+ENV ASDF_VERSION=3.3.4
+
+WORKDIR /tmp
+
+RUN curl https://common-lisp.net/project/asdf/archives/asdf-${ASDF_VERSION}.tar.gz > asdf.tar.gz \
+    && tar xvf asdf.tar.gz \
+    && sbcl --disable-debugger --load "/tmp/asdf-${ASDF_VERSION}/tools/load-asdf.lisp" --load "/tmp/asdf-${ASDF_VERSION}/uiop/uiop.asd" --load "/tmp/asdf-${ASDF_VERSION}/tools/install-asdf.lisp" --quit
 
 # We copy the git repository in to make sure we have a completely clean build
 # and no lingering local changes.
