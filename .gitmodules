@@ -159,7 +159,7 @@
 	url = https://notabug.org/cage/cl-colors2.git
 [submodule "ext/dexador"]
 	path = ext/dexador
-	url = https://github.com/daewok/dexador.git
+	url = https://github.com/fukamachi/dexador.git
 [submodule "ext/quri"]
 	path = ext/quri
 	url = https://github.com/fukamachi/quri.git
