@@ -118,9 +118,6 @@
 [submodule "ext/lisp-invocation"]
 	path = ext/lisp-invocation
 	url = https://gitlab.common-lisp.net/qitab/lisp-invocation.git
-[submodule "ext/cl-conspack"]
-	path = ext/cl-conspack
-	url = https://github.com/daewok/cl-conspack.git
 [submodule "ext/ieee-floats"]
 	path = ext/ieee-floats
 	url = https://github.com/marijnh/ieee-floats.git

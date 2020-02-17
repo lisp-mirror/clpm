@@ -18,7 +18,6 @@
                              (:static-file "chipz")
                              (:static-file "chunga")
                              (:static-file "cl-base64")
-                             (:static-file "cl-conspack")
                              (:static-file "cl-cookie")
                              (:static-file "cl-fad")
                              (:static-file "cl-plus-ssl"
