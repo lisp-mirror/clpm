@@ -4,6 +4,7 @@
   :description "System containing the licenses for CLPM and its dependencies."
   :license "BSD-2-Clause"
   :serial t
+  :depends-on (#:clpm-build)
   :components ((:module "licenses"
                 :components ((:static-file "adopt")
                              (:static-file "alexandria")
@@ -20,7 +21,8 @@
                              (:static-file "cl-conspack")
                              (:static-file "cl-cookie")
                              (:static-file "cl-fad")
-                             (:static-file "cl-plus-ssl")
+                             (:static-file "cl-plus-ssl"
+                              :if-feature :clpm-openssl)
                              (:static-file "cl-ppcre")
                              (:static-file "cl-reexport")
                              (:static-file "cl-utilities")
@@ -44,7 +46,8 @@
                              (:static-file "log4cl.NOTICE")
                              (:static-file "named-readtables")
                              (:static-file "nibbles")
-                             (:static-file "openssl")
+                             (:static-file "openssl"
+                              :if-feature :clpm-openssl)
                              (:static-file "proc-parse")
                              (:static-file "puri")
                              (:static-file "quri")
