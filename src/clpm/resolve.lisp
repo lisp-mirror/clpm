@@ -109,7 +109,6 @@ the requirements."
                                    :unresolved-reqs reqs
                                    :groveler (make-groveler)))
          (final-node (perform-search root-node)))
-    (setf (context-requirements out-context) reqs)
     (setf (context-releases out-context)
           (mapcar #'car (node-activated-releases final-node)))
     (setf (context-reverse-dependencies out-context)

@@ -47,7 +47,6 @@ preference is to update everything to the latest version possible.")
 
 (defun make-validate-fun (yesp output)
   (lambda (diff)
-    (format t "~S~%" (context-diff-to-plist diff))
     (unless (equal output "sexp")
       ;; We can't print this in a sexp format at the moment.
       (print-context-diff diff *standard-output*))

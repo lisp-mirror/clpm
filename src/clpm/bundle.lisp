@@ -6,6 +6,7 @@
 (uiop:define-package #:clpm/bundle
     (:use #:cl
           #:alexandria
+          #:anaphora
           #:clpm/clpmfile
           #:clpm/context
           #:clpm/install
@@ -52,18 +53,23 @@
 the lock file if necessary."
   (let* ((clpmfile (get-clpmfile clpmfile-designator))
          (lockfile-pathname (clpmfile-lockfile-pathname clpmfile))
-         (lockfile nil))
+         (lockfile nil)
+         (changedp nil))
     (if (probe-file lockfile-pathname)
         (setf lockfile (load-lockfile lockfile-pathname :localp localp))
         (setf lockfile (create-empty-lockfile clpmfile)))
     (unless localp
       (mapc #'sync-source (clpmfile-sources clpmfile)))
     (setf lockfile (install-requirements (clpmfile-all-requirements clpmfile)
-                                         :context lockfile :validate validate))
-    (with-open-file (stream lockfile-pathname
-                            :direction :output
-                            :if-exists :supersede)
-      (serialize-context-to-stream lockfile stream))))
+                                         :context lockfile
+                                         :validate (lambda (diff)
+                                                     (aprog1 (funcall validate diff)
+                                                       (setf changedp it)))))
+    (when changedp
+      (with-open-file (stream lockfile-pathname
+                              :direction :output
+                              :if-exists :supersede)
+        (serialize-context-to-stream lockfile stream)))))
 
 (defun bundle-update (clpmfile-designator &key
                                             update-projects (validate (constantly t))
@@ -71,7 +77,8 @@ the lock file if necessary."
                                             localp)
   (let* ((clpmfile (get-clpmfile clpmfile-designator))
          (lockfile-pathname (clpmfile-lockfile-pathname clpmfile))
-         (lockfile nil))
+         (lockfile nil)
+         (changedp nil))
     (unless (probe-file lockfile-pathname)
       ;; There is no lock file currently. Just fall back to BUNDLE-INSTALL.
       (return-from bundle-update
@@ -89,9 +96,13 @@ the lock file if necessary."
                   (project-name (project-name (release-project release))))
         (pushnew project-name update-projects :test #'equal)))
     (setf lockfile (install-requirements (clpmfile-all-requirements clpmfile)
-                                         :context lockfile :validate validate
-                                         :update-projects update-projects))
-    (with-open-file (stream lockfile-pathname
-                            :direction :output
-                            :if-exists :supersede)
-      (serialize-context-to-stream lockfile stream))))
+                                         :context lockfile
+                                         :validate (lambda (diff)
+                                                     (aprog1 (funcall validate diff)
+                                                       (setf changedp it)))
+                                         :update-projects (or update-projects t)))
+    (when changedp
+      (with-open-file (stream lockfile-pathname
+                              :direction :output
+                              :if-exists :supersede)
+        (serialize-context-to-stream lockfile stream)))))

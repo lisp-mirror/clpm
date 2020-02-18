@@ -406,10 +406,13 @@ in place with the same name. Return the new requirement if it was modified."
 
 (defmethod process-form (context (section (eql :releases)) form)
   (destructuring-bind (name &key version source systems) form
-    (declare (ignore systems))
-    (let ((source (get-source source)))
-      (push (source-project-release source name version)
-            (context-releases context)))))
+    (let* ((source (get-source source))
+           (release (source-project-release source name version)))
+      (push release
+            (context-releases context))
+      (dolist (system-name systems)
+        (push (release-system-release release system-name)
+              (context-system-releases context))))))
 
 (defmethod process-form (context (section (eql :reverse-dependencies)) form))
 
