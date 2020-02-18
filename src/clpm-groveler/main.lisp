@@ -96,14 +96,16 @@
       :loaded-systems ,(gethash source-file *directly-loaded-systems*))))
 
 (defun call-with-error-handling (thunk)
-  (handler-case
-      (values (funcall thunk) nil nil)
-    (asdf:missing-component (c)
-      (values nil nil (string-downcase (string (asdf/find-component:missing-requires c)))))
-    (error (c)
-      (values nil (with-output-to-string (s)
-                    (uiop:print-condition-backtrace c :stream s))
-              nil))))
+  (handler-bind ((asdf:missing-component
+                   (lambda (c)
+                     (return-from call-with-error-handling
+                       (values nil nil (string-downcase (string (asdf/find-component:missing-requires c)))))))
+                 (error (lambda (c)
+                          (return-from call-with-error-handling
+                            (values nil (with-output-to-string (s)
+                                          (uiop:print-condition-backtrace c :stream s))
+                                    nil)))))
+    (values (funcall thunk) nil nil)))
 
 (defmacro with-error-handling (nil &body body)
   `(call-with-error-handling (lambda () ,@body)))
