@@ -24,11 +24,11 @@
                  :sources (clpmfile-sources clpmfile)
                  :requirements (clpmfile-all-requirements clpmfile)))
 
-(defun build-lockfile (clpmfile &key local)
+(defun build-lockfile (clpmfile &key localp)
   "Given a clpmfile instance, make a lockfile context for it."
   (let* ((lockfile (create-empty-lockfile clpmfile))
          (lockfile-pathname (clpmfile-lockfile-pathname clpmfile)))
-    (unless local
+    (unless localp
       (log:info "syncing sources")
       (mapc #'sync-source (clpmfile-sources clpmfile)))
     (log:info "Resolving requirements")
@@ -38,25 +38,25 @@
       (serialize-context-to-stream lockfile stream))
     lockfile))
 
-(defun load-lockfile (pathname &key local)
+(defun load-lockfile (pathname &key localp)
   (handler-bind
       ((source-no-such-object
          (lambda (c)
-           (when (and (find-restart 'sync-and-retry) (not local))
+           (when (and (find-restart 'sync-and-retry) (not localp))
              (log:info "Syncing source and retrying")
              (invoke-restart 'sync-and-retry c)))))
     (load-anonymous-context-from-pathname pathname)))
 
-(defun bundle-install (clpmfile-designator &key local (validate (constantly t)))
+(defun bundle-install (clpmfile-designator &key localp (validate (constantly t)))
   "Given a clpmfile instance, install all releases from its lock file, creating
 the lock file if necessary."
   (let* ((clpmfile (get-clpmfile clpmfile-designator))
          (lockfile-pathname (clpmfile-lockfile-pathname clpmfile))
          (lockfile nil))
     (if (probe-file lockfile-pathname)
-        (setf lockfile (load-lockfile lockfile-pathname :local local))
+        (setf lockfile (load-lockfile lockfile-pathname :localp localp))
         (setf lockfile (create-empty-lockfile clpmfile)))
-    (unless local
+    (unless localp
       (mapc #'sync-source (clpmfile-sources clpmfile)))
     (setf lockfile (install-requirements (clpmfile-all-requirements clpmfile)
                                          :context lockfile :validate validate))
@@ -66,22 +66,32 @@ the lock file if necessary."
       (serialize-context-to-stream lockfile stream))))
 
 (defun bundle-update (clpmfile-designator &key
-                                            update-projects (validate (constantly t)))
+                                            update-projects (validate (constantly t))
+                                            update-systems
+                                            localp)
   (let* ((clpmfile (get-clpmfile clpmfile-designator))
          (lockfile-pathname (clpmfile-lockfile-pathname clpmfile))
          (lockfile nil))
-    (log:info "syncing sources")
-    (mapc #'sync-source (clpmfile-sources clpmfile))
-    (if (probe-file lockfile-pathname)
-        ;; Load the existing lockfile
-        (setf lockfile (load-lockfile lockfile-pathname))
-        ;; No lock file is present. Create an empty context.
-        (setf lockfile (create-empty-lockfile clpmfile)))
-    ;; Resolve the requirements, allowing for updates.
-    (let* ((new-lockfile (resolve-requirements lockfile :update-projects (or update-projects t)))
-           (diff (context-diff lockfile new-lockfile)))
-      (when (funcall validate diff)
-        (mapc #'install-release (context-releases new-lockfile))
-        (with-open-file (stream lockfile-pathname
-                                :direction :output :if-exists :supersede)
-          (serialize-context-to-stream new-lockfile stream))))))
+    (unless (probe-file lockfile-pathname)
+      ;; There is no lock file currently. Just fall back to BUNDLE-INSTALL.
+      (return-from bundle-update
+        (bundle-install clpmfile :localp localp :validate validate)))
+    ;; Load the existing lockfile
+    (setf lockfile (load-lockfile lockfile-pathname :localp localp))
+    (unless localp
+      (mapc #'sync-source (clpmfile-sources clpmfile)))
+    ;; Map all update systems to their projects.
+    (dolist (system update-systems)
+      (when-let* ((system-release (find system (context-system-releases lockfile)
+                                        :key (compose #'system-name #'system-release-system)
+                                        :test #'equal))
+                  (release (system-release-release system-release))
+                  (project-name (project-name (release-project release))))
+        (pushnew project-name update-projects :test #'equal)))
+    (setf lockfile (install-requirements (clpmfile-all-requirements clpmfile)
+                                         :context lockfile :validate validate
+                                         :update-projects update-projects))
+    (with-open-file (stream lockfile-pathname
+                            :direction :output
+                            :if-exists :supersede)
+      (serialize-context-to-stream lockfile stream))))

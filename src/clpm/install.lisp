@@ -65,10 +65,10 @@
 (defun install-requirements (reqs &key
                                     context
                                     (validate (constantly t))
-                                    save-context-p)
+                                    save-context-p
+                                    update-projects)
   (let* ((orig-context (get-context context))
-         (new-context (copy-context orig-context))
-         (update-projects nil))
+         (new-context (copy-context orig-context)))
     (dolist (r reqs)
       (context-add-requirement! new-context r))
     (setf new-context (resolve-requirements new-context :update-projects update-projects))
