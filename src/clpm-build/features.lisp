@@ -4,9 +4,19 @@
 ;;;; LICENSE for license information.
 
 (uiop:define-package #:clpm-build/features
-    (:use #:cl))
+    (:use #:cl)
+  (:import-from #:trivial-features))
 
 (in-package #:clpm-build/features)
+
+(defparameter *clpm-feature-documentation*
+  `((:clpm . "Required feature. Denotes that CLPM is present.")
+    (:clpm-curl . "Build support for using the curl executable to download files.")
+    (:clpm-dexador . "Build support for using the Dexador library to download files.")
+    (:clpm-drakma . "Build support for using the Drakma library to download files.")
+    (:clpm-firejail . "EXPERIMENTAL: Build support for using firejail to sandbox grovelers.")
+    (:clpm-openssl . "Build support for using openssl (via cl+ssl library) to talk with servers over HTTPS.")
+    (:clpm-winhttp . "Build support for WinHTTP backend. Implied by Windows and :CLPM-DEXADOR.")))
 
 (defparameter *default-linux-feature-set*
   '(:clpm
@@ -26,7 +36,7 @@
 (defun default-features ()
   (copy-list *default-linux-feature-set*))
 
-#+:win32
+#+:windows
 (defun default-features ()
   (copy-list *default-windows-feature-set*))
 
@@ -58,7 +68,7 @@
     ;; If we're using Dexador on Windows, push a feature saying we're using
     ;; WinHTTP.
     (when (and (present :clpm-dexador)
-               (uiop:featurep :win32))
+               (uiop:featurep :windows))
       (pushnew :clpm-winhttp clpm-features))
 
     ;; If no Lisp clients that use openssl are present, remove it from the
