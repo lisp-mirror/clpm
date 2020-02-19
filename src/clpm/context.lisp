@@ -134,10 +134,11 @@ in place with the same name. Return the new requirement if it was modified."
                                                      :test #'uiop:pathname-equal)))
     (mapcar (lambda (x) (list :directory x)) system-file-directories)))
 
-(defun context-to-asdf-source-registry-form (context)
+(defun context-to-asdf-source-registry-form (context &optional extra-forms)
   `(:source-registry
     :ignore-inherited-configuration
-    ,@(context-to-asdf-source-registry.d-forms context)))
+    ,@(context-to-asdf-source-registry.d-forms context)
+    ,@extra-forms))
 
 (defun context-write-asdf-files (context)
   (assert (context-name context))

@@ -7,6 +7,7 @@
     (:use #:cl
           #:alexandria
           #:anaphora
+          #:clpm/client
           #:clpm/clpmfile
           #:clpm/context
           #:clpm/install
@@ -15,6 +16,7 @@
           #:clpm/resolve
           #:clpm/source)
   (:export #:bundle-install
+           #:bundle-source-registry
            #:bundle-update))
 
 (in-package #:clpm/bundle)
@@ -72,6 +74,19 @@ the lock file if necessary."
                               :direction :output
                               :if-exists :supersede)
         (serialize-context-to-stream lockfile stream)))))
+
+(defun bundle-source-registry (clpmfile-designator &key include-client-p)
+  (let* ((*fetch-repo-automatically* nil)
+         (clpmfile (get-clpmfile clpmfile-designator))
+         (lockfile-pathname (clpmfile-lockfile-pathname clpmfile))
+         lockfile)
+    (unless (probe-file lockfile-pathname)
+      (error "Lockfile ~A does not exist" lockfile-pathname))
+    (setf lockfile (load-lockfile lockfile-pathname :localp t))
+    (context-to-asdf-source-registry-form
+     lockfile
+     (when include-client-p
+       `((:directory ,(uiop:pathname-directory-pathname (client-asd-pathname))))))))
 
 (defun bundle-update (clpmfile-designator &key
                                             update-projects (validate (constantly t))

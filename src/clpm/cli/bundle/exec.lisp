@@ -5,14 +5,13 @@
 
 (uiop:define-package #:clpm/cli/bundle/exec
     (:use #:cl
+          #:clpm/bundle
           #:clpm/cli/bundle/common
           #:clpm/cli/common-args
           #:clpm/cli/subcommands
           #:clpm/clpmfile
-          #:clpm/context
           #:clpm/execvpe
           #:clpm/log
-          #:clpm/source
           #:clpm/utils)
   (:import-from #:adopt))
 
@@ -40,11 +39,11 @@
 (define-cli-command (("bundle" "exec") *bundle-exec-ui*) (args options)
   (let* ((clpmfile-pathname (merge-pathnames (gethash :bundle-file options)
                                              (uiop:getcwd)))
-         (lockfile-pathname (merge-pathnames (make-pathname :type "lock")
-                                             clpmfile-pathname))
+         (clpmfile (get-clpmfile clpmfile-pathname))
+         (lockfile-pathname (clpmfile-lockfile-pathname clpmfile))
          (*default-pathname-defaults* (uiop:pathname-directory-pathname clpmfile-pathname))
-         (lockfile (load-anonymous-context-from-pathname lockfile-pathname))
-         (cl-source-registry-form (context-to-asdf-source-registry-form lockfile))
+         (include-client-p (gethash :bundle-exec-with-client options))
+         (cl-source-registry-form (bundle-source-registry clpmfile-pathname :include-client-p include-client-p))
          (cl-source-registry-value (format nil "~S" cl-source-registry-form))
          (command args))
     (log:debug "Computed CL_SOURCE_REGISTRY:~%~S" cl-source-registry-form)

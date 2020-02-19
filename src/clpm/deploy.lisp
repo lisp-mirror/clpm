@@ -5,6 +5,7 @@
 
 (uiop:define-package #:clpm/deploy
     (:use #:cl
+          #:clpm/client
           #:clpm/deps)
   (:import-from #:deploy)
   #+clpm-winhttp
@@ -40,6 +41,8 @@
            `(("clpm:src;**;*.*.*" ,(merge-pathnames "src/**/*.*" deploy:*data-location*))))
      (setf *clpm-groveler-asd-pathname* (merge-pathnames "src/clpm-groveler/clpm-groveler.asd"
                                                          deploy:*data-location*))
+     (setf *clpm-client-asd-pathname* (merge-pathnames "src/clpm-client/clpm-client.asd"
+                                                       deploy:*data-location*))
      (unless (uiop:probe-file* clpm-home)
        (format *error-output*
                "Unable to find CLPM_HOME. Please set CLPM_HOME environment variable.~%")
