@@ -22,7 +22,7 @@
            #:vcs-project/cache-directory
            #:vcs-project/path
            #:vcs-release
-           #:vcs-release/commit
+           #:vcs-release-commit
            #:vcs-source
            #:vcs-source-register-project!))
 
@@ -147,15 +147,19 @@ source using VCS-SOURCE-REGISTER_PROJECT!."))
   (hash-table-values (vcs-project-releases-by-spec project)))
 
 (defmethod project-vcs-release ((project vcs-project) &key commit branch tag)
-  (let ((ref (cond
-               (commit `(:commit ,commit))
-               (branch `(:branch ,branch))
-               (tag `(:tag ,tag)))))
-    (ensure-gethash ref (vcs-project-releases-by-spec project)
-                    (make-instance 'vcs-release
-                                   :source (project-source project)
-                                   :project project
-                                   :ref ref))))
+  (let* ((ref (cond
+                (commit `(:commit ,commit))
+                (branch `(:branch ,branch))
+                (tag `(:tag ,tag))))
+         (release (ensure-gethash ref (vcs-project-releases-by-spec project)
+                                  (make-instance 'vcs-release
+                                                 :source (project-source project)
+                                                 :project project
+                                                 :ref ref))))
+    (unless commit
+      (setf release (ensure-gethash `(:commit ,(vcs-release-commit release)) (vcs-project-releases-by-spec project)
+                                    release)))
+    release))
 
 
 ;; * releases
@@ -167,9 +171,6 @@ source using VCS-SOURCE-REGISTER_PROJECT!."))
    (project
     :initarg :project
     :reader release-project)
-   (ref
-    :initarg :ref
-    :reader vcs-release-ref)
    (commit
     :initarg :commit
     :accessor vcs-release-commit)
@@ -187,8 +188,7 @@ source using VCS-SOURCE-REGISTER_PROJECT!."))
 
 (defmethod initialize-instance :after ((release vcs-release) &rest initargs &key ref)
   (declare (ignore initargs))
-  (when (and (listp ref) (eql (first ref) :commit))
-    (setf (vcs-release-commit release) (second ref))))
+  (vcs-release-resolve! release ref))
 
 (defun populate-release-system-files! (release)
   (ensure-release-installed! release)
@@ -396,18 +396,20 @@ include it."
 
 ;; * Installing
 
-;; TODO: Split into a method that resolves to a commit and one that ensure the
-;; commit is installed.
+(defun vcs-release-resolve! (release ref)
+  (let* ((project (release-project release))
+         (repo (project-repo project)))
+
+    (ensure-ref-present-locally! repo ref)
+
+    (let ((commit-id (resolve-ref-to-commit repo ref)))
+      (setf (vcs-release-commit release) commit-id))))
+
 (defmethod ensure-release-installed! ((release vcs-release))
   (unless (vcs-release-installed-p release)
     (let* ((project (release-project release))
-           (repo (project-repo project))
-           (ref (vcs-release-ref release)))
+           (repo (project-repo project)))
 
-      (ensure-ref-present-locally! repo ref)
-
-      (let ((commit-id (resolve-ref-to-commit repo ref)))
-        (setf (vcs-release-commit release) commit-id))
       (let ((install-root (release-lib-pathname release)))
         (unless (uiop:probe-file* install-root)
           (log:info "installing ~A, commit ~A to ~A"
@@ -418,6 +420,7 @@ include it."
               (repo-archive-stream repo `(:commit ,(vcs-release-commit release)))
             (with-open-stream (stream stream)
               (unarchive archive-type stream install-root))))))
+
     (setf (vcs-release-installed-p release) t)))
 
 (defmethod install-release ((release vcs-release))

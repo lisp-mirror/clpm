@@ -309,15 +309,19 @@ source.")
   (hash-table-values (ff-project-releases-map project)))
 
 (defmethod project-vcs-release ((project ff-project) &key commit branch tag)
-  (let ((ref (cond
-               (commit `(:commit ,commit))
-               (branch `(:branch ,branch))
-               (tag `(:tag ,tag)))))
-    (ensure-gethash ref (ff-project-vcs-releases-map project)
-                    (make-instance 'vcs-release
-                                   :source (project-source project)
-                                   :project project
-                                   :ref ref))))
+  (let* ((ref (cond
+                (commit `(:commit ,commit))
+                (branch `(:branch ,branch))
+                (tag `(:tag ,tag))))
+         (release (ensure-gethash ref (ff-project-vcs-releases-map project)
+                                  (make-instance 'vcs-release
+                                                 :source (project-source project)
+                                                 :project project
+                                                 :ref ref))))
+    (unless commit
+      (setf release (ensure-gethash `(:commit ,(vcs-release-commit release)) (ff-project-vcs-releases-map project)
+                                    release)))
+    release))
 
 
 ;; * Releases
