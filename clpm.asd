@@ -23,8 +23,7 @@
                (:feature :clpm-curl #:clpm/http-client/curl)
                (:feature :clpm-dexador #:clpm/http-client/dexador)
                (:feature :clpm-drakma #:clpm/http-client/drakma)
-               (:feature :clpm-firejail #:clpm/sandbox/firejail))
-  :in-order-to ((prepare-op (build-op :clpm-client))))
+               (:feature :clpm-firejail #:clpm/sandbox/firejail)))
 
 (defmethod asdf:output-files ((o deploy:deploy-op) (c (eql (find-system "clpm"))))
   (let ((file (print (merge-pathnames (asdf/system:component-build-pathname c)
