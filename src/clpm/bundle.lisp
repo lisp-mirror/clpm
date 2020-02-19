@@ -11,6 +11,7 @@
           #:clpm/context
           #:clpm/install
           #:clpm/log
+          #:clpm/repos
           #:clpm/resolve
           #:clpm/source)
   (:export #:bundle-install
@@ -51,7 +52,8 @@
 (defun bundle-install (clpmfile-designator &key localp (validate (constantly t)))
   "Given a clpmfile instance, install all releases from its lock file, creating
 the lock file if necessary."
-  (let* ((clpmfile (get-clpmfile clpmfile-designator))
+  (let* ((*fetch-repo-automatically* (not localp))
+         (clpmfile (get-clpmfile clpmfile-designator))
          (lockfile-pathname (clpmfile-lockfile-pathname clpmfile))
          (lockfile nil)
          (changedp nil))
@@ -75,7 +77,8 @@ the lock file if necessary."
                                             update-projects (validate (constantly t))
                                             update-systems
                                             localp)
-  (let* ((clpmfile (get-clpmfile clpmfile-designator))
+  (let* ((*fetch-repo-automatically* (not localp))
+         (clpmfile (get-clpmfile clpmfile-designator))
          (lockfile-pathname (clpmfile-lockfile-pathname clpmfile))
          (lockfile nil)
          (changedp nil))

@@ -218,22 +218,28 @@ ref is present locally, fetching or cloning the repo as necessary."
   (destructuring-bind (ref-type ref-name) ref
     (declare (ignore ref-name))
     (let ((local-dir (git-repo-local-dir repo)))
-      (if (uiop:probe-file* local-dir)
-          ;; Repo is present, need to fetch if the ref is not present or the ref
-          ;; is a branch.
-          (when (or (eql ref-type :branch)
-                    (not (ref-present-p repo ref)))
-            (with-retries (:max 10 :sleep 5)
-              (fetch-repo! repo))
-            ;; Make sure the ref is actually present, raising an error otherwise.
-            (unless (ref-present-p repo ref)
-              (error "ref is not present, even after updating.")))
-          ;; Repo is not present at all, need to clone it.
-          (with-retries (:max 10 :sleep 5)
-            (clone-repo! repo)
-            ;; Make sure the ref is actually present, raising an error otherwise.
-            (unless (ref-present-p repo ref)
-              (error "ref is not present, even after updating.")))))))
+      (cond
+        ((uiop:probe-file* local-dir)
+         ;; Repo is present, need to fetch if the ref is not present or the ref
+         ;; is a branch.
+         (when (and (or (eql ref-type :branch)
+                        (not (ref-present-p repo ref)))
+                    *fetch-repo-automatically*)
+           (with-retries (:max 10 :sleep 5)
+             (fetch-repo! repo))
+           ;; Make sure the ref is actually present, raising an error otherwise.
+           (unless (ref-present-p repo ref)
+             (error "ref ~S is not present" ref))))
+        (*fetch-repo-automatically*
+         ;; Repo is not present at all, need to clone it.
+         (with-retries (:max 10 :sleep 5)
+           (clone-repo! repo)
+           ;; Make sure the ref is actually present, raising an error otherwise.
+           (unless (ref-present-p repo ref)
+             (error "ref is not present, even after updating."))))
+        (t
+         ;; Repo is not present and we were told to not fetch it. Error.
+         (error "Repo is not present at ~A" local-dir))))))
 
 (defmethod repo-archive-stream ((repo git-repo) ref)
   (values

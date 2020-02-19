@@ -6,7 +6,8 @@
 
 (uiop:define-package #:clpm/repos/defs
     (:use #:cl)
-  (:export #:ensure-ref-present-locally!
+  (:export #:*fetch-repo-automatically*
+           #:ensure-ref-present-locally!
            #:ref-present-p
            #:repo-archive-stream
            #:repo-lib-base-pathname
@@ -14,6 +15,8 @@
            #:resolve-ref-to-commit))
 
 (in-package #:clpm/repos/defs)
+
+(defvar *fetch-repo-automatically* t)
 
 (defgeneric ensure-ref-present-locally! (repo ref))
 
