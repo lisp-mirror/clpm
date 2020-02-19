@@ -42,6 +42,7 @@
                                              (uiop:getcwd)))
          (lockfile-pathname (merge-pathnames (make-pathname :type "lock")
                                              clpmfile-pathname))
+         (*default-pathname-defaults* (uiop:pathname-directory-pathname clpmfile-pathname))
          (lockfile (load-anonymous-context-from-pathname lockfile-pathname))
          (cl-source-registry-form (context-to-asdf-source-registry-form lockfile))
          (cl-source-registry-value (format nil "~S" cl-source-registry-form))

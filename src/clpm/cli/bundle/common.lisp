@@ -56,6 +56,7 @@
     (let* ((clpmfile-path (merge-pathnames (gethash :bundle-file options)
                                            (uiop:getcwd)))
            (local-config (merge-pathnames ".clpm/bundle.conf"
-                                          (uiop:pathname-directory-pathname clpmfile-path))))
+                                          (uiop:pathname-directory-pathname clpmfile-path)))
+           (*default-pathname-defaults* (uiop:pathname-directory-pathname clpmfile-path)))
       (when (probe-file local-config)
         (config-add-file-source! local-config))))
