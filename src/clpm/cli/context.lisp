@@ -6,6 +6,7 @@
 (uiop:define-package #:clpm/cli/context
     (:use #:cl
           #:clpm/cli/context/common
+          #:clpm/cli/context/find
           #:clpm/cli/context/pathnames))
 
 (in-package #:clpm/cli/context)
