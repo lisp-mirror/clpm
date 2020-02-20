@@ -20,22 +20,7 @@
            #:clpmfile-sources
            #:clpmfile-user-requirements
            #:get-clpmfile
-           #:read-clpmfile)
-  ;; (:export #:clpmfile/all-requirements
-  ;;          #:clpmfile/user-asd-files
-  ;;          #:clpmfile/user-global-sources
-  ;;          #:clpmfile/lockfile
-  ;;          #:clpmfile/sources
-  ;;          #:clpmfile/user-requirements
-  ;;          #:lockfile/all-reqs
-  ;;          #:lockfile/system-files
-  ;;          #:lockfile/user-asd-files
-  ;;          #:lockfile/user-global-sources
-  ;;          #:make-lockfile
-  ;;          #:read-clpmfile
-  ;;          #:read-lockfile
-  ;;          #:write-lockfile-to-stream)
-  )
+           #:read-clpmfile))
 
 (in-package #:clpm/clpmfile)
 
@@ -310,7 +295,6 @@ instance."
   (let* ((*default-pathname-defaults* (uiop:pathname-directory-pathname pathname)))
     (with-open-file (stream pathname)
       (read-clpmfile-from-stream stream pathname))))
-
 
 (defmethod print-object ((obj clpmfile) stream)
   (print-unreadable-object (obj stream :type t)
