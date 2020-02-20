@@ -73,7 +73,8 @@ the lock file if necessary."
       (with-open-file (stream lockfile-pathname
                               :direction :output
                               :if-exists :supersede)
-        (serialize-context-to-stream lockfile stream)))))
+        (serialize-context-to-stream lockfile stream)))
+    changedp))
 
 (defun bundle-source-registry (clpmfile-designator &key include-client-p)
   (let* ((*fetch-repo-automatically* nil)

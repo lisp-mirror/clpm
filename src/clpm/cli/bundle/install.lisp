@@ -5,6 +5,7 @@
 
 (uiop:define-package #:clpm/cli/bundle/install
     (:use #:cl
+          #:alexandria
           #:clpm/bundle
           #:clpm/cli/bundle/common
           #:clpm/cli/common-args
@@ -38,14 +39,30 @@ exist in the lock file.")
    :help *help-string*
    :contents (list *group-common*
                    *group-bundle*
-                   *option-bundle-local*)))
+                   *option-bundle-local*
+                   *option-output*)))
+
+(defun sexp-interaction-y-or-n-p ()
+  (uiop:with-safe-io-syntax ()
+    (prin1 :proceedp *standard-output*)
+    (terpri *standard-output*)
+    (finish-output *standard-output*)
+    (read *standard-input*)))
 
 (defun make-validate-fun (yes-p output)
   (lambda (diff)
-    (unless (equal output "sexp")
-      ;; We can't print this in a sexp format at the moment.
-      (print-context-diff diff *standard-output*))
-    (or yes-p (y-or-n-p "Proceed?"))))
+    (block nil
+      (unless (context-diff-has-diff-p diff)
+        (return t))
+      (switch (output :test #'equal)
+        ("sexp"
+         (uiop:with-safe-io-syntax ()
+           (prin1 (context-diff-to-plist diff) *standard-output*)
+           (terpri *standard-output*)
+           (or yes-p (sexp-interaction-y-or-n-p))))
+        (t
+         (print-context-diff diff *standard-output*)
+         (or yes-p (y-or-n-p "Proceed?")))))))
 
 (define-cli-command (("bundle" "install") *bundle-install-ui*) (args options)
   (let* ((clpmfile-pathname (merge-pathnames (gethash :bundle-file options)
@@ -53,5 +70,4 @@ exist in the lock file.")
          (*default-pathname-defaults* (uiop:pathname-directory-pathname clpmfile-pathname)))
     (bundle-install clpmfile-pathname :localp (gethash :bundle-local options)
                                       :validate (make-validate-fun (gethash :yes options)
-                                                                   (gethash :output options)))
-    t))
+                                                                   (gethash :output options)))))
