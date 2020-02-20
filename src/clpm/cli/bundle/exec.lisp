@@ -49,8 +49,10 @@
     (log:debug "Computed CL_SOURCE_REGISTRY:~%~S" cl-source-registry-form)
     (execvpe (first command) (rest command)
              `(("CL_SOURCE_REGISTRY" . ,cl-source-registry-value)
-               ("CLPM_BUNDLE_BIN_PATH" . ,(or *live-script-location*
-                                              (uiop:argv0)))
+               ,@(if *live-script-location*
+                     `(("CLPM_BUNDLE_BIN_LIVE_SCRIPT" . ,(uiop:native-namestring *live-script-location*))
+                       ("CLPM_BUNDLE_BIN_LISP_IMPLEMENTATION" . ,(lisp-implementation-type)))
+                     `(("CLPM_BUNDLE_BIN" . ,(uiop:argv0))))
                ("CLPM_BUNDLE_CLPMFILE" . ,(uiop:native-namestring clpmfile-pathname))
                ("CLPM_BUNDLE_CLPMFILE_LOCK" . ,(uiop:native-namestring lockfile-pathname)))
              t)
