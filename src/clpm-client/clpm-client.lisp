@@ -6,23 +6,30 @@
 (uiop:define-package #:clpm-client/clpm-client
     (:nicknames #:clpm-client)
   (:use #:cl
-        #:clpm-client/header
         #:clpm-client/asdf
         #:clpm-client/bundle
         #:clpm-client/cleanup
-        #:clpm-client/clpm)
+        #:clpm-client/clpm
+        #:clpm-client/version)
   (:export #:*clpm-cleanup-on-dump-p*
            #:*clpm-context*
            #:*clpm-executable*
            #:*clpm-system-not-found-behavior*
-           #:activate-clpm
+           #:activate-clpm-asdf-integration
            #:cleanup-clpm!
-           #:clpm-active-p
+           #:clpm-asdf-integration-active-p
            #:clpm-install-system
            #:clpm-missing-system
+           #:clpm-client-version
+           #:clpm-inside-bundle-exec-p
+           #:clpm-version
            #:clpmfile-pathname
-           #:deactivate-clpm
-           #:inside-bundle-exec-p
+           #:deactivate-clpm-asdf-integration
+           #:install-and-reload-bundle
+           #:install-system
+           #:install-system-and-dependencies
+           #:launch-clpm
+           #:reload-bundle
            #:run-clpm))
 
 (in-package #:clpm-client)

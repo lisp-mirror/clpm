@@ -6,19 +6,20 @@
 (uiop:define-package #:clpm-client/install
     (:use #:cl
           #:clpm-client/bundle
-          #:clpm-client/clpm)
+          #:clpm-client/clpm
+          #:clpm-client/context)
   (:export #:clpm-install-system))
 
 (in-package #:clpm-client/install)
 
 (defun clpm-install-system (system &key
                                      no-deps-p
-                                     (context *clpm-context* context-provided-p))
-  (when (and context-provided-p (inside-bundle-exec-p))
-    (warn "Inside a bundle. Ignoring the provided context."))
-  (let ((output (run-clpm `(,@(when (inside-bundle-exec-p) '("bundle"))
-                            "install"
-                            ,@(unless (inside-bundle-exec-p) `("--context" ,context))
+                                     (context *clpm-context*))
+  "Install a system in the given context."
+  (assert (not (clpm-inside-bundle-exec-p))
+          nil "Cannot currently run CLPM-INSTALL-SYSTEM inside a bundle exec command")
+  (let ((output (run-clpm `("install"
+                            "--context" ,context
                             ,@(when no-deps-p '("--no-deps"))
                             "-y"
                             "--output=sexp"
