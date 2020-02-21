@@ -51,10 +51,10 @@
   (uiop:read-file-form (merge-pathnames "src/clpm/version.lisp" *lakefile-truename*)
                        :at '(3 2)))
 
-(defun clpm-version ()
+(defun clpm-version (&key ignore-dirty-p)
   (let ((git-branch-name (git-branch-name))
         (git-describe (git-describe))
-        (git-dirty-p (git-dirty-p))
+        (git-dirty-p (and (not ignore-dirty-p) (git-dirty-p)))
         (base-version-string (base-version)))
     (if (git-tag-p)
         ;; This is a tagged version, just return the base version number.
@@ -151,7 +151,7 @@
    :input :interactive))
 
 (defun build-clpm-with-docker (tuple ref &key dockerfile context platform)
-  (let ((output-dir (merge-pathnames #?"build/releases/${(clpm-version)}/"
+  (let ((output-dir (merge-pathnames #?"build/releases/v${(clpm-version :ignore-dirty-p t)}/"
                                      (uiop:getcwd))))
     (ensure-directories-exist output-dir)
     (uiop:with-temporary-file (:pathname iid-pn)
@@ -173,11 +173,11 @@
           (let ((cid (uiop:read-file-string cid-pn)))
             (if (equal (second tuple) "windows")
                 (docker-cp cid #?"C:/clpm-${(git-tag ref)}/build/clpm.msi"
-                           (namestring (merge-pathnames (format nil "clpm-~{~A~^-~}-~A.msi" tuple (clpm-version))
+                           (namestring (merge-pathnames (format nil "clpm-~{~A~^-~}-v~A.msi" tuple (clpm-version :ignore-dirty-p t))
                                                         output-dir))
                            :context context)
                 (docker-cp cid #?"/clpm-${(git-tag ref)}/build/clpm.tar.gz"
-                           (namestring (merge-pathnames (format nil "clpm-~{~A~^-~}-~A.tar.gz" tuple (clpm-version))
+                           (namestring (merge-pathnames (format nil "clpm-~{~A~^-~}-v~A.tar.gz" tuple (clpm-version :ignore-dirty-p t))
                                                         output-dir))
                            :context context))
             (docker-rm cid
@@ -269,28 +269,28 @@ specified by the tuple."
 
   (task "dir" ()
     "Ensure release directory exists"
-    (ensure-directories-exist (merge-pathnames #?"build/releases/${(clpm-version)}/"
+    (ensure-directories-exist (merge-pathnames #?"build/releases/v${(clpm-version :ignore-dirty-p t)}/"
                                                (uiop:getcwd))))
 
   (task "digests" ("dir")
     "Generate a digests file for every file in the release directory"
-    (ensure-directories-exist (merge-pathnames #?"build/releases/${(clpm-version)}/"
+    (ensure-directories-exist (merge-pathnames #?"build/releases/v${(clpm-version :ignore-dirty-p t)}/"
                                                (uiop:getcwd)))
-    (uiop:delete-file-if-exists #?"build/releases/${(clpm-version)}/clpm-${(clpm-version)}.DIGESTS")
-    (let ((files (uiop:directory* (merge-pathnames #?"build/releases/${(clpm-version)}/*.*"))))
-      (with-open-file (s #?"build/releases/${(clpm-version)}/clpm-${(clpm-version)}.DIGESTS"
+    (uiop:delete-file-if-exists #?"build/releases/v${(clpm-version :ignore-dirty-p t)}/clpm-v${(clpm-version :ignore-dirty-p t)}.DIGESTS")
+    (let ((files (uiop:directory* (merge-pathnames #?"build/releases/v${(clpm-version :ignore-dirty-p t)}/*.*"))))
+      (with-open-file (s #?"build/releases/v${(clpm-version :ignore-dirty-p t)}/clpm-v${(clpm-version :ignore-dirty-p t)}.DIGESTS"
                          :direction :output)
         (write-line "The SHA512 checksums of the following files are:" s)
         (terpri s))
       (loop
         :for file :in files
         :do
-           (uiop:with-current-directory (#?"build/releases/${(clpm-version)}/")
+           (uiop:with-current-directory (#?"build/releases/v${(clpm-version :ignore-dirty-p t)}/")
              (uiop:run-program (list "sha512sum"
                                      (namestring (uiop:make-pathname*
                                                   :name (pathname-name file)
                                                   :type (pathname-type file))))
-                               :output #?"clpm-${(clpm-version)}.DIGESTS"
+                               :output #?"clpm-v${(clpm-version :ignore-dirty-p t)}.DIGESTS"
                                :if-output-exists :append
                                :error-output :interactive
                                :input :interactive))))))
