@@ -34,6 +34,7 @@
                              (:static-file "do-urlencode")
                              (:static-file "documentation-utils")
                              (:static-file "drakma")
+                             (:static-file "esrap")
                              (:static-file "exit-hooks")
                              (:static-file "fast-http")
                              (:static-file "fast-io")

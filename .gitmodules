@@ -181,3 +181,6 @@
 [submodule "ext/cl-semver"]
 	path = ext/cl-semver
 	url = https://github.com/cldm/cl-semver.git
+[submodule "ext/esrap"]
+	path = ext/esrap
+	url = https://github.com/scymtym/esrap.git
