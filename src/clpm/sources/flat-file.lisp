@@ -314,10 +314,7 @@ source.")
                 (branch `(:branch ,branch))
                 (tag `(:tag ,tag))))
          (release (ensure-gethash ref (ff-project-vcs-releases-map project)
-                                  (make-instance 'vcs-release
-                                                 :source (project-source project)
-                                                 :project project
-                                                 :ref ref))))
+                                  (make-vcs-release (project-source project) project ref))))
     (unless commit
       (setf release (ensure-gethash `(:commit ,(vcs-release-commit release)) (ff-project-vcs-releases-map project)
                                     release)))

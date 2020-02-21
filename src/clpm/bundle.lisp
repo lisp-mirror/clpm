@@ -9,6 +9,7 @@
           #:anaphora
           #:clpm/client
           #:clpm/clpmfile
+          #:clpm/config
           #:clpm/context
           #:clpm/install
           #:clpm/log
@@ -27,6 +28,13 @@
   (make-instance 'context
                  :sources (clpmfile-sources clpmfile)
                  :requirements (clpmfile-all-requirements clpmfile)))
+
+(defun make-vcs-override-fun (clpmfile-pathname)
+  (let ((clpmfile-directory (uiop:pathname-directory-pathname clpmfile-pathname)))
+    (lambda (project-name)
+      (let ((override (config-value :bundle :local project-name)))
+        (when override
+          (merge-pathnames override clpmfile-directory))))))
 
 (defun build-lockfile (clpmfile &key localp)
   "Given a clpmfile instance, make a lockfile context for it."
@@ -57,6 +65,7 @@ the lock file if necessary."
   (let* ((*fetch-repo-automatically* (not localp))
          (clpmfile (get-clpmfile clpmfile-designator))
          (lockfile-pathname (clpmfile-lockfile-pathname clpmfile))
+         (*vcs-project-override-fun* (make-vcs-override-fun (clpmfile-pathname clpmfile)))
          (lockfile nil)
          (changedp nil))
     (if (probe-file lockfile-pathname)
@@ -68,7 +77,8 @@ the lock file if necessary."
                                          :context lockfile
                                          :validate (lambda (diff)
                                                      (aprog1 (funcall validate diff)
-                                                       (setf changedp it)))))
+                                                       (setf changedp it)))
+                                         :update-projects (config-table-keys :bundle :local)))
     (when changedp
       (with-open-file (stream lockfile-pathname
                               :direction :output
@@ -80,6 +90,7 @@ the lock file if necessary."
   (let* ((*fetch-repo-automatically* nil)
          (clpmfile (get-clpmfile clpmfile-designator))
          (lockfile-pathname (clpmfile-lockfile-pathname clpmfile))
+         (*vcs-project-override-fun* (make-vcs-override-fun (clpmfile-pathname clpmfile)))
          lockfile)
     (unless (probe-file lockfile-pathname)
       (error "Lockfile ~A does not exist" lockfile-pathname))
@@ -96,6 +107,7 @@ the lock file if necessary."
   (let* ((*fetch-repo-automatically* (not localp))
          (clpmfile (get-clpmfile clpmfile-designator))
          (lockfile-pathname (clpmfile-lockfile-pathname clpmfile))
+         (*vcs-project-override-fun* (make-vcs-override-fun (clpmfile-pathname clpmfile)))
          (lockfile nil)
          (changedp nil))
     (unless (probe-file lockfile-pathname)

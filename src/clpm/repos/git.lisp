@@ -149,11 +149,11 @@ optionally changing into the local dir for ~repo~."
                       :output '(:string :stripped t)
                       :ignore-error-status ignore-error-status)))
 
-(defun git-rev-parse (rev &key repo ignore-error-status)
+(defun git-rev-parse (rev &key repo abbrev-ref ignore-error-status)
   "Calls ~git rev-parse~ with the provided revision and returns the result,
 optionally changing into the local dir for ~repo~."
   (with-git-dir (repo)
-    (uiop:run-program `("git" "rev-parse" ,rev)
+    (uiop:run-program `("git" "rev-parse" ,@(when abbrev-ref '("--abbrev-ref")) ,rev)
                       :output '(:string :stripped t)
                       :ignore-error-status ignore-error-status)))
 
@@ -162,6 +162,7 @@ optionally changing into the local dir for ~repo~."
   (let* ((local-dir (git-repo-local-dir repo))
          (uri-string (git-repo-uri-string repo))
          (credentials (git-repo-credentials repo)))
+    (log:debug "Fetching ~A" local-dir)
     (multiple-value-bind (prefix env)
         (authenticated-git-command-list credentials)
       (uiop:with-current-directory (local-dir)
@@ -248,3 +249,9 @@ ref is present locally, fetching or cloning the repo as necessary."
 
 (defmethod resolve-ref-to-commit ((repo git-repo) ref)
   (git-rev-parse (second ref) :repo repo))
+
+(defmethod repo-current-branch ((repo git-repo))
+  (git-rev-parse "HEAD" :repo repo :abbrev-ref t))
+
+(defmethod repo-current-commit ((repo git-repo))
+  (git-rev-parse "HEAD" :repo repo))

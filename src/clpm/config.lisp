@@ -95,6 +95,16 @@ directory in ~*clpm-config-directories*~."
      :documentation
      "The tar implementation to use.")
 
+    ((:bundle)
+     :type hash-table)
+    ((:bundle :local)
+     :type hash-table)
+    ((:bundle :local :*)
+     :wildcard-types (string)
+     :type (or string pathname)
+     :documentation
+     "Path to a folder to use for a project's git repository instead of a CLPM managed one. Relative pathnames are resolved with respect to the location of the clpmfile.")
+
     ((:context)
      :type string
      :default "default"

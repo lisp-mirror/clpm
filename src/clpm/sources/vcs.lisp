@@ -18,10 +18,11 @@
           #:clpm/requirement
           #:clpm/sources/defs
           #:clpm/sources/semantic-versioned-project)
-  (:export #:ensure-vcs-release-installed!
+  (:export #:*vcs-project-override-fun*
+           #:ensure-vcs-release-installed!
+           #:make-vcs-release
            #:vcs-project/cache-directory
            #:vcs-project/path
-           #:vcs-release
            #:vcs-release-commit
            #:vcs-source
            #:vcs-source-register-project!))
@@ -29,6 +30,7 @@
 (in-package #:clpm/sources/vcs)
 
 (setup-logger)
+
 
 ;; * sources
 
@@ -118,6 +120,29 @@ source using VCS-SOURCE-REGISTER_PROJECT!."))
 
 ;; * projects
 
+;; ** Overrides
+
+(defvar *vcs-project-override-fun* (constantly nil)
+  "A function that, given a project name returns either NIL or a directory
+pathname. If a directory pathname is returned, then that is assumed to be a
+local override when requesting a VCS release.")
+
+(defun make-vcs-release (source project ref)
+  (let ((override-pathname (funcall *vcs-project-override-fun* (project-name project))))
+    (if override-pathname
+        (make-instance 'vcs-local-release
+                       :source source
+                       :project project
+                       :ref ref
+                       :repo (make-instance 'local-git-override-repo
+                                            :pathname override-pathname))
+        (make-instance 'vcs-remote-release
+                       :source source
+                       :project project
+                       :ref ref))))
+
+;; ** Projects
+
 (defclass vcs-project (clpm-project)
   ((source
     :initarg :source
@@ -152,10 +177,7 @@ source using VCS-SOURCE-REGISTER_PROJECT!."))
                 (branch `(:branch ,branch))
                 (tag `(:tag ,tag))))
          (release (ensure-gethash ref (vcs-project-releases-by-spec project)
-                                  (make-instance 'vcs-release
-                                                 :source (project-source project)
-                                                 :project project
-                                                 :ref ref))))
+                                  (make-vcs-release (project-source project) project ref))))
     (unless commit
       (setf release (ensure-gethash `(:commit ,(vcs-release-commit release)) (vcs-project-releases-by-spec project)
                                     release)))
@@ -186,9 +208,45 @@ source using VCS-SOURCE-REGISTER_PROJECT!."))
     :initform (make-hash-table :test 'equal)
     :accessor vcs-release-system-releases-by-name)))
 
-(defmethod initialize-instance :after ((release vcs-release) &rest initargs &key ref)
+(defclass vcs-remote-release (vcs-release)
+  ()
+  (:documentation "Represents a release fetched from a remote repository."))
+
+(defclass vcs-local-release (vcs-release)
+  ((installed-p
+    :initform t)
+   (repo
+    :initarg :repo
+    :reader vcs-release-repo))
+  (:documentation "Represents a release that uses a user managed local repository."))
+
+(defmethod initialize-instance :after ((release vcs-remote-release) &rest initargs &key ref)
   (declare (ignore initargs))
   (vcs-release-resolve! release ref))
+
+(defmethod initialize-instance :after ((release vcs-local-release) &rest initargs &key ref)
+  (declare (ignore initargs))
+  (destructuring-bind (ref-type ref-name) ref
+    (ecase ref-type
+      (:branch
+       ;; Error unless the target branch name matches the actual branch name.
+       (let ((current-branch-name (repo-current-branch (vcs-release-repo release))))
+         (unless (equal ref-name current-branch-name)
+           (log:error "In order to use local overrides, branch names must match. Expected: ~a, actual: ~a"
+                      ref-name current-branch-name)
+           (error "In order to use local overrides, branch names must match. Expected: ~a, actual: ~a"
+                  ref-name current-branch-name))))
+      (:commit
+       ;; Warn if the desired commit is not present in the repo.
+       (unless (ref-present-p (vcs-release-repo release) ref)
+         (log:warn "Commit ~A is not present in the local override. Your local repo may not be up to date!"
+                   ref-name)
+         (warn "Commit ~A is not present in the local override. Your local repo may not be up to date!"
+               ref-name)))))
+  (setf (vcs-release-commit release) (repo-current-commit (vcs-release-repo release))))
+
+(defmethod vcs-release-repo ((release vcs-remote-release))
+  (project-repo (release-project release)))
 
 (defun populate-release-system-files! (release)
   (ensure-release-installed! release)
@@ -226,16 +284,18 @@ source using VCS-SOURCE-REGISTER_PROJECT!."))
 already created."
   (gethash system-file-namestring (vcs-release-system-files-by-namestring release)))
 
-(defmethod release-lib-pathname ((release vcs-release))
-  (let* ((project (release-project release))
-         (repo (project-repo project))
-         (commit-string (vcs-release-commit release)))
+(defmethod release-lib-pathname ((release vcs-remote-release))
+  (let ((repo (vcs-release-repo release))
+        (commit-string (vcs-release-commit release)))
     (uiop:resolve-absolute-location
      `(,(repo-lib-base-pathname repo)
        ,(subseq commit-string 0 2)
        ,(subseq commit-string 2 4)
        ,commit-string)
      :ensure-directory t)))
+
+(defmethod release-lib-pathname ((release vcs-local-release))
+  (git-repo-local-dir (vcs-release-repo release)))
 
 (defmethod release-system-releases ((release vcs-release))
   "Get all the system files and append together their systems."
@@ -397,8 +457,7 @@ include it."
 ;; * Installing
 
 (defun vcs-release-resolve! (release ref)
-  (let* ((project (release-project release))
-         (repo (project-repo project)))
+  (let ((repo (vcs-release-repo release)))
 
     (ensure-ref-present-locally! repo ref)
 
@@ -407,8 +466,8 @@ include it."
 
 (defmethod ensure-release-installed! ((release vcs-release))
   (unless (vcs-release-installed-p release)
-    (let* ((project (release-project release))
-           (repo (project-repo project)))
+    (let ((project (release-project release))
+          (repo (vcs-release-repo release)))
 
       (let ((install-root (release-lib-pathname release)))
         (unless (uiop:probe-file* install-root)

@@ -10,6 +10,8 @@
            #:ensure-ref-present-locally!
            #:ref-present-p
            #:repo-archive-stream
+           #:repo-current-branch
+           #:repo-current-commit
            #:repo-lib-base-pathname
            #:repo-to-form
            #:resolve-ref-to-commit))
@@ -23,6 +25,10 @@
 (defgeneric ref-present-p (repo ref))
 
 (defgeneric repo-archive-stream (repo ref))
+
+(defgeneric repo-current-branch (repo))
+
+(defgeneric repo-current-commit (repo))
 
 (defgeneric repo-lib-base-pathname (repo))
 

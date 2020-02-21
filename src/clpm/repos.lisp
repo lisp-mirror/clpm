@@ -7,10 +7,12 @@
     (:use #:cl
           #:clpm/repos/defs
           #:clpm/repos/git
-          #:clpm/repos/gitlab)
+          #:clpm/repos/gitlab
+          #:clpm/repos/local-git-override)
   (:reexport #:clpm/repos/defs)
   (:reexport #:clpm/repos/git)
   (:reexport #:clpm/repos/gitlab)
+  (:reexport #:clpm/repos/local-git-override)
   (:export #:make-repo-from-description))
 
 (in-package #:clpm/repos)
