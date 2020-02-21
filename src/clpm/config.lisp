@@ -104,6 +104,11 @@ directory in ~*clpm-config-directories*~."
      :type (or string pathname)
      :documentation
      "Path to a folder to use for a project's git repository instead of a CLPM managed one. Relative pathnames are resolved with respect to the location of the clpmfile.")
+    ((:bundle :output-translation)
+     :type (member t nil :local)
+     :default t
+     :documentation
+     "Controls whether `bundle exec` configures ASDF's output translations. NIL corresponds to not configuring the output translations. T (default) configures the output translations to translate everything to a folder in CLPM's cache. :LOCAL translates everything into the `./.clpm/fasl-cache/` folder relative to the clpmfile.")
 
     ((:context)
      :type string

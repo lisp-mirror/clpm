@@ -6,13 +6,16 @@
 (uiop:define-package #:clpm/cli/bundle/exec
     (:use #:cl
           #:clpm/bundle
+          #:clpm/cache
           #:clpm/cli/bundle/common
           #:clpm/cli/common-args
           #:clpm/cli/subcommands
           #:clpm/clpmfile
+          #:clpm/config
           #:clpm/execvpe
           #:clpm/log
-          #:clpm/utils)
+          #:clpm/utils
+          #:do-urlencode)
   (:import-from #:adopt))
 
 (in-package #:clpm/cli/bundle/exec)
@@ -36,6 +39,24 @@
                    *group-bundle*
                    *option-with-client*)))
 
+(defun compute-output-translations (clpmfile-pathname)
+  (let ((config-value (config-value :bundle :output-translation)))
+    (case config-value
+      ((nil)
+       nil)
+      ((t)
+       `(:output-translations
+         :ignore-inherited-configuration
+         (t (:root ,@(rest (pathname-directory (clpm-cache-pathname '("bundle" "fasl-cache")
+                                                                    :ensure-directory t)))
+                   ,(urlencode (format nil "~{~A~^/~}" (rest (pathname-directory clpmfile-pathname))))
+                   :implementation :**/ :*.*.*))))
+      (:local
+       `(:output-translations
+         :ignore-inherited-configuration
+         (t (,(uiop:pathname-directory-pathname clpmfile-pathname) ".clpm" "fasl-cache"
+             :implementation :**/ :*.*.*)))))))
+
 (define-cli-command (("bundle" "exec") *bundle-exec-ui*) (args options)
   (let* ((clpmfile-pathname (merge-pathnames (gethash :bundle-file options)
                                              (uiop:getcwd)))
@@ -45,10 +66,13 @@
          (include-client-p (gethash :bundle-exec-with-client options))
          (cl-source-registry-form (bundle-source-registry clpmfile-pathname :include-client-p include-client-p))
          (cl-source-registry-value (format nil "~S" cl-source-registry-form))
+         (output-translations-form (compute-output-translations clpmfile-pathname))
          (command args))
     (log:debug "Computed CL_SOURCE_REGISTRY:~%~S" cl-source-registry-form)
     (execvpe (first command) (rest command)
              `(("CL_SOURCE_REGISTRY" . ,cl-source-registry-value)
+               ,@(when output-translations-form
+                   `(("ASDF_OUTPUT_TRANSLATIONS" . ,(with-output-to-string (s) (prin1 output-translations-form s)))))
                ,@(if *live-script-location*
                      `(("CLPM_BUNDLE_BIN_LIVE_SCRIPT" . ,(uiop:native-namestring *live-script-location*))
                        ("CLPM_BUNDLE_BIN_LISP_IMPLEMENTATION" . ,(lisp-implementation-type)))
