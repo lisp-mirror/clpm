@@ -540,7 +540,7 @@ variables, then the config file, then the default config."
       (let ((*print-pretty* t)
             (*print-case* :downcase))
         (pprint-logical-block (stream values :prefix "(" :suffix ")")
-          (format stream "(table ~{~S~^ ~})" path)
+          (format stream "(~{~S~^ ~})" path)
           (pprint-exit-if-list-exhausted)
           (pprint-newline :mandatory stream)
           (loop
@@ -558,13 +558,10 @@ variables, then the config file, then the default config."
     (dolist (sub-table tables)
       (print-table (cdr sub-table) (car sub-table) stream))))
 
-;; (defun print-config (stream)
-;;   "Print the configuration to ~stream~."
-;;   (format stream "(version \"0.2\")~%~%")
-;;   (maphash (lambda (k v)
-;;              (assert (hash-table-p v))
-;;              (print-table v (list k) stream))
-;;            *config*))
+(defun print-config (stream)
+  "Print the configuration to ~stream~."
+  (format stream "(version \"0.2\")~%~%")
+  (print-table (config-value) nil stream))
 
 (uiop:register-clear-configuration-hook 'clear-global-config)
 (uiop:register-image-restore-hook 'load-global-config)

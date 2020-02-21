@@ -24,5 +24,5 @@
 
 (define-cli-command (("config" "info") *config-info-ui*) (arguments options)
   (format *stdout* "Config directories: ~A~%~%" *clpm-config-directories*)
-  (format *stdout* "Current configuration:~%~A~%---~%" (with-output-to-string (s) (print-config s)))
+  (format *stdout* "Current configuration:~%~A~%" (with-output-to-string (s) (print-config s)))
   t)
