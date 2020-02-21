@@ -16,8 +16,7 @@
           #:clpm/log
           #:clpm/repos
           #:clpm/requirement
-          #:clpm/sources/defs
-          #:clpm/sources/semantic-versioned-project)
+          #:clpm/sources/defs)
   (:export #:*vcs-project-override-fun*
            #:ensure-vcs-release-installed!
            #:make-vcs-release
