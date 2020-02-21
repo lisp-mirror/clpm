@@ -99,8 +99,8 @@ NIL until an image is dumped and is set by ~cache-full-version~.")
                   (let* ((ancestor (get-git-common-ancestor))
                          (ancestor-describe (get-git-describe ancestor))
                          (distance-from-master (get-git-distance-from-master)))
-                    (format nil "~A-0.~A.~A.~A+~A~:[~;-dirty~]"
-                            *base-version*
+                    (format nil "~{~A~^.~}-~{~A~^.~}.~A.0.~A.~A+~A~:[~;-dirty~]"
+                            primary-version prerelease-category
                             (second ancestor-describe)
                             git-branch
                             distance-from-master

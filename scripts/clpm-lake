@@ -33,6 +33,7 @@
 (let ((*standard-output* (make-broadcast-stream))
       (*error-output* (make-broadcast-stream)))
   (asdf:load-system :adopt)
+  (asdf:load-system :cl-semver)
   (asdf:load-system :lake))
 
 (defparameter *option-help*

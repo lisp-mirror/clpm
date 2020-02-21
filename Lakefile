@@ -6,7 +6,7 @@
 
 (in-package :cl-user)
 (defpackage :clpm/lake
-  (:use :cl :lake :cl-syntax)
+  (:use :cl :lake :cl-syntax :cl-semver)
   (:shadowing-import-from :lake
                           :directory))
 (in-package :clpm/lake)
@@ -17,12 +17,63 @@
 
 
 
-(defun clpm-version ()
-  (asdf:component-version (asdf:find-system :clpm)))
-
 (defun git-tag (&optional (ref "HEAD"))
   (uiop:run-program `("git" "describe" "--tags" ,ref)
                     :output '(:string :stripped t)))
+
+(defun git-tag-p ()
+  (zerop (nth-value 2 (uiop:run-program '("git" "describe" "--tags" "--exact-match" "HEAD")
+                                        :ignore-error-status t))))
+
+(defun git-branch-name ()
+  (uiop:run-program '("git" "rev-parse" "--abbrev-ref" "HEAD")
+                    :output '(:string :stripped t)))
+
+(defun git-common-ancestor ()
+  (uiop:run-program '("git" "merge-base" "HEAD" "master")
+                    :output '(:string :stripped t)))
+
+(defun git-describe (&optional (ref "HEAD"))
+  (uiop:split-string
+   (uiop:run-program `("git" "describe" "--tags" "--match" "v*" ,ref)
+                     :output '(:string :stripped t))
+   :max 3
+   :separator '(#\-)))
+
+(defun git-dirty-p ()
+  (not (zerop (nth-value 2 (uiop:run-program '("git" "diff-index" "--quiet" "HEAD")
+                                             :ignore-error-status t)))))
+
+(defun git-distance-from-master ()
+  (parse-integer (uiop:run-program '("git" "rev-list" "--count" "HEAD" "--not" "master")
+                                   :output '(:string :stripped t))))
+(defun base-version ()
+  (uiop:read-file-form (merge-pathnames "src/clpm/version.lisp" *lakefile-truename*)
+                       :at '(3 2)))
+
+(defun clpm-version ()
+  (let ((git-branch-name (git-branch-name))
+        (git-describe (git-describe))
+        (git-dirty-p (git-dirty-p))
+        (base-version-string (base-version)))
+    (if (git-tag-p)
+        ;; This is a tagged version, just return the base version number.
+        base-version-string
+        ;; Otherwise, assemble a version string.
+        (let* ((semver (read-version-from-string base-version-string))
+               (prerelease-category (or (version-pre-release semver) 0)))
+          (if (equal git-branch-name "master")
+              (format nil "~A.~A.~A-~A.~A+~A~:[~;-dirty~]"
+                      (version-major semver) (version-minor semver) (version-patch semver)
+                      prerelease-category (second git-describe) (third git-describe)
+                      git-dirty-p)
+              (let* ((ancestor (git-common-ancestor))
+                     (ancestor-describe (git-describe ancestor))
+                     (distance-from-master (git-distance-from-master)))
+                (format nil "~A.~A.~A-~A.~A.0.~A.~A+~A~:[~;-dirty~]"
+                        (version-major semver) (version-minor semver) (version-patch semver)
+                        prerelease-category (second ancestor-describe) git-branch-name distance-from-master
+                        (third git-describe) git-dirty-p)))))))
 
 
 ;; * Docker
@@ -100,7 +151,7 @@
    :input :interactive))
 
 (defun build-clpm-with-docker (tuple ref &key dockerfile context platform)
-  (let ((output-dir (merge-pathnames #?"build/releases/${(git-tag)}/"
+  (let ((output-dir (merge-pathnames #?"build/releases/${(clpm-version)}/"
                                      (uiop:getcwd))))
     (ensure-directories-exist output-dir)
     (uiop:with-temporary-file (:pathname iid-pn)
@@ -122,11 +173,11 @@
           (let ((cid (uiop:read-file-string cid-pn)))
             (if (equal (second tuple) "windows")
                 (docker-cp cid #?"C:/clpm-${(git-tag ref)}/build/clpm.msi"
-                           (namestring (merge-pathnames (format nil "clpm-~{~A~^-~}-~A.msi" tuple (git-tag))
+                           (namestring (merge-pathnames (format nil "clpm-~{~A~^-~}-~A.msi" tuple (clpm-version))
                                                         output-dir))
                            :context context)
                 (docker-cp cid #?"/clpm-${(git-tag ref)}/build/clpm.tar.gz"
-                           (namestring (merge-pathnames (format nil "clpm-~{~A~^-~}-~A.tar.gz" tuple (git-tag))
+                           (namestring (merge-pathnames (format nil "clpm-~{~A~^-~}-~A.tar.gz" tuple (clpm-version))
                                                         output-dir))
                            :context context))
             (docker-rm cid
@@ -218,28 +269,28 @@ specified by the tuple."
 
   (task "dir" ()
     "Ensure release directory exists"
-    (ensure-directories-exist (merge-pathnames #?"build/releases/${(git-tag)}/"
+    (ensure-directories-exist (merge-pathnames #?"build/releases/${(clpm-version)}/"
                                                (uiop:getcwd))))
 
   (task "digests" ("dir")
     "Generate a digests file for every file in the release directory"
-    (ensure-directories-exist (merge-pathnames #?"build/releases/${(git-tag)}/"
+    (ensure-directories-exist (merge-pathnames #?"build/releases/${(clpm-version)}/"
                                                (uiop:getcwd)))
-    (uiop:delete-file-if-exists #?"build/releases/${(git-tag)}/clpm-${(git-tag)}.DIGESTS")
-    (let ((files (uiop:directory* (merge-pathnames #?"build/releases/${(git-tag)}/*.*"))))
-      (with-open-file (s #?"build/releases/${(git-tag)}/clpm-${(git-tag)}.DIGESTS"
+    (uiop:delete-file-if-exists #?"build/releases/${(clpm-version)}/clpm-${(clpm-version)}.DIGESTS")
+    (let ((files (uiop:directory* (merge-pathnames #?"build/releases/${(clpm-version)}/*.*"))))
+      (with-open-file (s #?"build/releases/${(clpm-version)}/clpm-${(clpm-version)}.DIGESTS"
                          :direction :output)
         (write-line "The SHA512 checksums of the following files are:" s)
         (terpri s))
       (loop
         :for file :in files
         :do
-           (uiop:with-current-directory (#?"build/releases/${(git-tag)}/")
+           (uiop:with-current-directory (#?"build/releases/${(clpm-version)}/")
              (uiop:run-program (list "sha512sum"
                                      (namestring (uiop:make-pathname*
                                                   :name (pathname-name file)
                                                   :type (pathname-type file))))
-                               :output #?"clpm-${(git-tag)}.DIGESTS"
+                               :output #?"clpm-${(clpm-version)}.DIGESTS"
                                :if-output-exists :append
                                :error-output :interactive
                                :input :interactive))))))
@@ -255,3 +306,6 @@ specified by the tuple."
 (task "all" ("build"))
 
 (task "default" ("all"))
+
+(task "version" ()
+      (echo (clpm-version)))
