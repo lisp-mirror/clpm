@@ -24,6 +24,7 @@
                               :if-feature :clpm-openssl)
                              (:static-file "cl-ppcre")
                              (:static-file "cl-reexport")
+                             (:static-file "cl-semver")
                              (:static-file "cl-utilities")
                              (:static-file "clon")
                              (:static-file "closer-mop")
