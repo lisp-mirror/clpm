@@ -13,6 +13,7 @@
            #:parse-version-string
            #:semantic-version<
            #:semantic-version<=
+           #:version-spec-satisfied-p/dotted
            #:version-spec-satisfied-p/simple-string
            #:version-spec-satisfied-p/semantic))
 
@@ -162,9 +163,27 @@ by the character used to separate the segments."
 (defun semantic-version<= (version1 version2)
   (not (semantic-version< version2 version1)))
 
-(defun version< (version-1 version-2)
-  (check-type version-1 (or string list))
-  (check-type version-2 (or string list)))
+(defun version-spec-satisfied-p/dotted-1 (spec version)
+  (destructuring-bind (test version-spec)
+      spec
+    (ecase test
+      (=
+       (and (uiop:version<= version-spec version)
+            (uiop:version<= version version-spec)))
+      (<=
+       (uiop:version<= version version-spec))
+      (<
+       (uiop:version< version version-spec))
+      (>=
+       (uiop:version<= version-spec version))
+      (>
+       (uiop:version< version-spec version))
+      (/=
+       (or (uiop:version< version-spec version)
+           (uiop:version< version version-spec))))))
+
+(defun version-spec-satisfied-p/dotted (spec version)
+  (every (rcurry #'version-spec-satisfied-p/dotted-1 version) spec))
 
 (defun version-spec-satisfied-p/semantic-1 (spec version)
   (destructuring-bind (test version-spec)

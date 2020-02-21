@@ -12,7 +12,7 @@
           #:clpm/install/defs
           #:clpm/requirement
           #:clpm/sources/defs
-          #:clpm/sources/semantic-versioned-project)
+          #:clpm/sources/dotted-versioned-project)
   (:export #:fs-source
            #:fs-source-from-form
            #:fs-source-register-asd
@@ -321,7 +321,7 @@ contains."
 
 ;; * System release
 
-(defclass fs-system-release (semantic-versioned-system-release clpm-system-release)
+(defclass fs-system-release (dotted-versioned-system-release clpm-system-release)
   ((source
     :initarg :source
     :accessor system-release-source)
