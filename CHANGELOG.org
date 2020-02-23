@@ -1,5 +1,12 @@
 #+TITLE: CLPM Changelog
 
+* v0.2.0 - Unreleased
+
+  + Major rewrite of metadata storage. All source data is now stored in flat
+    files that are read on demand.
+  + Thread support is no longer mandatory.
+  + Config and clpmfile{,.lock} formats have changed.
+
 * v0.0.8 - 2019-04-05
   Bug fix, bundle install now correctly fetches git repos when a commit is missing
 * v0.0.7 - 2019-01-28

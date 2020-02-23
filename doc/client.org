@@ -2,34 +2,53 @@
 #+AUTHOR: CLPM Developers
 #+EMAIL: clpm-devel@common-lisp.net
 
-While CLPM can be used without the client, installing and using the client makes
-Common Lisp coding a more interactive and fun experience. The CLPM client can be
-loaded into a Lisp image and integrates with ASDF to seamlessly install missing
-systems a la the Quicklisp client.
+While CLPM can be used without the client, installing and using the client
+makes Common Lisp coding a more interactive and fun experience. The CLPM client
+can be loaded into a Lisp image and integrates with ASDF to seamlessly install
+missing systems similar to the Quicklisp client.
 
-* Installing
+Note that the clpm-client interface may change at any time before a stable
+1.0.0 version is released.
 
-  To install the CLPM Client, run the following in your favorite terminal
-  emulator. It will additionally prompt if you want to add the client to your
-  ASDF search path (highly recommended).
+* clpm-client ASDF System
 
-  #+begin_src shell
-    clpm client
-  #+end_src
+  The client's ASDF system name is =clpm-client=. It is installed with CLPM,
+  typically in =/usr/local/lib/clpm/src/clpm-client=. In order to use the
+  client, you must configure ASDF to find this system (see the ASDF manual for
+  more information on how to do this) or directly load the .asd file using
+  =asdf:load-asd=.
 
-* Using
+  The output of =clpm client rc= prints several ways to load and configure the
+  client. The default rc configuration provides a function that loads the
+  client when called. The =--quicklisp-alternative= option can be used to
+  generate rc file contents that automatically load the client and configure it
+  to behave similarly to Quicklisp.
 
-  To use the client, just load it with ASDF and activate it.
+* ASDF Integration
 
-  #+begin_src common-lisp
-    (asdf:load-system :clpm-client)
-    (clpm-client:activate-clpm)
-  #+end_src
+  By default, the client does not hook into ASDF unless directed to. In order
+  to get the benefit of automatically installing systems, enable the ASDF hooks
+  by running =(clpm-client:activate-clpm-asdf-integration)=
 
-  Now, if you attempt to ~asdf:load-system~ a missing system, a condition will
-  be signaled with a ~INSTALL-SYSTEM~ restart that will attempt to install the
-  missing system using CLPM and then load it.
+* Configuring
 
-  If you would prefer the system to be automatically installed, you can set
-  ~clpm-client:*clpm-system-not-found-behavior*~ to ~:install~ and it will be
-  silently installed if possible.
+  The client exports several variables that control its behavior. These
+  variables are:
+
+  + =*clpm-cleanup-on-dump-p*= :: Defaults to T. If non-NIL, then the client
+    attempts to clean up after itself on image dumps. This cleanup attempts to
+    remove all traces of CLPM from various hooks and then deletes all packages
+    that belong to the client.
+  + =*clpm-context*= :: Defaults to ="default"=. A string naming the global
+    context to use when not inside a bundle.
+  + =*clpm-executable*= :: If you installed CLPM at a non-standard path or wish
+    to execute it with non-standard options, set this variable. It can either
+    be a string (the path to CLPM) or a list of strings.
+  + =*clpm-system-not-found-behavior*= :: Defaults to =:error=. Controls the
+    behavior of the client when it ASDF integration has been enabled and a
+    system cannot be found. If =:error=, it signals a condition with several
+    restarts enabled to let you interactively determine how to proceed. If
+    =:install= then it tries to install the missing system. If
+    =:install-with-deps= then it tries to install the missing system and its
+    dependencies. If NIL, it does nothing (likely resulting in ASDF signaling
+    an error.

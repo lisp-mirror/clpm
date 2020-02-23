@@ -1,0 +1,107 @@
+#+TITLE: Installing CLPM
+#+AUTHOR: CLPM Developers
+#+EMAIL: clpm-devel@common-lisp.net
+#+OPTIONS: email:t toc:2 num:nil
+
+CLPM is distributed in both source and binary form. For either version, first
+install the dependencies:
+
++ tar :: Required.
++ git :: If you want to use development versions of your dependencies.
++ sbcl or ccl :: Either is required if systems need to be groveled for
+  dependencies (likely needed if you use development versions of any
+  dependency). SBCL is required if you are installing from source.
+
+After installing CLPM core, it is recommended you also install the CLPM client
+(see [[file:doc/client.org][client.org]]), but it is not needed for the quickstart.
+
+* Prebuilt binaries
+  To install CLPM in binary form, download the appropriate file from
+  [[https://common-lisp.net/project/clpm/downloads/][https://common-lisp.net/project/clpm/downloads/]]. Each release of CLPM
+  consists of the following files:
+
+  + =clpm-amd64-linux-gnu-$VERSION.tar.gz= :: CLPM compiled for 64bit
+    Linux using GNU libc (by far the most common).
+  + =clpm-amd64-linux-musl-$VERSION.tar.gz= :: CLPM compiled for 64bit
+    Linux using musl libc (e.g., Alpine Linux).
+  + =clpm-arm64-linux-gnu-$VERSION.tar.gz= :: CLPM compiled for 64bit
+    Linux on ARM processors using GNU libc.
+  + =clpm-arm64-linux-musl-$VERSION.tar.gz= :: CLPM compiled for 64bit
+    Linux on ARM processors using musl libc.
+  + =clpm-armv7-linux-gnu-$VERSION.tar.gz= :: CLPM compiled for 32bit
+    Linux on ARM processors using GNU libc.
+  + =clpm-armv7-linux-musl-$VERSION.tar.gz= :: CLPM compiled for 32bit
+    Linux on ARM processors using musl libc.
+  + =clpm-amd64-windows-$VERSION.msi= :: CLPM installer for 64 bit Windows.
+  + =clpm-$VERSION.DIGESTS= :: Text file containing the SHA512 sums for every
+    previously mentioned file.
+  + =clpm-$VERSION.DIGESTS.asc= :: Same as =clpm-$VERSION.DIGESTS=, but signed
+    with GPG key =0x10327DE761AB977333B1AD7629932AC49F3044CE=.
+
+** GNU/Linux
+
+   After downloading the tarball and validating the SHA512 sum, unpack it and
+   run =sh install.sh=. By default, it is installed to =/usr/local/=, but that
+   prefix con be changed using the =INSTALL_ROOT= environment
+   variable. However, if you change the prefix, you will also likely need to
+   set the =CLPM_HOME= environment variable to point to
+   =$INSTALL_ROOT/lib/clpm/=.
+
+** Windows
+
+   After downloading the installer and validating the SHA512 sum, simply run
+   the installer and follow the directions.
+
+* Source install
+** Configuring
+
+   CLPM can be customized by placing a file named
+   =customize-target-features.lisp-expr= in the root of the repo with a single
+   =lambda= form in it that takes a list of features and returns a modified
+   feature list. See [[file:src/clpm-build/features.lisp]] for a brief description
+   of the available features.
+
+   For example, to disable Dexador support, use the following form:
+
+   #+begin_src common-lisp
+     (lambda (features)
+       (flet ((enable (feature)
+                (pushnew feature features))
+              (disable (feature)
+                (setf features (remove feature features))))
+         (declare (ignorable #'enable #'disable))
+         (disable :clpm-dexador))
+       features)
+   #+end_src
+
+** Build and install
+
+   After cloning the repo and checking out the version you want, ensure the
+   submodules are up to date (=git submodule init= and =git submodule update=)
+   and run:
+
+   #+begin_src shell
+     sbcl --script scripts/build.lisp
+   #+end_src
+
+   If you're on GNU/Linux, you can then run =sh install.sh= to install (see
+   above).
+
+   If you're on Windows, you need to additionally install [[https://wixtoolset.org/][WiX v3.x]] and run the
+   following:
+
+   #+begin_src shell
+     sbcl --script scripts/build-wxs.lisp
+     cd build
+     %PATH_TO_WIX_INSTALL%/bin/candle clpm.wxs
+     %PATH_TO_WIX_INSTALL%/bin/light clpm.wxs -ext %PATH_TO_WIX_INSTALL%/bin/WixUIExtension.dll -cultures:en-us -out clpm.msi
+   #+end_src
+
+   This will get you an installer you can use.
+
+** Live install
+
+   If you would like to hack on CLPM, it may be easiest to load CLPM every time
+   you want to use it instead of building a binary. The easiest way to do this
+   is to execute =scripts/clpm-live-sbcl=. I recommend symlinking it to
+   something like =/usr/local/bin/clpm=.

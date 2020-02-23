@@ -10,30 +10,58 @@ repositories.
 
 The type of every source must be specified with a keyword.
 
-* Quicklisp
+* Configuration
 
-  A Quicklisp style source contains a subscription metadata file (such as the
-  primary Quicklisp one located at
-  https://beta.quicklisp.org/dist/quicklisp.txt). Additionally, there must a
-  file whose name is the same but suffixed with "-versions" (e.g.,
-  https://beta.quicklisp.org/dist/quicklisp-versions.txt) that points to the
-  dist file for every version of the distribution.
+  Sources are configured globally using the =sources.conf= file located in
+  CLPM's config directory. Place any number of source descriptions there and
+  they will be used for global contexts. If a desired resource is defined in
+  multiple sources, then the source defined first has precendence.
 
-  The type designator for a Quicklisp like source is =:quicklisp=. A quicklisp
-  distribution can be configured with the following options:
+  Sources are configured for project specific contexts (bundles) by placing
+  source descriptions in the clpmfile. See [[file:bundle.org][bundle.org]] for more details.
 
-  + =url= :: The URL to the subscription metadata file.
-  + =force-https= :: If true, the protocol for all URLs is changed to https
-    before downloading any files. This is useful because all URLs contained in
-    the primary Quicklisp distribution have http as the protocol even though
-    they are also served over https. If the =url= uses the =https= scheme,
-    =force-https= is implicitly set to true and cannot be disabled.
+* Source Descriptions
 
-  The following table can be added to your CLPM config file to use the primary
-  Quicklisp distribution.
+  Each source description is list where the first element is a string naming
+  the source (you may choose any name you like) and the rest is a plist
+  containing the options for the source. Each source must contain a value for
+  =:type= so that CLPM may instantiate the correct objects to interact with it.
 
-  #+begin_src common-lisp
-    ((table :sources "quicklisp")
-     :type :quicklisp
-     :url "https://beta.quicklisp.org/dist/quicklisp.txt")
-  #+end_src
+** Quicklisp
+
+   A Quicklisp style source contains a subscription metadata file (such as the
+   primary Quicklisp one located at
+   https://beta.quicklisp.org/dist/quicklisp.txt). Additionally, there must a
+   file whose name is the same but suffixed with "-versions" (e.g.,
+   https://beta.quicklisp.org/dist/quicklisp-versions.txt) that points to the
+   dist file for every version of the distribution.
+
+   The type designator for a Quicklisp like source is =:quicklisp=. A quicklisp
+   distribution can be configured with the following options:
+
+   + =:url= :: The URL to the subscription metadata file. If the URL uses the
+     HTTPS scheme, then every interaction with this source will take place
+     using HTTPS.
+
+   For instance, to use the primary Quicklisp source, you use the following
+   description:
+
+   #+begin_src common-lisp
+     ("quicklisp"
+      :type :quicklisp
+      :url "https://beta.quicklisp.org/dist/quicklisp.txt")
+   #+end_src
+
+** CLPI
+
+   Common Lisp Package Index style sources are currently under development. At
+   the moment, the only documentation of them exists in CLPM's source code. The
+   goal is to produce a package index that contains all of the releases of
+   projects, along with system versions and dependencies, and extra metadata
+   such as upstream repo location.
+
+   The primary CLPM author currently uses a CLPI style source to index packages
+   located on a private Gitlab instance. If you are interested in using a CLPI
+   style source, please reach out.
+
+   The type specifier is =:clpi=.

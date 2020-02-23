@@ -2,120 +2,156 @@
 #+AUTHOR: CLPM Developers
 #+EMAIL: clpm-devel@common-lisp.net
 
-CLPM is configured using a file named =clpm.conf=. CLPM constructs a list of
-directories to search for this file and the first instance found wins. The
-default order of directories searched is first the =common-lisp/clpm= folder of
-the user's XDG config directory (typically =$HOME/.confg/=), then in the system
-config folder (typically =/etc/=). The order can be changed with the
-=CLPM_CONFIG_DIRS= environment variable. If specified, it must be a list of
-directories separated by your OS's conventional directory separator. If any
-entry in the list is empty. The default search locations will be spliced into
-the list.
+CLPM can be configured through environment variables or a file named
+=clpm.conf=. The =clpm.conf= file is found by constructing a list of
+directories to search and the first instance found wins. The default order of
+directories searched is first the =clpm= folder of the user's XDG config
+directory (typically =~/.confg/=), then in the system config folder (typically
+=/etc/=). The order can be changed with the =CLPM_CONFIG_DIRS= environment
+variable. If specified, it must be a list of directories separated by your OS's
+conventional directory separator. If any entry in the list is empty. The
+default search locations will be spliced into the list.
+
+The configuration is organized into many hierarchical tables with
+config values specified through environment variables overriding those
+specified in the file.
 
 Logically, CLPM is configured by a series of nested tables. The config file
-describes these tables using a series of forms. It is recommended (and will
-likely be required in the future) that the first form in the config file
-declares the version of the config file API being used, such as the
-following. The described version API is 0.1.
+describes these tables using a series of forms. Additionally, any value
+specified by environment variables overrides the values specified in the
+file. The first form in the config file declares the version of the config file
+API being used, such as the following. The described version API is 0.2.
 
 #+begin_src common-lisp
-  (version "0.1")
+  (version "0.2")
 #+end_src
 
-Each subsequent form must describe a table. Each subsequent form must start
-with ~table~ or ~(table &rest path)~. The body of the form then contains a
-plist describing key/value pairs for that table. Tables can be nested by either
-declaring toplevel tables with overlapping paths or by embedding a table
-(without a path) as a value inside another table.
+Each subsequent form in the file must describe a table. Each subsequent form
+must start with a list containing the path to the table being described. The
+body of the form then contains a plist describing key/value pairs for that
+table.
 
-For example, the following config would force CLPM to use curl as its HTTP
-client and use the primary quicklisp destribution as a source.
+For example, the following config would force CLPM to use dexador as its HTTP
+client and write ASDF source registry configuration for the ="default"= context
+to ="/home/user/.config/common-lisp/source-registry.conf.d/50-clpm.conf"=
 
 #+begin_src common-lisp
-  (version "0.1")
+  (version "0.2")
 
-  ((table :http-client)
-   :method :curl)
+  ((:contexts "default")
+   :source-registry.d-files ("/home/user/.config/common-lisp/source-registry.conf.d/50-clpm.conf"))
 
-  ((table :sources "quicklisp")
-   :type :quicklisp
-   :url "https://beta.quicklisp.org/dist/quicklisp.txt")
+  ((:http-client)
+   :type :dexador)
 #+end_src
 
 The following describes the available configuration tables for CLPM. Each
 header describes a table (or sub table). The lists in each section describe
-that tables keys.
+that table's keys.
 
-* ~:archives~
+The environment variable name for any config option can be determined by
+turning all hyphens into underscores and separating path elements with an
+underscore as well. For example, the HTTP client can be set to dexador by
+setting =CLPM_HTTP_CLIENT_TYPE=dexador=.
 
-  + ~:tar-method~ :: A keyword specifying which tar implementation to
-    use. Defaults to =:auto=.
+However, any path element that is a domain name must have periods replaced with
+two underscores, including after the TLD. For example, to set a password for
+authenticating to Github, you would set
+=CLPM_GIT_REMOTES_GITHUB__COM__PASSWORD=supersekret=
 
-** ~:tar~
+The current configuration can be printed by running =clpm config info=.
 
-   Settings for the tar method that uses an external tar program.
+* Root
+  + =:context= :: A string naming the default context.
+* =:archives=
 
-   + ~:path~ :: Path to the =tar= executable. Defaults to ="tar"=.
+** =:tar=
 
-* ~:bundle~
-** ~:local~
-*** ~"PROJECT-NAME"~
+   + =:type= :: A keyword specifying which tar implementation use. Defaults to
+     =:auto=.
+
+* =:bundle=
+  + =:output-translation= :: Controls whether =clpm bundle exec= configures
+    ASDF's output translations. NIL corresponds to not configuring the output
+    translations. T (default) configures the output translations to translate
+    everything to a folder in CLPM's cache. =:local= translates everything into
+    the =./.clpm/fasl-cache/= folder relative to the clpmfile.
+
+** =:local=
+*** ="PROJECT-NAME"=
     When using the bundle commands, instead of using the upstream git repository
     for PROJECT-NAME, use a local checkout instead.
 
-    + ~:path~ :: Path to the folder containing the checkout of the git
-      repository to use.
+    + =:path= :: Path to the folder containing the checkout of the git
+      repository to use. Relative pathnames are resolved with respect to the
+      location of the clpmfile.
 
-* ~:git~
-** ~:remotes~
-*** ~"HOSTNAME"~
+* =:contexts=
+** ="CONTEXT-NAME"=
+
+   + =:source-registry.d-files= :: Used to inform ASDF where to find systems
+     for this context. Outputs the same contents to every file in a format
+     suitable for inclusion in a source-registry.d directory (see ASDF manual).
+
+   + =:source-registry-files= :: Used to inform ASDF where to find systems for
+     this context. Outputs the same contents to every file in a
+     source-registry.conf format (see ASDF manual).
+
+   + =:sources= :: A list of global source names that this context can use, or
+     T (default) to represent all global sources.
+
+* =:curl=
+  Settings for the HTTP method that uses the external curl program.
+
+  + =:path= :: Path to the =curl= executable. Defaults to ="curl"=.
+
+* =:firejail=
+  Settings for the grovel sandbox method that uses the external firejail
+  program.
+
+  + =:path= :: Path to the =firejail= executable. Defaults to ="firejail"=.
+
+* =:git=
+** =:remotes=
+*** ="HOSTNAME"=
     Provide configuration for interacting with HOSTNAME to fetch git repos.
 
-    + ~:username~ :: A string containing the username to use when connecting to
+    + =:username= :: A string containing the username to use when connecting to
       the server.
-    + ~:password~ :: A string containing the password to use when connecting to
+    + =:password= :: A string containing the password to use when connecting to
       the server.
-    + ~:method~ :: A keyword describing how to connect to the server. Can be one
+    + =:method= :: A keyword describing how to connect to the server. Can be one
       of:
-      + ~:https~ :: Connect using HTTPS.
-      + ~:http~ :: Connect using HTTP.
-      + ~:ssh~ :: Connect using SSH.
-    + ~:port~ :: Port to connect on.
-* ~:http~
-** ~:headers~
-*** ~"HOSTNAME~
-**** ~"HEADER-NAME"~
+      + =:https= :: Connect using HTTPS.
+      + =:ssh= :: Connect using SSH.
+
+* =:grovel=
+** =:sandbox=
+   Options for configuring the sandbox used to isolate processes that grovel for
+   dependencies from .asd files. (Experimental)
+
+   + =:method= :: The method to use to provide the sandbox. Defaults to
+     =:auto=.
+
+* =:http=
+** =:headers=
+*** ="HOSTNAME=
+**** ="HEADER-NAME"=
      When performing a non-git HTTP request to HOSTNAME, provide a header with
      the name HEADER-NAME.
 
-     + ~:secure-only-p~ :: If non-NIL, send this header only on secure
+     + =:secure-only-p= :: If non-NIL, send this header only on secure
        connections.
-     + ~:value~ :: The value to send for the header. Must be a string.
-     + ~:exec~ :: A path to a file that, when executed, prints the header value
+     + =:value= :: The value to send for the header. Must be a string.
+     + =:exec= :: A path to a file that, when executed, prints the header value
        to its standard output. Must be a string or pathname.
-     + ~:contents~ :: A path to a file that contains the value to use for the
+     + =:contents= :: A path to a file that contains the value to use for the
        header. Must be a string or pathname.
 
-* ~:http-client~
-  + ~:method~ :: The default method to use to as an HTTP client. Defaults to
+* =:http-client=
+  + =:type= :: A keyword specifying which HTTP client to use. Defaults to
     =:auto=.
+* =:tar=
+  Settings for the tar archive method that uses the external tar program.
 
-** ~:curl~
-   Settings for the curl method that uses an external curl program.
-
-   + ~:path~ :: Path to the =curl= executable. Defaults to ="curl"=.
-
-* ~:grovel~
-** ~:sandbox~
-   Options for configuring the sandbox used to isolate processes that grovel for
-   dependencies from .asd files.
-
-   + ~:method~ :: The default method to use as the sandbox. Defaults to =:auto=.
-
-* ~:sources~
-** ~"SOURCE-NAME~
-   Options to configure the source with the name SOURCE-NAME. See [[file:sources.org][sources.org]]
-   for more information on the available sources and their configuration
-   options.
-
-   Must contain a value for ~:type~ that names the type of source this is.
+  + =:path= :: Path to the =tar= executable. Defaults to ="tar"=.

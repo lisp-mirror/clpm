@@ -3,150 +3,56 @@
 #+EMAIL: clpm-devel@common-lisp.net
 #+OPTIONS: email:t toc:2 num:nil
 
-**WARNING**: This software is ALPHA quality. I use it as my daily driver, but it
-is still a little rough around the edges and it may accidentally eat your files.
+**WARNING**: This software is BETA quality. I use it as my daily driver, but it
+is still a little rough around the edges and it may accidentally eat your
+files.
 
 * Description
 
-  CLPM is a package manager for Common Lisp. It is focused on managing packages
-  for both user contexts and project specific contexts (bundles).
+  CLPM is a package manager for Common Lisp. It can manage packages in both
+  global and project specific contexts.
 
   It consists of two major pieces. First is a standalone program that is
-  responsible for all the heavy lifting of fetching and unpacking releases in
-  the correct place and managing project specific environments. This piece is
-  generally referred to as CLPM, the CLPM core, or =clpm= and is distributed as
-  a precompiled image using SBCL (but it is possible to compile it from
-  source). The second is a small client library written in portable Common Lisp
-  that interfaces with ASDF and calls CLPM as necessary to find and install
-  missing systems. This piece is generally referred to as the CLPM client or
-  =clpm-client= and is meant to be loaded into development images.
+  responsible for all the heavy lifting of downloading and unpacking releases
+  in the correct place, resolving dependencies, and managing project specific
+  environments. This piece is generally referred to as CLPM, the CLPM core, or
+  =clpm= and is distributed as a precompiled executable using SBCL (but it is
+  possible to compile it from source). The second is a small client library
+  written in portable Common Lisp that interfaces with ASDF and calls CLPM as
+  necessary to find and install missing systems. This piece is generally
+  referred to as the CLPM client or =clpm-client= and is meant to be loaded
+  when you are interactively developing code.
 
-  To contact the developers, send email to and/or join
-  clpm-devel@common-lisp.net
+  To contact the developers, send email to clpm-devel@common-lisp.net
   [[https://mailman.common-lisp.net/listinfo/clpm-devel]].
-
-* Project Goals
-
-  CLPM is far from the only package manager available for Common Lisp[fn:1], but
-  it makes very different assumptions and design choices than the other
-  available solutions. In this section we describe our high level goals and how
-  they affect our design decisions.
-
-  + Minimize footprint in development Lisp image :: Ultimately, dependency
-    management should not be a large part of developing a library or
-    application - you should be focused on creating your cool functionality
-    instead of downloading and installing dependencies. So why should all the
-    (nontrivial amounts of) code necessary for downloading libraries, resolving
-    their dependencies, unpacking them, and installing them ever be present in
-    your development Lisp image? This drives CLPM's separation into the core and
-    the client. Additionally, some Lisps (I'm looking at you, SBCL) have a large
-    memory footprint and this helps keep that down.
-  + Use existing libraries where possible :: Because the CLPM core never needs
-    to be loaded into a development image, there are no issues with version
-    conflicts or incompatibilities between third party libraries used by CLPM
-    and the code being developed. This means that existing libraries can be
-    leveraged where it makes sense and we don't need to reinvent the wheel.
-  + Support cleanup on image dump :: Many Common Lisp implementations allow you
-    to deliver programs by dumping an in-memory image to file. For most programs
-    generated there is no need to have a bundled package manager. Therefore,
-    CLPM provides an option to remove the client from the image when it is
-    dumped (using UIOP provided functions).
-  + Support multiple workflows and configurations :: We want it to be equally
-    easy to hack on CLPM, to use it for CI, and to use it for development by
-    coders uninterested in hacking on CLPM itself. This means we strive to
-    support both distribution of a (mostly) statically linked program as well as
-    using CLPM directly from source.
-  + Support installing multiple package versions :: CLPM supports installing
-    multiple versions of the same package simultaneously. This is an enabling
-    feature for managing project specific dependencies as well as global
-    dependencies.
-  + Support multiple package sources :: At first, CLPM will support only
-    Quicklisp-style distributions as a package source/repository. But we
-    envision adding support for new sources, preferably including one that
-    stores the upstream repos for each project.
 
 * Installing
 
-  CLPM is distributed in both source and binary form. Additionally, the binaries
-  are distributed in both dynamically and statically linked forms (note: the
-  binaries are built with SBCL, which does not support statically linking against
-  the C library[fn:3], so you need to get the one that matches your OS's libc
-  (most likely the =gnu= variant)).
-
-  For either version, first install the dependencies:
-
-  + tar :: Required[fn:2].
-  + git :: If using bundles with git repos specified.
-  + sbcl or ccl :: If systems need to be groveled for dependencies (likely
-    needed if you use bundles).
-  + openssl :: Needed if accessing sources over https *and* compiling from
-    source or using the dynamically linked version.
-
-  After installing CLPM core, it is recommended you also install the CLPM client
-  (see [[file:doc/client.org][client.org]]), but it is not needed for the quickstart.
-
-** Prebuilt binaries
-   To install CLPM in binary form, download the appropriate file from
-   [[https://common-lisp.net/project/clpm/downloads/][https://common-lisp.net/project/clpm/downloads/]]. It is highly recommended that
-   you use the static variants. Each release of CLPM consists of the following
-   files:
-
-   + =clpm-$VERSION-x86_64-linux-gnu-dynamic= :: CLPM compiled for 64bit
-     Linux. Dynamically links against glibc (GNU's libc) and all supporting
-     libraries.
-   + =clpm-$VERSION-x86_64-linux-gnu-static= :: CLPM compiled for 64bit
-     Linux. Dynamically links against glibc (GNU's libc) and statically linked
-     against all supporting libraries.
-   + =clpm-$VERSION-x86_64-linux-musl-dynamic= :: CLPM compiled for 64bit
-     Linux. Dynamically links against musl libc and all supporting libraries.
-   + =clpm-$VERSION-x86_64-linux-musl-static= :: CLPM compiled for 64bit
-     Linux. Dynamically links against musl libc and statically linked against
-     all supporting libraries.
-   + =clpm-$VERSION-x86_64-windows-dynamic.exe= :: CLPM compiled for 64bit
-     Windows. Dynamically links against all supporting libraries.
-   + =clpm-$VERSION-x86_64-windows-static.exe= :: CLPM compiled for 64bit
-     Windows. Statically linked against all supporting libraries.
-   + =clpm-$VERSION-x86_64-darwin-dynamic= :: CLPM compiled for 64bit
-     MacOS. Dynamically links against all supporting libraries.
-   + =clpm-$VERSION.DIGESTS= :: Text file containing the SHA512 sums for every
-     previously mentioned file.
-   + =clpm-$VERSION.DIGESTS.asc= :: Same as =clpm-$VERSION.DIGESTS=, but signed
-     with GPG key =0x10327DE761AB977333B1AD7629932AC49F3044CE=.
-
-   After downloading the binary and validating the SHA512 sum, make sure the
-   file is executable, and save it as =clpm= (or =clpm.exe=) somewhere on your
-   PATH.
-
-** Source install
-   The next easiest way to install CLPM is to install SBCL, clone the CLPM
-   sources (including the git submodules!), and symlink the [[file:scripts/clpm-live][clpm-live]] script as
-   =clpm= somewhere on your PATH. Alternatively, you can build a dynamically or
-   statically linked executable by running one of the following:
-
-   #+begin_src shell
-     sbcl --script scripts/clpm-build-dynamic-sbcl
-     sbcl --script scripts/clpm-build-static-sbcl
-   #+end_src
+  See [[file:INSTALL.org][INSTALL.org]] for detailed installation instructions.
 
 * Quickstart
 
-  Now that you have CLPM installed, you can begin using it! First, you need to
-  add a software repository. You likely want to start with the main Quicklisp
-  distribution, so create a file called =~/.config/common-lisp/clpm/clpm.conf=
-  with the following contents:
+  Now that you have CLPM installed, this section walks you through how to set
+  it up as a Quicklisp alternative.
+
+  First, configure CLPM to use the Quicklisp index as a source for packages and
+  to use HTTPS to fetch files from it [fn:1]. Create a file called
+  =~/.config/clpm/sources.conf= with the following contents:
 
   #+begin_src common-lisp
-    (clpm-config
-     :sources
-     ("quicklisp"
-      (:type :quicklisp
-       :url "https://beta.quicklisp.org/dist/quicklisp.txt"
-       :force-https t)))
+    ("quicklisp"
+     :type :quicklisp
+     :url "https://beta.quicklisp.org/dist/quicklisp.txt")
   #+end_src
 
-  This configures CLPM to use the primary Quicklisp distribution and configures
-  it to always fetch files from it over HTTPS [fn:5] [fn:6]. See [[file:doc/config.org][config.org]] for
-  more details.
+  See [[file:doc/sources.org][sources.org]] for more details on configuring sources.
+
+  Next, configure your favorite Lisp to load the client by placing the output
+  of the following command in your Lisp's init file (such as =~/.sbclrc=).
+
+  #+begin_src shell
+    clpm client rc --quicklisp-alternative
+  #+end_src
 
   Then, sync your local copy of the Quicklisp metadata by running:
 
@@ -154,33 +60,113 @@ is still a little rough around the edges and it may accidentally eat your files.
     clpm sync
   #+end_src
 
-  Syncing may take a while the first time. When it's finished, you can install a
-  project, such as CFFI, by running:
+  Syncing may take a while the first time as it needs to fetch and process the
+  metadata for every Quicklisp release.
 
-  #+begin_src shell
-    clpm install cffi
-  #+end_src
-
-  This will install all ASDF systems belonging to the CFFI project (currently
-  =cffi=, =cffi-uffi-compat=, =cffi-toolchain=, =cffi-tests=, =cffi-libffi=,
-  =cffi-grovel=, and =cffi-examples=) and all their dependencies.
-
-  If you want to install only a single system and its dependencies[fn:4] you can use
-  the =-s= (system) option, such as:
-
-  #+begin_src shell
-    clpm install -s cffi
-  #+end_src
-
-  You can test this was successful by starting your favorite Lisp and running:
+  Then you can start your favorite lisp and try loading a system, such as
+  alexandria:
 
   #+begin_src common-lisp
-    (require :asdf)
-    (asdf:load-system :cffi)
+    (asdf:load-system :alexandria)
   #+end_src
 
-  Note how you do not need to load any CLPM code inside your Lisp image in order
-  to load CFFI after installing it. (Assuming you have ASDF 3+ installed).
+  CLPM will see that alexandria is not present locally and automatically
+  install it before loading it.
+
+* Project Goals
+
+  CLPM is far from the only package manager available for Common Lisp[fn:2], but
+  it makes very different assumptions and design choices than the other
+  available solutions. In this section we describe our high level goals and how
+  they affect our design decisions.
+
+** Use existing libraries where possible
+
+   If you look at Quicklisp, you'll quickly notice that the client does not
+   rely on any third party code and all functionality, from an HTTP client to
+   untaring, are implemented completely as part of the Quicklisp client
+   project. The upsides of this strategy are that only required functionality
+   is loaded into the development image, it prevents version conflicts between
+   code the Quicklisp client depends on and the code you're developing depends
+   on, and it helps ensure that Quicklisp works on a broad set of Common Lisp
+   implementations. However, it has a major downside: the maintenance and
+   development costs of the package manager are high, potentially making it
+   difficult to implement new features and the package manager does not really
+   drive the quality of code in the community at large higher.
+
+   The desire to use existing libraries drives the decision for the CLPM core
+   and client to be separated. The client has no external dependencies which
+   allows it to share all the benefits of Quicklisp's model, and the core never
+   needs to be loaded into a development image, so it can leverage any
+   dependency that makes sense without impacting the development image in the
+   slightest.
+
+** Support HTTPS
+
+   HTTPS is becoming more and more ubiquitous. Some websites (such as Github
+   and Gitlab) are only served over HTTPS and some users insist on HTTPS
+   everywhere possible. This trend is not going away, therefore CLPM should
+   natively support HTTPS.
+
+   As no Lisp implementation I am aware of has native support for TLS, this
+   means that CLPM has to use third party tools to achieve this support. This
+   further drives the separation of the core and client, as CLPM can use
+   foreign libraries to provide TLS support and this is not something that
+   should be brought into a development image that does not need it
+   otherwise.
+
+   Additionally, Quicklisp packages are served over HTTPS. While the Quicklisp
+   client cannot take advantage of that (without
+   [[https://github.com/snmsts/quicklisp-https]]), CLPM can, providing a little
+   more of a guarantee that packages have not been tampered with.
+
+** Minimize footprint in development images and deployments
+
+   Many Common Lisp implementations allow you to deliver programs by dumping an
+   image to file. For most programs generated this way there is no need to have
+   a bundled package manager. Therefore, there should be an easy way to use a
+   package manager without leaving traces if it in your deployed system.
+
+   To this end, CLPM can be used without ever loading the client (for example,
+   =clpm bundle exec= configures ASDF entirely through environment variables)
+   and if you do choose to use the client for better interactive development,
+   CLPM is able to remove itself from the image when it is dumped.
+
+** Support CI/CD workflows
+
+   CI and CD are nice to have and nicer still when the jobs can run quickly and
+   give fast feedback. To that end, CLPM is distributed in both binary and
+   source form. Source for hackers or people who want to use a different
+   feature set and binary for quick and easy installation in other cases.
+
+** Support installing multiple package versions
+
+   Ideally, updates to packages would never introduce regressions. However, we
+   live in reality and this happens frequently (just look at the packages that
+   get removed from Quicklisp in any given release for failing to
+   build). Additionally, sometimes you just really need to use an old version
+   of a dependcy for some project while using the latest version of the same
+   dependency in another project.
+
+   To this end, CLPM supports installing multiple versions of the same package
+   simultaneously. This is additionally an enabling feature for managing
+   project specific contexts as well as global contexts.
+
+** Support and encourage explicitly versioned systems
+
+   ASDF allows developers to provide version numbers for their systems and
+   associate version requirements with dependencies. IMHO this is a criminally
+   underutilized feature of ASDF and it should be *required* that any release
+   of a package in any package index should declare a version number. However,
+   it is a lot of work to convince others to believe the same way and even if a
+   critical mass did buy in, things wouldn't change overnight.
+
+   Therefore, CLPM supports both the status quo (a Quicklisp package index
+   versioned by date) as well as a work in progress package index (working name
+   of CLPI). This new Common Lisp Package Index includes both extra metadata
+   about projects (such as the upstream repo which can be used to check out
+   development versions) and requires that systems are versioned in order to be
+   released.
 
 * In-depth Documentation
 
@@ -195,19 +181,7 @@ is still a little rough around the edges and it may accidentally eat your files.
 
 * Footnotes
 
-[fn:6] On Windows, CLPM will fetch over HTTPS, but it will *not* currently
-validate the certificates. See [[https://gitlab.common-lisp.net/clpm/clpm/issues/1][issue#1]] for more info.
-
-[fn:5] All files in the primary Quicklisp distribution are served over both
+[fn:1] All files in the primary Quicklisp distribution are served over both
 HTTPS and HTTP, even though the Quicklisp client cannot use HTTPS itself.
 
-[fn:4] Really, the entire project the system belongs to will be installed, but
-only the dependencies of the specified system will be installed.
-
-[fn:3] If you know a way to statically link SBCL against libc, please let me
-know!
-
-[fn:1] See, for example: [[https://www.quicklisp.org/beta/][Quicklisp]], [[https://github.com/fukamachi/qlot/][Qlot]], and [[https://github.com/CodyReichert/qi][Qi]].
-
-[fn:2] Using the archive CL library for a full Common Lisp solution is on the
-roadmap, but it needs a decent amount of work.
+[fn:2] See, for example: [[https://www.quicklisp.org/beta/][Quicklisp]], [[https://github.com/fukamachi/qlot/][Qlot]], and [[https://github.com/CodyReichert/qi][Qi]].
