@@ -57,7 +57,7 @@
            (log:trace "When groveling, found ~A is unsatisfied" missing-req)
            (if-let ((candidate-file
                      (and (typep missing-req 'system-requirement)
-                          (find (asdf:primary-system-name (requirement/name missing-req))
+                          (find (asdf:primary-system-name (requirement-name missing-req))
                                 (node-system-files-pending-groveling new-search-node)
                                 :key (compose #'system-file-primary-system-name #'car)
                                 :test #'equal))))
@@ -101,7 +101,7 @@
             (let ((reqs (system-release-requirements sr)))
               ;; Mark the reason for the new reqs
               (mapc (lambda (r)
-                      (setf (requirement/why r) sr))
+                      (setf (requirement-why r) sr))
                     reqs)
               ;; Add the deps we just computed.
               (node-add-unresolved-reqs! new-search-node reqs)))
@@ -130,12 +130,12 @@
           (node-add-resolution! new-node release system-releases nil unresolved-req)
           ;; And push its requirements, unless the requirement says to not
           ;; include deps.
-          (unless (requirement/no-deps-p unresolved-req)
+          (unless (requirement-no-deps-p unresolved-req)
             (dolist (sr system-releases)
               (let ((new-reqs (system-release-requirements sr)))
                 ;; Mark the reason for the new reqs
                 (mapc (lambda (r)
-                        (setf (requirement/why r) sr))
+                        (setf (requirement-why r) sr))
                       new-reqs)
                 (node-add-unresolved-reqs! new-node new-reqs))))
           (values new-node (not (null resolutions))))))))
@@ -221,7 +221,7 @@ observed in package-inferred-systems that are groveled after a refactoring
 leaves some dead files around."
   (and (typep req 'system-requirement)
        (null (find-requirement-source req nil))
-       (node-find-system-if-active node (asdf:primary-system-name (requirement/name req)))))
+       (node-find-system-if-active node (asdf:primary-system-name (requirement-name req)))))
 
 (defun cleanup-search-node! (node)
   "Returns two values. The first is the search node with all satisfied

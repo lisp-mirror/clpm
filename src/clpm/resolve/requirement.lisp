@@ -45,7 +45,7 @@ source can be found."))
 (defmethod find-requirement-source :around (req &optional (errorp t))
   "If the requirement has a specific source set, use that. Otherwise, fallback
 to searching."
-  (let ((out (or (requirement/source req)
+  (let ((out (or (requirement-source req)
                  (call-next-method))))
     (or out
         (when errorp
@@ -55,19 +55,19 @@ to searching."
   "Find the first source in *SOURCES* that provides the project. ERRORP is
 handled by an :AROUND method."
   (declare (ignore errorp))
-  (find-project-source (requirement/name req)))
+  (find-project-source (requirement-name req)))
 
 (defmethod find-requirement-source ((req system-requirement) &optional errorp)
   "Find the first source in *SOURCES* that provides the system. ERRORP is andled
 by an :AROUND method."
   (declare (ignore errorp))
-  (find-system-source (requirement/name req)))
+  (find-system-source (requirement-name req)))
 
 (defmethod find-requirement-source ((req vcs-project-requirement) &optional errorp)
   "Find the first source in *SOURCES* that provides the project. ERRORP is
 handled by an :AROUND method."
   (declare (ignore errorp))
-  (find-project-source (requirement/name req)))
+  (find-project-source (requirement-name req)))
 
 
 ;; * Requirement States
@@ -77,13 +77,13 @@ handled by an :AROUND method."
 satisfied. Returns one of :SAT, :UNSAT, or :UNKNOWN."))
 
 (defmethod requirement-state ((req fs-system-requirement) node)
-  (let* ((system-name (requirement/name req))
+  (let* ((system-name (requirement-name req))
          (system-release (node-find-system-if-active node system-name)))
     (cond
       ((not system-release)
        :unknown)
       ((not (eql (system-release-source system-release)
-                 (requirement/source req)))
+                 (requirement-source req)))
        :unsat)
       (t
        :sat))))
@@ -91,8 +91,8 @@ satisfied. Returns one of :SAT, :UNSAT, or :UNKNOWN."))
 (defmethod requirement-state ((req project-requirement) node)
   "A project requirement is satisfied if a release for the project is active in
 the search node and its version satisfies the requested version."
-  (let* ((project-name (requirement/name req))
-         (version-spec (requirement/version-spec req))
+  (let* ((project-name (requirement-name req))
+         (version-spec (requirement-version-spec req))
          (release (node-find-project-if-active node project-name)))
     (cond
       ((not release)
@@ -105,8 +105,8 @@ the search node and its version satisfies the requested version."
 (defmethod requirement-state ((req system-requirement) node)
   "A system requirement is satisfied if there is an active system release that
 provides the system."
-  (let* ((system-name (requirement/name req))
-         (version-spec (requirement/version-spec req))
+  (let* ((system-name (requirement-name req))
+         (version-spec (requirement-version-spec req))
          (system-release (node-find-system-if-active node system-name)))
     (cond
       ((provided-system-p system-name)
@@ -141,8 +141,8 @@ a plist. This plist can contain :system-releases or :system-files."))
 
 (defmethod resolve-requirement ((req fs-system-requirement) node)
   ;; Make a release from the file system.
-  (let* ((system-name (requirement/name req))
-         (fs-source (requirement/source req))
+  (let* ((system-name (requirement-name req))
+         (fs-source (requirement-source req))
          (system (source-system fs-source system-name))
          (releases (system-releases system))
          (release (first releases))
@@ -164,11 +164,11 @@ a plist. This plist can contain :system-releases or :system-files."))
 satisfy the version spec (if any) and including every system release per
 satisfying release."
   (when-let*
-      ((project-name (requirement/name req))
+      ((project-name (requirement-name req))
        (source (find-requirement-source req nil))
        (project (source-project source project-name))
        (releases (project-releases project))
-       (applicable-releases (remove-if-not (rcurry #'release-satisfies-version-spec-p (requirement/version-spec req))
+       (applicable-releases (remove-if-not (rcurry #'release-satisfies-version-spec-p (requirement-version-spec req))
                                            releases)))
     (mapcar (lambda (x)
               (list x :system-releases (release-system-releases x)))
@@ -177,12 +177,12 @@ satisfying release."
 (defmethod resolve-requirement ((req system-requirement) node)
   "A system requirement is resolved by any release that provides the system."
   (when-let*
-      ((system-name (requirement/name req))
+      ((system-name (requirement-name req))
        (source (find-requirement-source req))
        (system (source-system source system-name)))
     (let* ((system-releases (system-system-releases system))
            (applicable-system-releases (remove-if-not (rcurry #'system-release-satisfies-version-spec-p
-                                                              (requirement/version-spec req))
+                                                              (requirement-version-spec req))
                                                       system-releases)))
       (unless system-releases
         (error "No releases for ~S" system-name))
@@ -193,12 +193,12 @@ satisfying release."
 
 (defmethod resolve-requirement ((req vcs-project-requirement) node)
   (declare (ignore node))
-  (let* ((project-name (requirement/name req))
-         (systems (requirement/systems req))
-         (system-files (requirement/system-files req))
-         (branch (requirement/branch req))
-         (commit (requirement/commit req))
-         (tag (requirement/tag req))
+  (let* ((project-name (requirement-name req))
+         (systems (requirement-systems req))
+         (system-files (requirement-system-files req))
+         (branch (requirement-branch req))
+         (commit (requirement-commit req))
+         (tag (requirement-tag req))
          (source (find-requirement-source req nil))
          (vcs-project (source-project source project-name nil))
          (vcs-release (project-vcs-release vcs-project

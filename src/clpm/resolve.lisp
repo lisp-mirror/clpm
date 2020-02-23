@@ -75,15 +75,15 @@
 
 (defun rewrite-vcs-req (req context)
   "Given a VCS requirement and a context, "
-  (let ((existing-release (find (requirement/name req) (context-releases context)
+  (let ((existing-release (find (requirement-name req) (context-releases context)
                                 :test #'equal :key (compose #'project-name #'release-project))))
     (if (and existing-release (listp (release-version existing-release)))
         (progn
           (make-instance 'vcs-project-requirement
-                         :name (requirement/name req)
-                         :source (requirement/source req)
-                         :why (requirement/why req)
-                         :no-deps-p (requirement/no-deps-p req)
+                         :name (requirement-name req)
+                         :source (requirement-source req)
+                         :why (requirement-why req)
+                         :no-deps-p (requirement-no-deps-p req)
                          :commit (second (release-version existing-release))))
         req)))
 
@@ -91,7 +91,7 @@
   (mapcar (lambda (req)
             (if (and (not (eql update-projects t))
                      (typep req 'vcs-requirement)
-                     (not (member (requirement/name req) update-projects :test #'equal)))
+                     (not (member (requirement-name req) update-projects :test #'equal)))
                 (rewrite-vcs-req req context)
                 req))
           reqs))
