@@ -15,21 +15,20 @@
   (:export #:*clpm-system-not-found-behavior*
            #:activate-clpm-asdf-integration
            #:clpm-asdf-integration-active-p
+           #:clpm-install-and-reload-bundle
+           #:clpm-install-system-and-dependencies
            #:clpm-missing-system
+           #:clpm-reload-bundle
            #:clpm-system-search
-           #:deactivate-clpm-asdf-integration
-           #:install-and-reload-bundle
-           #:install-system
-           #:install-system-and-dependencies
-           #:reload-bundle))
+           #:deactivate-clpm-asdf-integration))
 
 (in-package #:clpm-client/asdf)
 
 (defvar *clpm-system-not-found-behavior* :error
   "The behavior if CLPM is asked to find a system that is not installed. One of:
 
-+ :ERROR :: Signal a CLPM-MISSING-SYSTEM condition with the INSTALL-SYSTEM
-restart available.
++ :ERROR :: Signal a CLPM-MISSING-SYSTEM condition with the CLPM-INSTALL-SYSTEM
+and CLPM-INSTALL-SYSTEM-AND-DEPENDENCIES restarts available.
 
 + :INSTALL :: Just install the system without prompting.
 
@@ -90,12 +89,12 @@ into the lock file and then reload the config."
        (restart-case
            ;; Prevent RESTART-CASE from using WITH-CONDITION-RESTARTS
            (signal-missing-system system-name)
-         (install-and-reload-bundle ()
+         (clpm-install-and-reload-bundle ()
            :report "Run bundle install and reload configuration form clpmfile.lock"
            (when (clpm-bundle-install :validate 'clpm-bundle-install-validate-diff)
              (reload-config)
              (asdf:find-system system-name)))
-         (reload-bundle ()
+         (clpm-reload-bundle ()
            :report "Clear ASDF configuration and reload from clpmfile.lock."
            (reload-config)
            (asdf:find-system system-name))))
@@ -121,12 +120,12 @@ use."
           (restart-case
               ;; Prevent RESTART-CASE from using WITH-CONDITION-RESTARTS
               (signal-missing-system system-name)
-            (install-system ()
+            (clpm-install-system ()
               :report "Attempt to install the system using CLPM."
               (let ((*clpm-system-not-found-behavior* nil))
                 (clpm-install-system system-name :no-deps-p t)
                 (lookup-system)))
-            (install-system-and-dependencies ()
+            (clpm-install-system-and-dependencies ()
               :report "Attempt to install the system and its dependencies using CLPM."
               (let ((*clpm-system-not-found-behavior* nil))
                 (clpm-install-system system-name)

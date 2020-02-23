@@ -18,19 +18,16 @@
            #:activate-clpm-asdf-integration
            #:cleanup-clpm!
            #:clpm-asdf-integration-active-p
+           #:clpm-install-and-reload-bundle
            #:clpm-install-system
+           #:clpm-install-system-and-dependencies
            #:clpm-missing-system
            #:clpm-client-version
            #:clpm-inside-bundle-exec-p
+           #:clpm-reload-bundle
            #:clpm-version
            #:clpmfile-pathname
-           #:deactivate-clpm-asdf-integration
-           #:install-and-reload-bundle
-           #:install-system
-           #:install-system-and-dependencies
-           #:launch-clpm
-           #:reload-bundle
-           #:run-clpm))
+           #:deactivate-clpm-asdf-integration))
 
 (in-package #:clpm-client)
 
