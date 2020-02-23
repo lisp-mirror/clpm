@@ -122,11 +122,11 @@ disk.")
 
 (defgeneric ff-source-repo-pathname (source)
   (:documentation
-   "Returns the pathname to the root directory of the source's files.")
+   "Returns the pathname to the root directory of the source's repo files.")
   (:method ((source ff-source))
-    "Defaults to the repo/ directory in the source's lib directory."
+    "Defaults to the repo/ directory in the source's cache directory."
     (merge-pathnames "repo/"
-                     (source-lib-directory source))))
+                     (source-cache-directory source))))
 
 (defgeneric ff-source-repo-project-index-pathname (source)
   (:documentation
