@@ -20,11 +20,13 @@
                              (:static-file "cl-base64")
                              (:static-file "cl-cookie")
                              (:static-file "cl-fad")
+                             (:static-file "cl-interpol")
                              (:static-file "cl-plus-ssl"
                               :if-feature :clpm-openssl)
                              (:static-file "cl-ppcre")
                              (:static-file "cl-reexport")
                              (:static-file "cl-semver")
+                             (:static-file "cl-unicode")
                              (:static-file "cl-utilities")
                              (:static-file "clon")
                              (:static-file "closer-mop")
