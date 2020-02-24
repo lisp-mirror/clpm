@@ -464,11 +464,17 @@ value."
           (error "Unable to parse ~S as a boolean." orig-value)))))
     ((and (listp type)
           (eql (first type) 'member)
-          (every #'keywordp (rest type)))
-     (let ((kw (make-keyword (uiop:standard-case-symbol-name value))))
-       (unless (typep kw type)
-         (error "Unknown value ~S for type ~S" kw type))
-       kw))
+          (every (lambda (x) (or (keywordp x) (eql x nil) (eql x t))) (rest type)))
+     (cond
+       ((equalp value "t")
+        t)
+       ((equalp value "nil")
+        nil)
+       (t
+        (let ((kw (make-keyword (uiop:standard-case-symbol-name value))))
+          (unless (typep kw type)
+            (error "Unknown value ~S for type ~S" kw type))
+          kw))))
     ((equal type '(or string pathname))
      (uiop:parse-native-namestring value))
     (t
