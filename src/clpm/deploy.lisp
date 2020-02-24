@@ -36,6 +36,10 @@
                                         (deploy:runtime-directory))))
      (setf deploy:*data-location* (uiop:truenamize (uiop:ensure-directory-pathname
                                                     (uiop:ensure-absolute-pathname clpm-home))))
+     ;; Fixup the logical pathnames
+     (when (uiop:featurep :clpm-logical-pathnames)
+       (setf (logical-pathname-translations "clpm")
+             `(("clpm:src;**;*.*.*" ,(merge-pathnames "src/**/*.*" deploy:*data-location*)))))
      (setf *clpm-groveler-asd-pathname* (merge-pathnames "src/clpm-groveler/clpm-groveler.asd"
                                                          deploy:*data-location*))
      (setf *clpm-client-asd-pathname* (merge-pathnames "src/clpm-client/clpm-client.asd"

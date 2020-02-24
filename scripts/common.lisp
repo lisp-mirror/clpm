@@ -11,6 +11,9 @@
 ;; Load in ASDF.
 (require :asdf)
 
+;; Setup logical pathnames
+(load (merge-pathnames "../logical-pathname.lisp" *load-truename*))
+
 (defvar *setup-file-pathname* *load-truename*
   "The pathname to this file.")
 
@@ -23,6 +26,12 @@
   "The pathname to the root of the build directory. Defaults to build/ inside
 *ROOT-PATHNAME*")
 
+(defun make-asdf-logical-pathname-translator (orig-fun)
+  (lambda (pn)
+    (if (typep pn 'logical-pathname)
+        (funcall orig-fun (translate-logical-pathname pn))
+        (funcall orig-fun pn))))
+
 (defun setup-asdf (&optional (cache-dir ""))
   (let ((build-cache (uiop:ensure-directory-pathname
                       (merge-pathnames (concatenate 'string "cl-cache/" cache-dir)
@@ -33,4 +42,6 @@
                                        (:tree ,*root-pathname*)))
     (asdf:initialize-output-translations `(:output-translations
                                            :ignore-inherited-configuration
-                                           (:root (,build-cache :implementation :**/ :*.*.*))))))
+                                           (:root (,build-cache :implementation :**/ :*.*.*))))
+    (setf asdf::*output-translation-function*
+          (make-asdf-logical-pathname-translator 'asdf:apply-output-translations))))
