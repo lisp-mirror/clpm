@@ -151,15 +151,15 @@
 (defmethod ff-source-system-release-class ((source clpi-source))
   'clpi-system-release)
 
-;; (defmethod source-project :around ((source ql-flat-source) project-name &optional (error t))
-;;   (declare (ignore error))
-;;   (restart-case
-;;       (call-next-method)
-;;     (sync-and-retry (c)
-;;       :report "Sync and try again"
-;;       (declare (ignore c))
-;;       (sync-source source)
-;;       (call-next-method))))
+(defmethod source-project :around ((source clpi-source) project-name &optional (error t))
+  (declare (ignore error))
+  (restart-case
+      (call-next-method)
+    (sync-and-retry (c)
+      :report "Sync and try again"
+      (declare (ignore c))
+      (sync-source source)
+      (call-next-method))))
 
 
 
