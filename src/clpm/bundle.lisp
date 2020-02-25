@@ -73,6 +73,9 @@ the lock file if necessary."
         (setf lockfile (create-empty-lockfile clpmfile)))
     (unless localp
       (mapc #'sync-source (clpmfile-sources clpmfile)))
+    ;; Nuke the lockfile's requirements so that we pick up deletions from the
+    ;; clpmfile.
+    (setf (context-requirements lockfile) nil)
     (setf lockfile (install-requirements (clpmfile-all-requirements clpmfile)
                                          :context lockfile
                                          :validate (lambda (diff)
