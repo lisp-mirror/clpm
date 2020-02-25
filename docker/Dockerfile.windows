@@ -3,7 +3,8 @@
 # This software is part of CLPM. See README.org for more information. See
 # LICENSE for license information.
 
-FROM daewok/sbcl:2.0.0-windowsservercore-ltsc2019
+ARG windows_version=1909
+FROM daewok/sbcl:2.0.1-windowsservercore-$windows_version
 
 WORKDIR "C:/"
 
@@ -29,6 +30,13 @@ RUN Write-Host "Starting download"; \
     mkdir wix/bin; \
     cd wix/bin; \
     unzip ../../wix311-binaries.zip;
+
+# Install ASDF.
+ENV ASDF_VERSION=3.3.4
+
+RUN cmd /c curl -o asdf.tar.gz https://common-lisp.net/project/asdf/archives/asdf-$Env:ASDF_VERSION.tar.gz; \
+    tar -x -v -f asdf.tar.gz; \
+    sbcl --disable-debugger --load "asdf-$Env:ASDF_VERSION/tools/load-asdf.lisp" --load "asdf-$Env:ASDF_VERSION/uiop/uiop.asd" --load "asdf-$Env:ASDF_VERSION/tools/install-asdf.lisp" --quit
 
 WORKDIR C:/
 COPY .git C:/clpm-git
