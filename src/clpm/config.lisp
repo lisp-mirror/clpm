@@ -438,7 +438,7 @@ value."
                               (string-upcase
                                (cl-ppcre:regex-replace-all #\. (cl-ppcre:regex-replace-all "-" x "_") "__"))
                               "_")))
-                          x))
+                          (cl-ppcre:regex-replace-all "-" (string-upcase (symbol-name x)) "_")))
                     path)
             hash-table-p)))
 
