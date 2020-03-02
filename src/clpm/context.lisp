@@ -568,7 +568,7 @@ in place with the same name. Return the new requirement if it was modified."
 
 (defmethod extract-why ((why clpm-system-release))
   (let* ((system (system-release-system why)))
-    (list :system (system-name system))))
+    (list :system :name (system-name system))))
 
 (defmethod extract-why ((why (eql t)))
   t)
@@ -613,27 +613,35 @@ in place with the same name. Return the new requirement if it was modified."
 
 (defun serialize-context-reverse-dependencies (release-and-reverse-deps stream)
   (destructuring-bind (release . reverse-deps) release-and-reverse-deps
+    ;; Filter out the requirements where we didn't know the true reason for the
+    ;; requirement at the time (likely because we were trying to load an ASD
+    ;; file into the groveler). We can ignore it because we *should* have the
+    ;; true reason elsewhere in the list.
+    (setf reverse-deps (remove :grovel (remove t reverse-deps)
+                               :key #'requirement-why))
     (let ((project (release-project release)))
       (pprint-logical-block (stream nil :prefix "(" :suffix ")")
         ;; Name
         (prin1 (project-name project) stream)
         ;; Reverse deps
         (pprint-newline :mandatory stream)
-        (pprint-logical-block (stream reverse-deps)
+        (pprint-logical-block (stream (sort (copy-list reverse-deps)
+                                            (lambda (x y)
+                                              (cond
+                                                ((eql x t)
+                                                 t)
+                                                ((eql y t)
+                                                 nil)
+                                                (t
+                                                 (string< (system-name (system-release-system x))
+                                                          (system-name (system-release-system y))))))
+                                            :key #'requirement-why))
           (pprint-exit-if-list-exhausted)
           (loop
             (let* ((req (pprint-pop)))
-              ;; This is a requirement where we didn't know the real reason for
-              ;; its existence at the time (because we were trying to load an
-              ;; ASD file into the groveler). We can ignore it because we'll
-              ;; have the true reason elsewhere in the list.
-              (unless (or (eql t req)
-                          (eql (requirement-why req) :grovel))
-                (serialize-reverse-dep req stream))
+              (serialize-reverse-dep req stream)
               (pprint-exit-if-list-exhausted)
-              (unless (or (eql t req)
-                          (eql (requirement-why req) :grovel))
-                (pprint-newline :mandatory stream)))))))))
+              (pprint-newline :mandatory stream))))))))
 
 ;; ** Requirements
 
