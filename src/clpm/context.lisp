@@ -386,6 +386,11 @@ in place with the same name. Return the new requirement if it was modified."
                             :pathname pathname
                             :no-deps-p no-deps-p
                             :why t))
+            ((eql type :asd-file)
+             (make-instance 'fs-system-file-requirement
+                            :name pathname
+                            :no-deps-p no-deps-p
+                            :why t))
             ((or branch tag commit)
              (make-instance 'vcs-project-requirement
                             :name name
