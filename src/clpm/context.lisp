@@ -524,7 +524,8 @@ in place with the same name. Return the new requirement if it was modified."
         (write-section-header "releases" stream)
         (prin1 :releases stream)
         (pprint-newline :mandatory stream)
-        (pprint-logical-block (stream (context-releases context))
+        (pprint-logical-block (stream (sort (copy-list (context-releases context)) #'string<
+                                            :key (compose #'project-name #'release-project)))
           (pprint-exit-if-list-exhausted)
           (loop
             (let ((release (pprint-pop)))
@@ -545,7 +546,8 @@ in place with the same name. Return the new requirement if it was modified."
         (write-section-header "reverse-dependencies" stream)
         (prin1 :reverse-dependencies stream)
         (pprint-newline :mandatory stream)
-        (pprint-logical-block (stream (context-reverse-dependencies context))
+        (pprint-logical-block (stream (sort (copy-list (context-reverse-dependencies context)) #'string<
+                                            :key (compose #'project-name #'release-project #'car)))
           (pprint-exit-if-list-exhausted)
           (loop
             (let ((release-and-reverse-deps (pprint-pop)))
