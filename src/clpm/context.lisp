@@ -100,7 +100,8 @@
                     (:project (or (typep req 'project-requirement)
                                   (typep req 'vcs-project-requirement)))
                     (:system (typep req 'system-requirement))
-                    (:asd-system (typep req 'fs-system-requirement)))
+                    (:asd-system (typep req 'fs-system-requirement))
+                    (:asd-file (typep req 'fs-system-file-requirement)))
                   (equal name (requirement-name req))))
            (context-requirements context)))
 
@@ -647,6 +648,9 @@ in place with the same name. Return the new requirement if it was modified."
 (defmethod requirement-type-keyword ((req fs-system-requirement))
   :asd-system)
 
+(defmethod requirement-type-keyword ((req fs-system-file-requirement))
+  :asd-file)
+
 (defmethod requirement-type-keyword ((req vcs-project-requirement))
   :project)
 
@@ -749,6 +753,23 @@ in place with the same name. Return the new requirement if it was modified."
     (prin1 :name stream)
     (write-char #\Space stream)
     (pprint-newline :miser stream)
+    (prin1 (requirement-name req) stream)
+    ;; no deps
+    (when (requirement-no-deps-p req)
+      (write-char #\Space stream)
+      (pprint-newline :fill stream)
+      (prin1 :no-deps-p stream)
+      (write-char #\Space stream)
+      (prin1 t stream))))
+
+(defmethod serialize-context-requirement ((req fs-system-file-requirement) stream)
+  (pprint-logical-block (stream nil :prefix "(" :suffix ")")
+    (prin1 (requirement-type-keyword req) stream)
+    ;; pathname
+    (write-char #\Space stream)
+    (pprint-newline :fill stream)
+    (prin1 :pathname stream)
+    (write-char #\Space stream)
     (prin1 (requirement-name req) stream)
     ;; no deps
     (when (requirement-no-deps-p req)

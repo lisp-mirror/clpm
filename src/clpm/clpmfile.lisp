@@ -93,8 +93,7 @@ clpmfile is located."
                             systems)
                     (list (make-instance 'fs-system-file-requirement
                                          :source fs-source
-                                         :name (merge-pathnames asd-file
-                                                                (clpmfile-pathname clpmfile))
+                                         :name asd-file
                                          :why t)))))
             (clpmfile-user-asd-files clpmfile))))
 

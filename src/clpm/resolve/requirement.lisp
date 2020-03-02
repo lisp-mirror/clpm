@@ -88,6 +88,9 @@ satisfied. Returns one of :SAT, :UNSAT, or :UNKNOWN."))
       (t
        :sat))))
 
+(defmethod requirement-state ((req fs-system-file-requirement) node)
+  :unknown)
+
 (defmethod requirement-state ((req project-requirement) node)
   "A project requirement is satisfied if a release for the project is active in
 the search node and its version satisfies the requested version."
@@ -151,13 +154,15 @@ a plist. This plist can contain :system-releases or :system-files."))
 
     (list (list release
                 :system-files
-                (list (cons (system-release-system-file system-release) (list system-name)))))
-    ;; (mapcar (lambda (release)
-    ;;           (list release :system-files (list (cons (release-system-release)))(release-system-files release))
-    ;;           ;;(list release :system-releases (list (release-system-release release system-name)))
-    ;;           )
-    ;;         releases)
-    ))
+                (list (cons (system-release-system-file system-release) (list system-name)))))))
+
+(defmethod resolve-requirement ((req fs-system-file-requirement) node)
+  ;; Make a release from the file system.
+  (let* ((asd-pathname (requirement-name req))
+         (fs-source (requirement-source req))
+         (release (source-project-release fs-source :all :newest)))
+    (list (list release
+                :system-files (list (cons (release-system-file release asd-pathname) t))))))
 
 (defmethod resolve-requirement ((req project-requirement) node)
   "A project requirement is resolved by finding releases of the project that
