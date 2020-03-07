@@ -7,6 +7,7 @@
     (:use #:cl
           #:clpm/cli/bundle
           #:clpm/cli/client
+          #:clpm/cli/clpi
           #:clpm/cli/config
           #:clpm/cli/context
           #:clpm/cli/entry
