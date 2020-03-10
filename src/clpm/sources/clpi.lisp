@@ -200,7 +200,7 @@
           (with-forms-from-stream (s form)
             (destructuring-bind (system-name &rest args) form
               (declare (ignore args))
-              (let ((url (puri:merge-uris (uiop:strcat "systems/" system-name "/releases")
+              (let ((url (puri:merge-uris (uiop:strcat "systems/" (urlencode (urlencode system-name)) "/releases")
                                           base-url))
                     (pn (merge-pathnames "releases"
                                          (ff-source-repo-system-pathname source system-name))))
