@@ -11,6 +11,7 @@
           #:clpm/cli/config
           #:clpm/cli/context
           #:clpm/cli/entry
+          #:clpm/cli/hack
           #:clpm/cli/install
           #:clpm/cli/license-info
           #:clpm/cli/sync

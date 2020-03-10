@@ -179,9 +179,10 @@ optionally changing into the local dir for ~repo~."
                     exit-code output error-output)
             (error 'retriable-error)))))))
 
-(defun clone-repo! (repo)
+(defmethod clone-repo! ((repo git-repo) &key pathname not-bare-p)
   "Given a repo, clone it locally."
-  (let* ((local-dir (git-repo-local-dir repo))
+  (let* ((local-dir (or (when pathname (uiop:ensure-directory-pathname pathname))
+                        (git-repo-local-dir repo)))
          (uri-string (git-repo-uri-string repo))
          (credentials (git-repo-credentials repo)))
     (multiple-value-bind (prefix env)
@@ -190,9 +191,9 @@ optionally changing into the local dir for ~repo~."
           (apply
            #'uiop:run-program
            `(,@prefix "clone"
-                      "--bare"
+                      ,@(unless not-bare-p
+                          '("--bare" "--mirror"))
                       "--verbose"
-                      "--mirror"
                       ,uri-string
                       ,(namestring local-dir))
            :input :interactive

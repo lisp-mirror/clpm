@@ -7,6 +7,7 @@
 (uiop:define-package #:clpm/repos/defs
     (:use #:cl)
   (:export #:*fetch-repo-automatically*
+           #:clone-repo!
            #:ensure-ref-present-locally!
            #:ref-present-p
            #:repo-archive-stream
@@ -19,6 +20,8 @@
 (in-package #:clpm/repos/defs)
 
 (defvar *fetch-repo-automatically* t)
+
+(defgeneric clone-repo! (repo &key pathname not-bare-p))
 
 (defgeneric ensure-ref-present-locally! (repo ref))
 
