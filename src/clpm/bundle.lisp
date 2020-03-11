@@ -68,11 +68,11 @@ the lock file if necessary."
          (*vcs-project-override-fun* (make-vcs-override-fun (clpmfile-pathname clpmfile)))
          (lockfile nil)
          (changedp nil))
+    (unless localp
+      (mapc #'sync-source (clpmfile-sources clpmfile)))
     (if (probe-file lockfile-pathname)
         (setf lockfile (load-lockfile lockfile-pathname :localp localp))
         (setf lockfile (create-empty-lockfile clpmfile)))
-    (unless localp
-      (mapc #'sync-source (clpmfile-sources clpmfile)))
     ;; Nuke the lockfile's requirements so that we pick up deletions from the
     ;; clpmfile.
     (setf (context-requirements lockfile) nil)
