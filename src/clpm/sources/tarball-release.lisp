@@ -141,27 +141,21 @@
      "distfiles")
    :ensure-directory t))
 
-(defun url-filename (url)
-  "Return the filename of ~url~."
-  (file-namestring (puri:uri-path url)))
-
-(defun url-location (url)
-  "Return a list of two elements. First is the ~url~ to fetch the file, the
-second is the filename of the file located at ~url~."
-  (if (listp url)
-      (values (first url) (second url))
-      (values url (url-filename url))))
+(defun release-cache-pathname (release)
+  (uiop:resolve-absolute-location
+   `(,(source-archive-cache (release-source release))
+     ,(uiop:strcat (project-name (release-project release))
+                   "-"
+                   (release-version release)
+                   ".tar.gz"))))
 
 (defun ensure-tarball-fetched (release)
   "Ensure that the files needed to install ~release~ have been downloaded."
-  (let ((version-url (tarball-release/url release)))
-    (multiple-value-bind (url filename)
-        (url-location version-url)
-      (let ((archive-pathname (merge-pathnames filename
-                                               (source-archive-cache (release-source release)))))
-        (ensure-file-fetched archive-pathname url
-                             :hint :immutable)
-        archive-pathname))))
+  (let ((version-url (tarball-release/url release))
+        (archive-pathname (release-cache-pathname release)))
+    (ensure-file-fetched archive-pathname version-url
+                         :hint :immutable)
+    archive-pathname))
 
 (defmethod install-release ((release tarball-release))
   (let* ((version-string (release-version release))
