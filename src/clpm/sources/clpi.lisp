@@ -55,6 +55,11 @@
         (setf url (puri:parse-uri url)))
     (setf (source-url source) url)))
 
+;; ** Project
+
+(defclass clpi-project (ff-project)
+  ())
+
 ;; ** Release
 
 (defclass clpi-release (ff-release
@@ -145,6 +150,9 @@
 
 ;; * Flat file methods
 
+(defmethod ff-source-project-class ((source clpi-source))
+  'clpi-project)
+
 (defmethod ff-source-release-class ((source clpi-source))
   'clpi-release)
 
@@ -161,6 +169,15 @@
       (sync-source source)
       (call-next-method))))
 
+(defmethod project-release :around ((project clpi-project) version-string &optional (error t))
+  (declare (ignore error))
+  (restart-case
+      (call-next-method)
+    (sync-and-retry (c)
+      :report "Sync and try again"
+      (declare (ignore c))
+      (sync-source (project-source project))
+      (call-next-method))))
 
 
 ;; * Syncing
