@@ -15,11 +15,13 @@
                 #:byte-array-to-hex-string
                 #:digest-file
                 #:md5)
-  (:export #:tarball-release
+  (:export #:source-tarball-archive-cache
+           #:tarball-release
            #:tarball-release/desired-md5
            #:tarball-release/desired-size
            #:tarball-release/prefix
            #:tarball-release/url
+           #:tarball-release-cache-pathname
            #:tarball-release-with-md5
            #:tarball-release-with-size))
 
@@ -134,16 +136,18 @@
 
 
 
-(defun source-archive-cache (source)
+(defun source-tarball-archive-cache (source)
   "Return a pathname to the directory where ~source~ caches its archives."
   (uiop:resolve-absolute-location
    `(,(source-cache-directory source)
      "distfiles")
    :ensure-directory t))
 
-(defun release-cache-pathname (release)
+(defgeneric tarball-release-cache-pathname (release))
+
+(defmethod tarball-release-cache-pathname ((release tarball-release))
   (uiop:resolve-absolute-location
-   `(,(source-archive-cache (release-source release))
+   `(,(source-tarball-archive-cache (release-source release))
      ,(uiop:strcat (project-name (release-project release))
                    "-"
                    (release-version release)
@@ -152,7 +156,7 @@
 (defun ensure-tarball-fetched (release)
   "Ensure that the files needed to install ~release~ have been downloaded."
   (let ((version-url (tarball-release/url release))
-        (archive-pathname (release-cache-pathname release)))
+        (archive-pathname (tarball-release-cache-pathname release)))
     (ensure-file-fetched archive-pathname version-url
                          :hint :immutable)
     archive-pathname))

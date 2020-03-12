@@ -97,6 +97,11 @@
     :initarg :file-md5
     :reader tarball-release/desired-md5)))
 
+(defmethod tarball-release-cache-pathname ((release ql-flat-release))
+  (uiop:resolve-absolute-location
+   `(,(source-tarball-archive-cache (release-source release))
+     ,(file-namestring (puri:uri-path (tarball-release/url release))))))
+
 ;; ** System Release
 
 (defclass ql-flat-system-release (ff-system-release)
