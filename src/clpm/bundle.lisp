@@ -89,7 +89,7 @@ the lock file if necessary."
         (serialize-context-to-stream lockfile stream)))
     changedp))
 
-(defun bundle-source-registry (clpmfile-designator &key include-client-p)
+(defun bundle-source-registry (clpmfile-designator &key include-client-p ignore-missing-releases)
   (let* ((*fetch-repo-automatically* nil)
          (clpmfile (get-clpmfile clpmfile-designator))
          (lockfile-pathname (clpmfile-lockfile-pathname clpmfile))
@@ -98,6 +98,12 @@ the lock file if necessary."
     (unless (probe-file lockfile-pathname)
       (error "Lockfile ~A does not exist" lockfile-pathname))
     (setf lockfile (load-lockfile lockfile-pathname :localp t))
+    (unless ignore-missing-releases
+      (let* ((releases (context-releases lockfile))
+             (missing-releases (remove-if #'release-installed-p releases)))
+        (when missing-releases
+          (error "The following releases are not installed: ~{~S~^, ~}"
+                 (mapcar (compose #'project-name #'release-project) missing-releases)))))
     (context-to-asdf-source-registry-form
      lockfile
      (when include-client-p
