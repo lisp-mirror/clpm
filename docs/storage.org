@@ -1,6 +1,7 @@
 #+TITLE: CLPM Storage
 #+AUTHOR: CLPM Developers
 #+EMAIL: clpm-devel@common-lisp.net
+#+OPTIONS: toc:1 num:nil
 
 This document specifies what files on your computer CLPM will touch and why.
 

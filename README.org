@@ -1,9 +1,10 @@
 #+TITLE: Common Lisp Package Manager - CLPM
 #+AUTHOR: CLPM Developers
 #+EMAIL: clpm-devel@common-lisp.net
-#+OPTIONS: email:t toc:2 num:nil
+#+OPTIONS: email:t toc:1 num:ni
 
-**WARNING**: This software is BETA quality. I use it as my daily driver, but it
+
+*WARNING*: This software is BETA quality. I use it as my daily driver, but it
 is still a little rough around the edges and it may accidentally eat your
 files.
 
@@ -23,12 +24,68 @@ files.
   referred to as the CLPM client or =clpm-client= and is meant to be loaded
   when you are interactively developing code.
 
-  To contact the developers, send email to clpm-devel@common-lisp.net
-  [[https://mailman.common-lisp.net/listinfo/clpm-devel]].
+  CLPM is licensed under the two clause BSD license (BSD-2). So, basically do
+  what you want with it (while providing appropriate attribution) and don't
+  complain if it breaks things. CLPM is currently beta quality so expect some
+  breakage and incompatibilites going forward.
+
+  To receive help or report issues please send email to
+  [[mailto:clpm-devel@common-lisp.net][clpm-devel@common-lisp.net]]. Additionally, feel free to join the email list at
+  [[https://mailman.common-lisp.net/listinfo/clpm-devel]]. To join in the
+  development of CLPM, you can find the project hosted on the common-lisp.net
+  Gitlab server at [[https://gitlab.common-lisp.net/clpm/clpm]].
 
 * Installing
 
-  See [[file:INSTALL.org][INSTALL.org]] for detailed installation instructions.
+  CLPM is distributed in both source and binary form. For either version, first
+  install the dependencies:
+
+  * tar :: Required.
+  * git :: If you want to use development versions of your dependencies.
+  * sbcl or ccl :: Either is required if systems need to be groveled for
+    dependencies (likely needed if you use development versions of any
+    dependency). SBCL is required if you are installing from source.
+
+** Prebuilt binaries
+   To install CLPM in binary form, download the appropriate file from
+   [[https://common-lisp.net/project/clpm/downloads/][https://common-lisp.net/project/clpm/downloads/]]. Each release of CLPM
+   consists of the following files:
+
+   + =clpm-amd64-linux-gnu-$VERSION.tar.gz= :: CLPM compiled for 64bit Linux
+     using GNU libc (by far the most common).
+   + =clpm-amd64-linux-musl-$VERSION.tar.gz= :: CLPM compiled for 64bit Linux
+     using musl libc (e.g., Alpine Linux).
+   + =clpm-arm64-linux-gnu-$VERSION.tar.gz= :: CLPM compiled for 64bit Linux on
+     ARM processors using GNU libc.
+   + =clpm-arm64-linux-musl-$VERSION.tar.gz= :: CLPM compiled for 64bit Linux
+     on ARM processors using musl libc.
+   + =clpm-armv7-linux-gnu-$VERSION.tar.gz= :: CLPM compiled for 32bit Linux on
+     ARM processors using GNU libc.
+   + =clpm-armv7-linux-musl-$VERSION.tar.gz= :: CLPM compiled for 32bit Linux
+     on ARM processors using musl libc.
+   + =clpm-amd64-windows-$VERSION.msi= :: CLPM installer for 64 bit Windows.
+   + =clpm-$VERSION.DIGESTS= :: Text file containing the SHA512 sums for every
+     previously mentioned file.
+   + =clpm-$VERSION.DIGESTS.asc= :: Same as =clpm-$VERSION.DIGESTS=, but signed
+     with GPG key =0x10327DE761AB977333B1AD7629932AC49F3044CE=.
+
+*** GNU/Linux
+
+    After downloading the tarball and validating the SHA512 sum, unpack it and
+    run =sh install.sh=. By default, it is installed to =/usr/local/=, but that
+    prefix con be changed using the =INSTALL_ROOT= environment
+    variable. However, if you change the prefix, you will also likely need to
+    set the =CLPM_HOME= environment variable to point to
+    =$INSTALL_ROOT/lib/clpm/=.
+
+*** Windows
+
+    After downloading the installer and validating the SHA512 sum, simply run
+    the installer and follow the directions.
+
+** Source Install
+
+   See [[file:INSTALL.org][INSTALL]] for more details on installing from source.
 
 * Quickstart
 
@@ -45,7 +102,7 @@ files.
      :url "https://beta.quicklisp.org/dist/quicklisp.txt")
   #+end_src
 
-  See [[file:doc/sources.org][sources.org]] for more details on configuring sources.
+  See [[file:docs/sources.org][sources]] for more details on configuring sources.
 
   Next, configure your favorite Lisp to load the client by placing the output
   of the following command in your Lisp's init file (such as =~/.sbclrc=).
@@ -104,7 +161,7 @@ files.
 ** Support HTTPS
 
    HTTPS is becoming more and more ubiquitous. Some websites (such as Github
-   and Gitlab) are only served over HTTPS and some users insist on HTTPS
+   and Gitlab) are only served over HTTPS and some people insist on HTTPS
    everywhere possible. This trend is not going away, therefore CLPM should
    natively support HTTPS.
 
@@ -145,7 +202,7 @@ files.
    live in reality and this happens frequently (just look at the packages that
    get removed from Quicklisp in any given release for failing to
    build). Additionally, sometimes you just really need to use an old version
-   of a dependcy for some project while using the latest version of the same
+   of a dependency for some project while using the latest version of the same
    dependency in another project.
 
    To this end, CLPM supports installing multiple versions of the same package
@@ -172,12 +229,12 @@ files.
 
   For more documentation on CLPM, you may find the following files useful:
 
-  + [[file:doc/client.org][client.org]] :: Summary of CLPM's client.
-  + [[file:doc/config.org][config.org]] :: Summary of all of CLPM's configuration options.
-  + [[file:doc/sources.org][sources.org]] :: Summary of all supported software repositories.
-  + [[file:doc/bundle.org][bundle.org]] :: Information on how to use CLPM to manage and repeatably
+  + [[file:docs/client.org][client]] :: Summary of CLPM's client.
+  + [[file:docs/config.org][config]] :: Summary of all of CLPM's configuration options.
+  + [[file:docs/sources.org][sources]] :: Summary of all supported software repositories.
+  + [[file:docs/bundle.org][bundle]] :: Information on how to use CLPM to manage and repeatably
     install dependencies for a single project.
-  + [[file:doc/storage.org][storage.org]] :: Information on where CLPM writes data to your hard drive.
+  + [[file:docs/storage.org][storage]] :: Information on where CLPM writes data to your hard drive.
 
 * Footnotes
 

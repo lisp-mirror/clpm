@@ -1,7 +1,7 @@
 #+TITLE: Installing CLPM
 #+AUTHOR: CLPM Developers
 #+EMAIL: clpm-devel@common-lisp.net
-#+OPTIONS: email:t toc:2 num:nil
+#+OPTIONS: email:t toc:1 num:nil
 
 CLPM is distributed in both source and binary form. For either version, first
 install the dependencies:
@@ -11,9 +11,6 @@ install the dependencies:
 + sbcl or ccl :: Either is required if systems need to be groveled for
   dependencies (likely needed if you use development versions of any
   dependency). SBCL is required if you are installing from source.
-
-After installing CLPM core, it is recommended you also install the CLPM client
-(see [[file:doc/client.org][client.org]]), but it is not needed for the quickstart.
 
 * Prebuilt binaries
   To install CLPM in binary form, download the appropriate file from

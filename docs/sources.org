@@ -1,6 +1,7 @@
 #+TITLE: CLPM Sources
 #+AUTHOR: CLPM Developers
 #+EMAIL: clpm-devel@common-lisp.net
+#+OPTIONS: toc:1 num:nil
 
 A repository of Common Lisp projects is called a "source". The source you are
 most likely familiar with is Quicklisp, but CLPM is designed to be extended to

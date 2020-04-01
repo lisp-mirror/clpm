@@ -1,6 +1,7 @@
 #+TITLE: CLPM Configuration
 #+AUTHOR: CLPM Developers
 #+EMAIL: clpm-devel@common-lisp.net
+#+OPTIONS: toc:1 num:nil H:9
 
 CLPM can be configured through environment variables or a file named
 =clpm.conf=. The =clpm.conf= file is found by constructing a list of
@@ -46,8 +47,7 @@ to ="/home/user/.config/common-lisp/source-registry.conf.d/50-clpm.conf"=
 #+end_src
 
 The following describes the available configuration tables for CLPM. Each
-header describes a table (or sub table). The lists in each section describe
-that table's keys.
+header describes a table. The lists in each section describe that table's keys.
 
 The environment variable name for any config option can be determined by
 turning all hyphens into underscores and separating path elements with an
@@ -61,84 +61,118 @@ authenticating to Github, you would set
 
 The current configuration can be printed by running =clpm config info=.
 
-* Root
-  + =:context= :: A string naming the default context.
-* =:archives=
+* =()=
+  The root table, containing all other tables and some direct options.
 
-** =:tar=
+  + =:context= :: A string naming the default context.
+
+* =(:archives)=
+  This table contains all options for dealing with archives.
+
+** =(:archives :tar)=
+   This table contains configuration for dealing with archives in tar format.
 
    + =:type= :: A keyword specifying which tar implementation use. Defaults to
      =:auto=.
 
-* =:bundle=
+* =(:bundle)=
+  This table contains all configuration for operating with bundles.
+
   + =:output-translation= :: Controls whether =clpm bundle exec= configures
     ASDF's output translations. NIL corresponds to not configuring the output
     translations. T (default) configures the output translations to translate
     everything to a folder in CLPM's cache. =:local= translates everything into
     the =./.clpm/fasl-cache/= folder relative to the clpmfile.
 
-** =:local=
-*** ="PROJECT-NAME"=
-    When using the bundle commands, instead of using the upstream git repository
-    for PROJECT-NAME, use a local checkout instead.
+** =(:bundle :local)=
+   This table contains configuration used to override project resolution when
+   operating with bundles such that a local checkout of a project is used
+   instead of an upstream version.
+
+*** =(:bundle :local "PROJECT-NAME")=
+    When using the bundle commands, instead of using the upstream VCS for
+    PROJECT-NAME, use a local checkout instead.
 
     + =:path= :: Path to the folder containing the checkout of the git
       repository to use. Relative pathnames are resolved with respect to the
-      location of the clpmfile.
+      directory of the clpmfile.
 
-* =:contexts=
-** ="CONTEXT-NAME"=
+* =(:contexts)=
+  This table contains configuration for all contexts.
 
-   + =:source-registry.d-files= :: Used to inform ASDF where to find systems
-     for this context. Outputs the same contents to every file in a format
-     suitable for inclusion in a source-registry.d directory (see ASDF manual).
+** =(:contexts "CONTEXT-NAME")=
+   This table contains the configuration for context =CONTEXT-NAME=.
 
-   + =:source-registry-files= :: Used to inform ASDF where to find systems for
-     this context. Outputs the same contents to every file in a
-     source-registry.conf format (see ASDF manual).
+   + =:source-registry.d-files= :: A list of pathnames. On any modification of
+     a context, each file will be updated to contain the locations of all .asd
+     files in the context, in a format suitable for inclusion in a
+     source-registry.d directory (see ASDF manual).
+
+   + =:source-registry-files= :: A list of pathnames. On any modification of a
+     context, each file will be updated to contain the locations of all .asd
+     files in the context, in a format suitable for ASDF's source-registry.conf
+     feature (see ASDF manual).
 
    + =:sources= :: A list of global source names that this context can use, or
      T (default) to represent all global sources.
 
-* =:curl=
-  Settings for the HTTP method that uses the external curl program.
+* =(:curl)=
+  This table contains configuration for using the curl executable as an HTTP
+  client.
 
   + =:path= :: Path to the =curl= executable. Defaults to ="curl"=.
 
-* =:firejail=
-  Settings for the grovel sandbox method that uses the external firejail
-  program.
+* =(:firejail)=
+  This table contains configuration for using the firejail executable as a
+  sandbox method. (experimental)
 
   + =:path= :: Path to the =firejail= executable. Defaults to ="firejail"=.
 
-* =:git=
-** =:remotes=
-*** ="HOSTNAME"=
-    Provide configuration for interacting with HOSTNAME to fetch git repos.
+* =(:git)=
+  This table contains the configuration for interacting with git repositories.
+
+** =(:git :remotes)=
+   This table contains configuration specific to specified git remotes.
+
+*** =(:git :remotes "HOSTNAME")=
+    This table contains configuration specific to interacting with the git
+    remote located at =HOSTNAME=.
 
     + =:username= :: A string containing the username to use when connecting to
       the server.
     + =:password= :: A string containing the password to use when connecting to
-      the server.
+      the server. Ignored when the method is not HTTPS.
     + =:method= :: A keyword describing how to connect to the server. Can be one
       of:
       + =:https= :: Connect using HTTPS.
       + =:ssh= :: Connect using SSH.
 
-* =:grovel=
-** =:sandbox=
-   Options for configuring the sandbox used to isolate processes that grovel for
-   dependencies from .asd files. (Experimental)
+* =(:grovel)=
+  This table contains configuration for groveling for dependencies and other
+  information from .asd files.
+
+** =(:grovel :sandbox)=
+   This table contains configuration of the sandbox used to isolate processes
+   that grovel for dependencies from .asd files. (Experimental)
 
    + =:method= :: The method to use to provide the sandbox. Defaults to
      =:auto=.
 
-* =:http=
-** =:headers=
-*** ="HOSTNAME=
-**** ="HEADER-NAME"=
-     When performing a non-git HTTP request to HOSTNAME, provide a header with
-     the name HEADER-NAME.
+* =(:http)=
+  This table contains the configuration for interacting with remote servers
+  using HTTP (for non-VCS releated requests).
+
+** =(:http :headers)=
+   This table contains the configuration for specifying headers to be sent
+   during HTTP requests.
+
+*** =(:http :headers "HOSTNAME")=
+    This table contains the configuration for specifying headers to be sent
+    during HTTP requests to host =HOSTNAME=.
+
+**** =(:http :headers "HOSTNAME" "HEADER-NAME")=
+     This table contains the configuration for specifying the contents of
+     =HEADER-NAME= to be sent during HTTP requests to host =HOSTNAME=.
 
      + =:secure-only-p= :: If non-NIL, send this header only on secure
        connections.
@@ -148,10 +182,14 @@ The current configuration can be printed by running =clpm config info=.
      + =:contents= :: A path to a file that contains the value to use for the
        header. Must be a string or pathname.
 
-* =:http-client=
+* =(:http-client)=
+  This table contains configuration for the internal HTTP client.
+
   + =:type= :: A keyword specifying which HTTP client to use. Defaults to
     =:auto=.
-* =:tar=
-  Settings for the tar archive method that uses the external tar program.
+
+* =(:tar)=
+  This table contains configuration for using the tar executable as the method
+  to extract archives in tar format.
 
   + =:path= :: Path to the =tar= executable. Defaults to ="tar"=.

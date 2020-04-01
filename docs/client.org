@@ -1,6 +1,7 @@
 #+TITLE: CLPM Client
 #+AUTHOR: CLPM Developers
 #+EMAIL: clpm-devel@common-lisp.net
+#+OPTIONS: toc:1 num:nil
 
 While CLPM can be used without the client, installing and using the client
 makes Common Lisp coding a more interactive and fun experience. The CLPM client

@@ -1,6 +1,7 @@
 #+TITLE: CLPM Bundle
 #+AUTHOR: CLPM Developers
 #+EMAIL: clpm-devel@common-lisp.net
+#+OPTIONS: toc:1 num:nil
 
 This file describes the "bundle" capabilities of CLPM. Bundles are anonymous,
 project specific contexts that can be included in source repositories.
@@ -104,7 +105,7 @@ with zero configuration or helpers needed (other than ASDF, of course).
     + ~:commit~ :: If specified, must be a string naming the commit to use.
     + ~:tag~ :: If specified, must be a string naming the tag to use.
     + ~:systems~ :: A list naming the systems to require in the bundle. If NIL,
-      all explicitly defined systems are required.[fn:2]
+      all explicitly defined systems are required.
 
 *** ~:asd~
 
@@ -153,6 +154,9 @@ with zero configuration or helpers needed (other than ASDF, of course).
    All environment variables are present in the new process, additionally the
    following environment variables are set:
 
+   + =ASDF_OUTPUT_TRANSLATIONS= :: If CLPM is configured to manage the output
+     translations for bundles. See =:output-translations= in the =(:bundle)=
+     config table.
    + =CL_SOURCE_REGISTRY= :: Set to contain the parent folders of every .asd
      file in the bundle.
    + =CLPM_BUNDLE_BIN_PATH= :: Set to the path to the clpm executable. Used by
