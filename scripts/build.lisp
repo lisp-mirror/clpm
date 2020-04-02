@@ -19,7 +19,8 @@
 
 (asdf:load-system :clpm)
 
-(when (uiop:featurep :linux)
+(when (or (uiop:featurep :linux)
+          (uiop:featurep :darwin))
   (format uiop:*stderr* "~%~%Performing release build. Setting default CLPM home.~%~%")
   (setf (symbol-value (uiop:find-symbol* '#:*default-clpm-home* '#:clpm/deploy))
         "/usr/local/lib/clpm"))
