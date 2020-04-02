@@ -93,14 +93,17 @@ satisfied. Returns one of :SAT, :UNSAT, or :UNKNOWN."))
 
 (defmethod requirement-state ((req project-requirement) node)
   "A project requirement is satisfied if a release for the project is active in
-the search node and its version satisfies the requested version."
+the search node, its version satisfies the requested version, and all of its
+system releases are active."
   (let* ((project-name (requirement-name req))
          (version-spec (requirement-version-spec req))
-         (release (node-find-project-if-active node project-name)))
+         (release (node-find-project-if-active node project-name))
+         (system-releases (when release (release-system-releases release))))
     (cond
       ((not release)
        :unknown)
-      ((release-satisfies-version-spec-p release version-spec)
+      ((and (release-satisfies-version-spec-p release version-spec)
+            (subsetp system-releases (node-activated-system-releases node)))
        (values :sat nil))
       (t
        :unsat))))
