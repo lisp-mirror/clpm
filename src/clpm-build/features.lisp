@@ -18,6 +18,14 @@
     (:clpm-openssl . "Build support for using openssl (via cl+ssl library) to talk with servers over HTTPS.")
     (:clpm-winhttp . "Build support for WinHTTP backend. Implied by Windows and :CLPM-DEXADOR.")))
 
+(defparameter *default-darwin-feature-set*
+  '(:clpm
+    :clpm-curl
+    :clpm-dexador
+    :clpm-drakma
+    :clpm-firejail
+    :clpm-openssl))
+
 (defparameter *default-linux-feature-set*
   '(:clpm
     :clpm-curl
@@ -31,6 +39,10 @@
     :clpm-curl
     :clpm-dexador
     :deploy-console))
+
+#+:darwin
+(defun default-features ()
+  (copy-list *default-darwin-feature-set*))
 
 #+:linux
 (defun default-features ()
