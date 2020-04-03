@@ -40,6 +40,7 @@ exist in the lock file.")
    :contents (list *group-common*
                    *group-bundle*
                    *option-bundle-local*
+                   *option-yes*
                    *option-output*)))
 
 (defun sexp-interaction-y-or-n-p ()
