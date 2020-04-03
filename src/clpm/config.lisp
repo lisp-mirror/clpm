@@ -174,7 +174,7 @@ directory in ~*clpm-config-directories*~."
      :type hash-table)
     ((:git :remotes :* :type)
      :wildcard-types (hostname)
-     :type (member :gitlab)
+     :type (member :github :gitlab)
      :documentation
      "The type of git server hosted at this hostname.")
     ((:git :remotes :* :method)

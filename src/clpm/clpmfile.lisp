@@ -151,6 +151,27 @@ source."
     (push `(,asd-file ,@(when systems (list :systems systems)))
           (clpmfile-user-asd-files clpmfile))))
 
+(defmethod parse-clpmfile-form (clpmfile (type (eql :github)) args)
+
+  "Parse a :github statement from a clpmfile into a vcs-project-requirement
+instance."
+  (destructuring-bind (name &key (host "github.com") path branch commit tag systems)
+      args
+    (let ((source (clpmfile-vcs-source clpmfile))
+          (repo (make-repo-from-description (list :github :host host :path path))))
+      ;; Register the git project.
+      (vcs-source-register-project! source repo name)
+      (assert (xor branch commit tag))
+      (push (make-instance 'vcs-project-requirement
+                           :systems systems
+                           :name name
+                           :source source
+                           :branch branch
+                           :commit commit
+                           :tag tag
+                           :why t)
+            (clpmfile-user-requirements clpmfile)))))
+
 (defmethod parse-clpmfile-form (clpmfile (type (eql :gitlab)) args)
 
   "Parse a :gitlab statement from a clpmfile into a vcs-project-requirement

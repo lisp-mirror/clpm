@@ -85,6 +85,28 @@ with zero configuration or helpers needed (other than ASDF, of course).
     + ~:source~ :: If provided, names a source that the system must be located
       in.
 
+*** ~:github~
+
+    The github directive specifies a requirement that must be satisfied by a git
+    repository hosted on a github server. Unless specified otherwise, every
+    explicitly defined system (and their dependencies) are included in the
+    bundle.
+
+    #+begin_src common-lisp
+      (name &key (host "github.com") path branch commit tag systems)
+    #+end_src
+
+    + ~name~ :: must be a string, unique in the file.
+    + ~:host~ :: is the hostname of the github server. Defaults to github.com.
+    + ~:path~ :: is a string naming the path to the repository.
+    + ~:branch~ :: If specified, must be a string naming the branch to use. If
+      none of branch, commit, or tag are specified, the branch defaults to the
+      default branch from the server.
+    + ~:commit~ :: If specified, must be a string naming the commit to use.
+    + ~:tag~ :: If specified, must be a string naming the tag to use.
+    + ~:systems~ :: A list naming the systems to require in the bundle. If NIL,
+      all explicitly defined systems are required.
+
 *** ~:gitlab~
 
     The gitlab directive specifies a requirement that must be satisfied by a git
