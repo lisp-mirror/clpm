@@ -17,6 +17,7 @@ install the dependencies:
   [[https://common-lisp.net/project/clpm/downloads/][https://common-lisp.net/project/clpm/downloads/]]. Each release of CLPM
   consists of the following files:
 
+  + =clpm-amd64-darwin-$VERSION.tar.gz= :: CLPM compiled for 64bit Mac OS.
   + =clpm-amd64-linux-gnu-$VERSION.tar.gz= :: CLPM compiled for 64bit
     Linux using GNU libc (by far the most common).
   + =clpm-amd64-linux-musl-$VERSION.tar.gz= :: CLPM compiled for 64bit
