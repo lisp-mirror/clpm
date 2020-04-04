@@ -86,7 +86,7 @@
 
 ;; * Conditions
 
-(define-condition source-no-such-object ()
+(define-condition source-no-such-object (error)
   ((source
     :initarg :source)))
 
