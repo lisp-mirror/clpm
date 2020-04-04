@@ -32,50 +32,58 @@
   (handler-bind ((adopt:unrecognized-option #'adopt:discard-option))
     (adopt:parse-options ui)))
 
+(defun clpm-debugger (c v)
+  (declare (ignore v))
+  (format *error-output* "Uncaught error. You should not have ended up here, ~
+please report a bug and provide the stack trace.~%")
+  (uiop:print-condition-backtrace c)
+  (uiop:quit 1))
+
 (defun main ()
-  (handler-bind
-      (;; Gracefully catch ctrl-c
-       (#+sbcl sb-sys:interactive-interrupt
-        #+ccl  ccl:interrupt-signal-condition
-        #+clisp system::simple-interrupt-condition
-        #+ecl ext:interactive-interrupt
-        #+allegro excl:interrupt-signal
-        (lambda (c) (declare (ignore c)) (uiop:quit 2)))
-       ;; On warning, print it and optionally the backtrace.
-       (warning (lambda (c)
-                  (log:warn "~A" c)
-                  (log:debug "~A" (with-output-to-string (s)
-                                    (uiop:print-condition-backtrace c :stream s)))
-                  ;; Invoke muffle warning so that we don't get a duplicate
-                  ;; warning printed.
-                  (muffle-warning c)))
-       ;; On error, print the backtrace and quit.
-       (error (lambda (c)
-                (uiop:print-condition-backtrace c)
-                (uiop:quit 1))))
-    (multiple-value-bind (arguments options)
-        ;; We need to ignore unrecognized options here since we don't yet
-        ;; know the correct set of options to use!
-        (parse-options-ignoring-unrecognized *default-ui*)
-      ;; Compute verbosity
-      (case (gethash :verbose options)
-        (0
-         (log:config '(clpm) :warn
-                     :this :stream *error-output* :immediate-flush :own
-                     :pattern "%;<;;>;5p [%g{}{}{:downcase}] - %<{pretty}%m%>%n"))
-        (1
-         (log:config '(clpm) :info
-                     :this :stream *error-output* :immediate-flush :own
-                     :pattern "%;<;;>;5p [%g{}{}{:downcase}] - %<{pretty}%m%>%n")
-         (log:debug "Setting CLPM log level to info"))
-        (2
-         (log:config '(clpm) :debug
-                     :this :stream *error-output* :immediate-flush :own
-                     :pattern "%;<;;>;5p [%g{}{}{:downcase}] - %<{pretty}%m%>%n")
-         (log:debug "Setting CLPM log level to debug"))
-        (t
-         (log:config '(clpm) :trace
-                     :this :stream *error-output* :immediate-flush :own
-                     :pattern "%;<;;>;5p [%g{}{}{:downcase}] - %<{pretty}%m%>%n")
-         (log:debug "Setting CLPM log level to trace")))
-      (dispatch-subcommand *commands* arguments options *default-ui*))))
+  (let ((*debugger-hook* #'clpm-debugger))
+    (handler-bind
+        (;; Gracefully catch ctrl-c
+         (#+sbcl sb-sys:interactive-interrupt
+          #+ccl  ccl:interrupt-signal-condition
+          #+clisp system::simple-interrupt-condition
+          #+ecl ext:interactive-interrupt
+          #+allegro excl:interrupt-signal
+          (lambda (c) (declare (ignore c)) (uiop:quit 2)))
+         ;; On warning, print it and optionally the backtrace.
+         (warning (lambda (c)
+                    (log:warn "~A" c)
+                    (log:debug "~A" (with-output-to-string (s)
+                                      (uiop:print-condition-backtrace c :stream s)))
+                    ;; Invoke muffle warning so that we don't get a duplicate
+                    ;; warning printed.
+                    (muffle-warning c)))
+         ;; On error, print the backtrace and quit.
+         (error (lambda (c)
+                  (uiop:print-condition-backtrace c)
+                  (uiop:quit 1))))
+      (multiple-value-bind (arguments options)
+          ;; We need to ignore unrecognized options here since we don't yet
+          ;; know the correct set of options to use!
+          (parse-options-ignoring-unrecognized *default-ui*)
+        ;; Compute verbosity
+        (case (gethash :verbose options)
+          (0
+           (log:config '(clpm) :warn
+                       :this :stream *error-output* :immediate-flush :own
+                       :pattern "%;<;;>;5p [%g{}{}{:downcase}] - %<{pretty}%m%>%n"))
+          (1
+           (log:config '(clpm) :info
+                       :this :stream *error-output* :immediate-flush :own
+                       :pattern "%;<;;>;5p [%g{}{}{:downcase}] - %<{pretty}%m%>%n")
+           (log:debug "Setting CLPM log level to info"))
+          (2
+           (log:config '(clpm) :debug
+                       :this :stream *error-output* :immediate-flush :own
+                       :pattern "%;<;;>;5p [%g{}{}{:downcase}] - %<{pretty}%m%>%n")
+           (log:debug "Setting CLPM log level to debug"))
+          (t
+           (log:config '(clpm) :trace
+                       :this :stream *error-output* :immediate-flush :own
+                       :pattern "%;<;;>;5p [%g{}{}{:downcase}] - %<{pretty}%m%>%n")
+           (log:debug "Setting CLPM log level to trace")))
+        (dispatch-subcommand *commands* arguments options *default-ui*)))))
