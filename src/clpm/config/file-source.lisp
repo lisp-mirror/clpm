@@ -117,6 +117,6 @@ it."
 
 (defmethod config-source-implicit-keys ((config-source config-file-source) path)
   "Just look up the parent hash table and return the keys."
-  (let ((table (gethashes* (config-file-source-root-ht config-source) (butlast path))))
+  (let ((table (gethashes* (config-file-source-root-ht config-source) path)))
     (when table
       (hash-table-keys table))))

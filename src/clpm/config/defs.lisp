@@ -6,7 +6,9 @@
 (uiop:define-package #:clpm/config/defs
     (:use #:cl
           #:alexandria)
-  (:export #:get-children-of-config-path
+  (:export #:config-path-key-types
+           #:get-all-config-paths-with-prefix
+           #:get-children-of-config-path
            #:get-config-entry
            #:header
            #:hostname))
@@ -209,3 +211,36 @@
       :when (and (starts-with-subseq canonical-path info-path)
                  (length= (1+ (length path)) info-path))
         :collect (last-elt info-path))))
+
+(defun get-all-config-paths-with-prefix (path)
+  "Returns a list of all paths to values (NOT subpaths to hash-tables) that
+start with `PATH`."
+  (let* ((config-info (get-config-entry path))
+         (type (getf (cdr config-info) :type))
+         (canonical-path (car config-info)))
+    (assert config-info)
+    (assert (eql type 'hash-table))
+    (loop
+      :for info :in *config-info*
+      :for info-path := (car info)
+      :when (and (not (eql (getf (cdr info) :type) 'hash-table))
+                 (starts-with-subseq canonical-path info-path))
+        :collect (append path (nthcdr (length path) info-path)))))
+
+(defun sub-paths (path)
+  "Return all sub paths of `PATH` (and the path itself)."
+  (loop
+    :for i :below (length path)
+    :collect (butlast path i)))
+
+(defun config-path-key-types (path)
+  "Given a `PATH`, return a list of all the types of keys on the
+path. Everything is a `:keyword` except for wildcards."
+  (loop
+    :for p :in (nreverse (sub-paths path))
+    :for config-info := (get-config-entry p)
+    :for canonical-path := (car config-info)
+    :if (eql (last-elt canonical-path) :*)
+      :collect (last-elt (getf (cdr config-info) :wildcard-types))
+    :else
+      :collect :keyword))

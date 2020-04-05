@@ -14,5 +14,5 @@
 
 (defgeneric config-source-implicit-keys (config-source path)
   (:documentation
-   "Given a path ending in a wildcard, return all possible values for the
-wildcard defined in this config source."))
+   "Given a path, return all possible values for the next path segment defined
+in this config source. The only defined child to `PATH` MUST be `:*`"))

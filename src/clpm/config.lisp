@@ -61,7 +61,7 @@ file (clpm.conf)."
 look at environment variables."
   (let ((defined-children (get-children-of-config-path path)))
     (if (equal defined-children '(:*))
-        (remove-duplicates (mapcan (rcurry #'config-source-implicit-keys (append path (list :*)))
+        (remove-duplicates (mapcan (rcurry #'config-source-implicit-keys path)
                                    *config-sources*)
                            :test #'equal)
         defined-children)))
