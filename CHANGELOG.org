@@ -3,6 +3,8 @@
 * v0.2.1 - Unreleased
 
   + Rebind =*debugger-hook*= so that CLPM never drops into debugger.
+  + Wildcard config options (such as for HTTP headers) can now be discovered
+    purely from environment variables.
 
 * v0.2.0 - 2020-04-03
 

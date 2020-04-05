@@ -13,6 +13,7 @@
           #:uuid)
   (:export #:*live-script-location*
            #:ensure-uri-scheme-https!
+           #:merge-hts
            #:mktemp
            #:posix-environment-alist
            #:process-stream
@@ -175,3 +176,39 @@ other than ~:https~ or ~:http~."))
 
 (defmacro with-forms-from-stream ((stream form-binding) &body body)
   `(call-with-forms-from-stream ,stream (lambda (,form-binding) ,@body)))
+
+(defun merge-hts (new-ht default-ht)
+  "Recursively merge two hash tables. If a key is present in ~new-ht~ its value
+overwrites the value from ~default-ht~."
+  (let ((out (copy-hash-table default-ht)))
+    (maphash
+     (lambda (k v)
+       (multiple-value-bind (default-v exists-p)
+           (gethash k out)
+         (cond
+           ((or
+             (hash-table-p v)
+             (hash-table-p default-v))
+            ;; Either both must be hash tables or the default shouldn't exist.
+            (unless (or (not exists-p)
+                        (and (hash-table-p default-v)
+                             (hash-table-p v)))
+              (error "Cannot merge ~S with ~S" v default-v))
+            ;; Merge the hash tables together
+            (if (null default-v)
+                (setf (gethash k out) v)
+                (setf (gethash k out) (merge-hts v default-v))))
+           ((or
+             (listp v)
+             (and exists-p (listp default-v)))
+            ;; The new value is a list. The default value must be a list.
+            (unless (or (not exists-p)
+                        (and (listp default-v)
+                             (listp v)))
+              (error "Cannot merge ~S with ~S" v default-v))
+            ;; Append the lists together.
+            (setf (gethash k out) (append v default-v)))
+           (t
+            (setf (gethash k out) v)))))
+     new-ht)
+    out))
