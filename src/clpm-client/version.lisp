@@ -13,7 +13,7 @@
 (in-package #:clpm-client/version)
 
 ;; If the location of this changes, the asd file must be updated!
-(defvar *version* "0.2.0"
+(defvar *version* "0.2.1"
   "The client's version.")
 
 (defun clpm-client-version ()

@@ -1,6 +1,6 @@
 #+TITLE: CLPM Changelog
 
-* v0.2.1 - Unreleased
+* v0.2.1 - 2020-04-05
 
   + Rebind =*debugger-hook*= so that CLPM never drops into debugger.
   + Wildcard config options (such as for HTTP headers) can now be discovered
