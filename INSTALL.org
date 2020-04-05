@@ -14,8 +14,8 @@ install the dependencies:
 
 * Prebuilt binaries
   To install CLPM in binary form, download the appropriate file from
-  [[https://common-lisp.net/project/clpm/downloads/][https://common-lisp.net/project/clpm/downloads/]]. Each release of CLPM
-  consists of the following files:
+  [[https://files.clpm.dev/clpm/]]. Each release of CLPM consists of the following
+  files:
 
   + =clpm-amd64-darwin-$VERSION.tar.gz= :: CLPM compiled for 64bit Mac OS.
   + =clpm-amd64-linux-gnu-$VERSION.tar.gz= :: CLPM compiled for 64bit

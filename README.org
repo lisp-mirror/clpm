@@ -48,26 +48,26 @@ files.
 
 ** Prebuilt binaries
    To install CLPM in binary form, download the appropriate file from
-   [[https://common-lisp.net/project/clpm/downloads/][https://common-lisp.net/project/clpm/downloads/]]. The current release files
-   for each platform are:
+   [[https://files.clpm.dev/clpm/][https://files.clpm.dev/clpm/]]. The current release files for each platform
+   are:
 
-   + [[https://common-lisp.net/project/clpm/downloads/clpm-amd64-darwin-v0.2.0.tar.gz][clpm-amd64-darwin-v0.2.0.tar.gz]] :: CLPM compiled for 64bit Mac OS.
-   + [[https://common-lisp.net/project/clpm/downloads/clpm-amd64-linux-gnu-v0.2.0.tar.gz][clpm-amd64-linux-gnu-v0.2.0.tar.gz]] :: CLPM compiled for 64bit Linux using
+   + [[https://files.clpm.dev/clpm/clpm-amd64-darwin-v0.2.0.tar.gz][clpm-amd64-darwin-v0.2.0.tar.gz]] :: CLPM compiled for 64bit Mac OS.
+   + [[https://files.clpm.dev/clpm/clpm-amd64-linux-gnu-v0.2.0.tar.gz][clpm-amd64-linux-gnu-v0.2.0.tar.gz]] :: CLPM compiled for 64bit Linux using
      GNU libc (by far the most common).
-   + [[https://common-lisp.net/project/clpm/downloads/clpm-amd64-linux-musl-v0.2.0.tar.gz][clpm-amd64-linux-musl-v0.2.0.tar.gz]] :: CLPM compiled for 64bit Linux using
+   + [[https://files.clpm.dev/clpm/clpm-amd64-linux-musl-v0.2.0.tar.gz][clpm-amd64-linux-musl-v0.2.0.tar.gz]] :: CLPM compiled for 64bit Linux using
      musl libc (e.g., Alpine Linux).
-   + [[https://common-lisp.net/project/clpm/downloads/clpm-arm64-linux-gnu-v0.2.0.tar.gz][clpm-arm64-linux-gnu-v0.2.0.tar.gz]] :: CLPM compiled for 64bit Linux on ARM
+   + [[https://files.clpm.dev/clpm/clpm-arm64-linux-gnu-v0.2.0.tar.gz][clpm-arm64-linux-gnu-v0.2.0.tar.gz]] :: CLPM compiled for 64bit Linux on ARM
      processors using GNU libc.
-   + [[https://common-lisp.net/project/clpm/downloads/clpm-arm64-linux-musl-v0.2.0.tar.gz][clpm-arm64-linux-musl-v0.2.0.tar.gz]] :: CLPM compiled for 64bit Linux on
+   + [[https://files.clpm.dev/clpm/clpm-arm64-linux-musl-v0.2.0.tar.gz][clpm-arm64-linux-musl-v0.2.0.tar.gz]] :: CLPM compiled for 64bit Linux on
      ARM processors using musl libc.
-   + [[https://common-lisp.net/project/clpm/downloads/clpm-armv7-linux-gnu-v0.2.0.tar.gz][clpm-armv7-linux-gnu-v0.2.0.tar.gz]] :: CLPM compiled for 32bit Linux on ARM
+   + [[https://files.clpm.dev/clpm/clpm-armv7-linux-gnu-v0.2.0.tar.gz][clpm-armv7-linux-gnu-v0.2.0.tar.gz]] :: CLPM compiled for 32bit Linux on ARM
      processors using GNU libc.
-   + [[https://common-lisp.net/project/clpm/downloads/clpm-armv7-linux-musl-v0.2.0.tar.gz][clpm-armv7-linux-musl-v0.2.0.tar.gz]] :: CLPM compiled for 32bit Linux on
+   + [[https://files.clpm.dev/clpm/clpm-armv7-linux-musl-v0.2.0.tar.gz][clpm-armv7-linux-musl-v0.2.0.tar.gz]] :: CLPM compiled for 32bit Linux on
      ARM processors using musl libc.
-   + [[https://common-lisp.net/project/clpm/downloads/clpm-amd64-windows-v0.2.0.msi][clpm-amd64-windows-v0.2.0.msi]] :: CLPM installer for 64 bit Windows.
-   + [[https://common-lisp.net/project/clpm/downloads/clpm-v0.2.0.DIGESTS][clpm-v0.2.0.DIGESTS]] :: Text file containing the SHA512 sums for every
+   + [[https://files.clpm.dev/clpm/clpm-amd64-windows-v0.2.0.msi][clpm-amd64-windows-v0.2.0.msi]] :: CLPM installer for 64 bit Windows.
+   + [[https://files.clpm.dev/clpm/clpm-v0.2.0.DIGESTS][clpm-v0.2.0.DIGESTS]] :: Text file containing the SHA512 sums for every
      previously mentioned file.
-   + [[https://common-lisp.net/project/clpm/downloads/clpm-v0.2.0.DIGESTS.asc][clpm-v0.2.0.DIGESTS.asc]] :: Same as =clpm-v0.2.0.DIGESTS=, but signed with
+   + [[https://files.clpm.dev/clpm/clpm-v0.2.0.DIGESTS.asc][clpm-v0.2.0.DIGESTS.asc]] :: Same as =clpm-v0.2.0.DIGESTS=, but signed with
      GPG key =0x10327DE761AB977333B1AD7629932AC49F3044CE=.
 
 *** GNU/Linux and Darwin
