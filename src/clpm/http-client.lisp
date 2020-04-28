@@ -5,20 +5,64 @@
 
 (uiop:define-package #:clpm/http-client
     (:use #:cl
-          #:clpm/http-client/all
           #:alexandria
+          #:anaphora
           #:clpm/config
           #:clpm/log
+          #:clpm-multi-http-client
           #:iterate)
   (:import-from #:flexi-streams)
   (:import-from #:puri)
   (:export #:ensure-file-fetched
-           #:fetch-url
            #:http-request))
 
 (in-package #:clpm/http-client)
 
 (setup-logger)
+
+(defvar *http-client*)
+
+(defun clear-http-client ()
+  (makunbound '*http-client*))
+(uiop:register-image-dump-hook 'clear-http-client)
+
+(defgeneric make-http-client (type))
+
+(defmethod make-http-client ((type (eql :curl)))
+  (let ((class (uiop:find-symbol* :curl-client :clpm-multi-http-client/curl)))
+    (apply #'make-instance
+           class
+           (awhen (config-value :curl)
+             (hash-table-plist it)))))
+
+(defmethod make-http-client ((type (eql :dexador)))
+  (let ((class (uiop:find-symbol* :dexador-client :clpm-multi-http-client/dexador)))
+    (apply #'make-instance
+           class
+           (awhen (config-value :dexador)
+             (hash-table-plist it)))))
+
+(defmethod make-http-client ((type (eql :drakma)))
+  (let ((class (uiop:find-symbol* :drakma-client :clpm-multi-http-client/drakma)))
+    (apply #'make-instance
+           class
+           (awhen (config-value :drakma)
+             (hash-table-plist it)))))
+
+
+(defun get-http-client ()
+  (unless (boundp '*http-client*)
+    (let* ((client-config-value (config-value :http-client :type))
+           (client-type (cond
+                          ((and (eql client-config-value :auto)
+                                (featurep :windows))
+                           :dexador)
+                          ((eql client-config-value :auto)
+                           :drakma)
+                          (t
+                           client-config-value))))
+      (setf *http-client* (make-http-client client-type))))
+  *http-client*)
 
 (defun day-name (day-of-week)
   (ecase day-of-week
@@ -82,15 +126,6 @@ the request."
             (contents
              (collect (cons header-name (uiop:read-file-string contents))))))))))
 
-(defun fetch-url (url)
-  "Given a URL, return a string with the contents of the file located at ~url~."
-  (let ((url (puri:parse-uri url)))
-    (log:debug "Fetching ~A" url)
-    (babel:octets-to-string
-     (http-request url :additional-headers (get-additional-headers-for-hostname
-                                            (puri:uri-host url)
-                                            (puri:uri-scheme url))))))
-
 (defun ensure-file-fetched (pathname url &key force hint)
   "Given a pathname, make sure it exists. If it does not exist, fetch it from
 URL (string or puri URI).
@@ -121,9 +156,11 @@ Returns T if the contents of PATHNAME were modified, NIL otherwise."
       (ensure-directories-exist pathname)
       (unwind-protect
            (multiple-value-bind (http-stream status-code)
-               (http-request url
-                             :want-stream t
-                             :additional-headers additional-headers)
+               (http-client-request (get-http-client)
+                                    url
+                                    :want-stream t
+                                    :force-binary t
+                                    :additional-headers additional-headers)
              (unwind-protect
                   (progn
                     (log:debug "Status code: ~S" status-code)
@@ -143,7 +180,6 @@ Returns T if the contents of PATHNAME were modified, NIL otherwise."
                        nil)
                       (t
                        (error "Can't handle HTTP code ~A" status-code))))
-               (unless (http-client-manages-streams-p url)
-                 (close http-stream))))
+               (close http-stream)))
         (when (probe-file tmp-pathname)
           (delete-file tmp-pathname))))))

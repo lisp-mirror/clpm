@@ -20,10 +20,11 @@
   :build-operation "deploy-op"
   :build-pathname #+win32 "clpm.exe" #-win32 "clpm"
   :depends-on (#:clpm/clpm
-               (:feature :clpm-curl #:clpm/http-client/curl)
-               (:feature :clpm-dexador #:clpm/http-client/dexador)
-               (:feature :clpm-drakma #:clpm/http-client/drakma)
-               (:feature :clpm-firejail #:clpm/sandbox/firejail)))
+               (:feature :clpm-curl #:clpm-multi-http-client/curl)
+               (:feature :clpm-dexador #:clpm-multi-http-client/dexador)
+               (:feature :clpm-drakma #:clpm-multi-http-client/drakma)
+               (:feature :clpm-firejail #:clpm/sandbox/firejail)
+               (:feature :clpm-openssl #:clpm/http-client/cl-plus-ssl)))
 
 (defmethod asdf:output-files ((o deploy:deploy-op) (c (eql (find-system "clpm"))))
   (let ((file (print (merge-pathnames (asdf/system:component-build-pathname c)

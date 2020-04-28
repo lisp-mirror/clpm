@@ -175,8 +175,9 @@
      :type hash-table)
     ((:http-client :type)
      :type (member :auto
-                   ,@(when (featurep :clpm-drakma) (list :drakma))
-                   ,@(when (featurep :clpm-curl) (list :curl)))
+                   ,@(when (featurep :clpm-curl) (list :curl))
+                   ,@(when (featurep :clpm-dexador) (list :dexador))
+                   ,@(when (featurep :clpm-drakma) (list :drakma)))
      :default :auto
      :documentation
      "The HTTP client implementation to use.")
