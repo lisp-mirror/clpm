@@ -11,17 +11,11 @@
           #:clpm/cache
           #:clpm/data
           #:clpm/http-client
-          #:clpm/requirement
           #:clpm/sources/clpi
           #:clpm/sources/defs
-          #:clpm/sources/flat-file
           #:clpm/sources/ql-clpi
-          #:clpm/sources/tarball-release
-          #:clpm/ql
           #:clpm/utils
-          #:clpm/version-strings
-          #:do-urlencode
-          #:split-sequence)
+          #:do-urlencode)
   (:import-from #:clpi)
   (:import-from #:puri)
   (:import-from #:ql-clpi)
@@ -32,7 +26,7 @@
 
 ;; * Source
 
-(defclass ql-source (clpi-source)
+(defclass ql-source (ql-clpi-source)
   ((url
     :initarg :url
     :accessor ql-source-url)))
