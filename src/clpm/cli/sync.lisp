@@ -26,12 +26,19 @@
   (adopt:make-interface
    :name "clpm-sync"
    :summary "Common Lisp Package Manager Sync"
-   :usage "sync"
+   :usage "sync [SOURCE-NAME*]"
    :help *help-text*
    :manual *help-text*
    :contents (list *group-common*)))
 
 (define-cli-command (("sync") *sync-ui*) (args options)
-  (log:info "Sync")
-  (mapc #'sync-source (sources))
+  (let ((sources (sources)))
+    (when args
+      (setf sources
+            (remove-if-not (lambda (source)
+                             (member (source-name source) args
+                                     :test #'equal))
+                           sources)))
+    (log:info "Syncing ~{~A~^, ~}" (mapcar #'source-name sources))
+    (mapc #'sync-source sources))
   t)
