@@ -10,6 +10,7 @@
   (:export #:*group-common*
            #:*option-context*
            #:*option-help*
+           #:*option-local*
            #:*option-output*
            #:*option-yes*
            #:*option-verbose*))
@@ -21,6 +22,13 @@
                      :long "help"
                      :help "Display help and exit"
                      :reduce (constantly t)))
+
+(defparameter *option-local*
+  (adopt:make-option
+   :cli-config-local
+   :long "local"
+   :help "Do not sync remote sources, use only the data located in the local cache"
+   :reduce (constantly t)))
 
 (defparameter *option-yes*
   (adopt:make-option

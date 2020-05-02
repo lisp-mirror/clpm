@@ -100,6 +100,7 @@
                    *option-install-project*
                    *option-install-no-deps*
                    *option-yes*
+                   *option-local*
                    *option-install-branch*
                    *option-install-tag*
                    *option-install-commit*

@@ -11,7 +11,8 @@
            #:get-children-of-config-path
            #:get-config-entry
            #:header
-           #:hostname))
+           #:hostname
+           #:parse-string-config-value))
 
 (in-package #:clpm/config/defs)
 
@@ -253,3 +254,43 @@ path. Everything is a `:keyword` except for wildcards."
       :collect (last-elt (getf (cdr config-info) :wildcard-types))
     :else
       :collect :keyword))
+
+(defun parse-string-config-value (value type)
+  (cond
+    ((eql type 'string)
+     value)
+    ((eql type 'boolean)
+     (let ((value (string-downcase value))
+           (orig-value value))
+       (cond
+         ((or (equalp value "0")
+              (equalp value "n")
+              (equalp value "no")
+              (equalp value "false")
+              (equalp value "nil"))
+          nil)
+         ((or (equalp value "1")
+              (equalp value "y")
+              (equalp value "yes")
+              (equalp value "true")
+              (equalp value "t"))
+          t)
+         (t
+          (error "Unable to parse ~S as a boolean." orig-value)))))
+    ((and (listp type)
+          (eql (first type) 'member)
+          (every (lambda (x) (or (keywordp x) (eql x nil) (eql x t))) (rest type)))
+     (cond
+       ((equalp value "t")
+        t)
+       ((equalp value "nil")
+        nil)
+       (t
+        (let ((kw (make-keyword (uiop:standard-case-symbol-name value))))
+          (unless (typep kw type)
+            (error "Unknown value ~S for type ~S" kw type))
+          kw))))
+    ((equal type '(or string pathname))
+     (uiop:parse-native-namestring value))
+    (t
+     (error "Unknown type ~S to parse from a string." type))))

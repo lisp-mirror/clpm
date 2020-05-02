@@ -95,6 +95,9 @@
                        (urlencode (subseq it 1))))))
      :ensure-directory t)))
 
+(defmethod source-can-lazy-sync-p ((source clpi-dual-source))
+  t)
+
 (defmethod source-lib-directory ((source clpi-source))
   "Compute the cache location for this source, based on its canonical url."
   (let ((url (source-url source)))

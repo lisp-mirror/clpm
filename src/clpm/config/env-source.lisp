@@ -48,52 +48,12 @@ value."
                     path)
             hash-table-p)))
 
-(defun parse-env-value (value type)
-  (cond
-    ((eql type 'string)
-     value)
-    ((eql type 'boolean)
-     (let ((value (string-downcase value))
-           (orig-value value))
-       (cond
-         ((or (equalp value "0")
-              (equalp value "n")
-              (equalp value "no")
-              (equalp value "false")
-              (equalp value "nil"))
-          nil)
-         ((or (equalp value "1")
-              (equalp value "y")
-              (equalp value "yes")
-              (equalp value "true")
-              (equalp value "t"))
-          t)
-         (t
-          (error "Unable to parse ~S as a boolean." orig-value)))))
-    ((and (listp type)
-          (eql (first type) 'member)
-          (every (lambda (x) (or (keywordp x) (eql x nil) (eql x t))) (rest type)))
-     (cond
-       ((equalp value "t")
-        t)
-       ((equalp value "nil")
-        nil)
-       (t
-        (let ((kw (make-keyword (uiop:standard-case-symbol-name value))))
-          (unless (typep kw type)
-            (error "Unknown value ~S for type ~S" kw type))
-          kw))))
-    ((equal type '(or string pathname))
-     (uiop:parse-native-namestring value))
-    (t
-     (error "Unknown type ~S to parse from a string." type))))
-
 (defmethod config-source-value ((config-source config-env-source) path)
   (let* ((config-info (get-config-entry path))
          (type (getf (cdr config-info) :type))
          (env-var-name (path-to-env-var path config-info)))
     (when-let ((env-value (uiop:getenv env-var-name)))
-      (values (parse-env-value env-value type) t))))
+      (values (parse-string-config-value env-value type) t))))
 
 (defun build-envvar-regex (path types capture-index)
   `(:sequence

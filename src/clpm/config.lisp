@@ -7,6 +7,7 @@
 (uiop:define-package #:clpm/config
     (:use #:cl
           #:alexandria
+          #:clpm/config/cli-source
           #:clpm/config/default-source
           #:clpm/config/defs
           #:clpm/config/env-source
@@ -17,6 +18,7 @@
           #:iterate)
   (:export #:*clpm-config-directories*
            #:clpm-config-pathname
+           #:config-add-cli-source!
            #:config-add-file-source!
            #:config-table-keys
            #:config-value
@@ -42,12 +44,25 @@ file (clpm.conf)."
                     (make-instance 'config-default-source)))))
   *config-sources*)
 
+(defun config-add-cli-source! (ht)
+  (push (make-instance 'config-cli-source
+                       :arg-ht ht)
+        *config-sources*))
+
 (defun config-add-file-source! (pn)
   (when (uiop:probe-file* pn)
     (setf *config-sources*
-          (list* (first *config-sources*)
-                 (make-instance 'config-file-source :pathname pn)
-                 (rest *config-sources*)))))
+          (append (remove-if-not (lambda (x)
+                                   (or
+                                    (typep x 'config-env-source)
+                                    (typep x 'config-cli-source)))
+                                 *config-sources*)
+                  (list (make-instance 'config-file-source :pathname pn))
+                  (remove-if (lambda (x)
+                               (or
+                                (typep x 'config-env-source)
+                                (typep x 'config-cli-source)))
+                             *config-sources*)))))
 
 (defun clear-global-config ()
   "Clear the *config-sources* variable."

@@ -70,6 +70,9 @@
                        (urlencode (subseq it 1))))))
      :ensure-directory t)))
 
+(defmethod source-can-lazy-sync-p ((source ql-source))
+  nil)
+
 (defmethod source-lib-directory ((source ql-source))
   "Compute the cache location for this source, based on its canonical url."
   (let ((url (ql-source-url source)))

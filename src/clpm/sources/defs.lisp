@@ -43,6 +43,7 @@
            #:release-satisfies-version-spec-p
            #:source-args
            #:source-cache-directory
+           #:source-can-lazy-sync-p
            #:source-ensure-system
            #:source-lib-directory
            #:source-name
@@ -166,6 +167,10 @@ source implementation should provide a ~sync-and-retry~ restart.")
     (let ((project (source-project source project-name error)))
       (when project
         (project-release project version-string error)))))
+
+(defgeneric source-can-lazy-sync-p (source)
+  (:documentation
+   "Return T if the SOURCE can download metadata on demand."))
 
 (defgeneric source-synced-p (source)
   (:documentation "Return T iff the source has been synced already."))

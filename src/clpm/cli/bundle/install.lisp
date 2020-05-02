@@ -39,7 +39,7 @@ exist in the lock file.")
    :help *help-string*
    :contents (list *group-common*
                    *group-bundle*
-                   *option-bundle-local*
+                   *option-local*
                    *option-yes*
                    *option-output*)))
 
@@ -69,6 +69,5 @@ exist in the lock file.")
   (let* ((clpmfile-pathname (merge-pathnames (gethash :bundle-file options)
                                              (uiop:getcwd)))
          (*default-pathname-defaults* (uiop:pathname-directory-pathname clpmfile-pathname)))
-    (bundle-install clpmfile-pathname :localp (gethash :bundle-local options)
-                                      :validate (make-validate-fun (gethash :yes options)
+    (bundle-install clpmfile-pathname :validate (make-validate-fun (gethash :yes options)
                                                                    (gethash :output options)))))

@@ -12,8 +12,7 @@
           #:clpm/utils)
   (:import-from #:adopt)
   (:import-from #:cl-ppcre)
-  (:export #:*group-bundle*
-           #:*option-bundle-local*))
+  (:export #:*group-bundle*))
 
 (in-package #:clpm/cli/bundle/common)
 
@@ -25,13 +24,6 @@
    :initial-value "clpmfile"
    :help "The path to the clpmfile"
    :reduce #'adopt:last))
-
-(defparameter *option-bundle-local*
-  (adopt:make-option
-   :bundle-local
-   :long "local"
-   :help "Do not sync remote sources, use only the data located in the local cache"
-   :reduce (constantly t)))
 
 (defparameter *group-bundle*
   (adopt:make-group

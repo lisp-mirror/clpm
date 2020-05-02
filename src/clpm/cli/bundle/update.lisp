@@ -41,7 +41,7 @@ preference is to update everything to the latest version possible.")
    :help *help-string*
    :contents (list *group-common*
                    *group-bundle*
-                   *option-bundle-local*
+                   *option-local*
                    *option-yes*
                    *option-output*)))
 
@@ -56,10 +56,8 @@ preference is to update everything to the latest version possible.")
   (let* ((clpmfile-pathname (merge-pathnames (gethash :bundle-file options)
                                              (uiop:getcwd)))
          (*default-pathname-defaults* (uiop:pathname-directory-pathname clpmfile-pathname))
-         (localp (gethash :bundle-local options))
          (yesp (gethash :yes options))
          (output (gethash :output options)))
     (bundle-update clpmfile-pathname :update-systems args
-                                     :localp localp
                                      :validate (make-validate-fun yesp output))
     t))

@@ -36,20 +36,6 @@
         (when override
           (merge-pathnames override clpmfile-directory))))))
 
-(defun build-lockfile (clpmfile &key localp)
-  "Given a clpmfile instance, make a lockfile context for it."
-  (let* ((lockfile (create-empty-lockfile clpmfile))
-         (lockfile-pathname (clpmfile-lockfile-pathname clpmfile)))
-    (unless localp
-      (log:info "syncing sources")
-      (mapc #'sync-source (clpmfile-sources clpmfile)))
-    (log:info "Resolving requirements")
-    (setf lockfile (resolve-requirements lockfile))
-    (with-open-file (stream lockfile-pathname
-                            :direction :output)
-      (serialize-context-to-stream lockfile stream))
-    lockfile))
-
 (defun load-lockfile (pathname &key localp)
   (handler-bind
       ((source-no-such-object
@@ -59,19 +45,21 @@
              (invoke-restart 'sync-and-retry c)))))
     (load-anonymous-context-from-pathname pathname)))
 
-(defun bundle-install (clpmfile-designator &key localp (validate (constantly t)))
+(defun bundle-install (clpmfile-designator &key (validate (constantly t)))
   "Given a clpmfile instance, install all releases from its lock file, creating
 the lock file if necessary."
-  (let* ((*fetch-repo-automatically* (not localp))
+  (let* ((*fetch-repo-automatically* (not (config-value :local)))
          (clpmfile (get-clpmfile clpmfile-designator))
          (lockfile-pathname (clpmfile-lockfile-pathname clpmfile))
          (*vcs-project-override-fun* (make-vcs-override-fun (clpmfile-pathname clpmfile)))
          (lockfile nil)
          (changedp nil))
-    (unless localp
-      (mapc #'sync-source (clpmfile-sources clpmfile)))
+    (unless (config-value :local)
+      (dolist (s (clpmfile-sources clpmfile))
+        (unless (source-can-lazy-sync-p s)
+          (sync-source s))))
     (if (probe-file lockfile-pathname)
-        (setf lockfile (load-lockfile lockfile-pathname :localp localp))
+        (setf lockfile (load-lockfile lockfile-pathname :localp (config-value :local)))
         (setf lockfile (create-empty-lockfile clpmfile)))
     ;; Nuke the lockfile's requirements so that we pick up deletions from the
     ;; clpmfile.
@@ -111,9 +99,8 @@ the lock file if necessary."
 
 (defun bundle-update (clpmfile-designator &key
                                             update-projects (validate (constantly t))
-                                            update-systems
-                                            localp)
-  (let* ((*fetch-repo-automatically* (not localp))
+                                            update-systems)
+  (let* ((*fetch-repo-automatically* (not (config-value :local)))
          (clpmfile (get-clpmfile clpmfile-designator))
          (lockfile-pathname (clpmfile-lockfile-pathname clpmfile))
          (*vcs-project-override-fun* (make-vcs-override-fun (clpmfile-pathname clpmfile)))
@@ -122,11 +109,13 @@ the lock file if necessary."
     (unless (probe-file lockfile-pathname)
       ;; There is no lock file currently. Just fall back to BUNDLE-INSTALL.
       (return-from bundle-update
-        (bundle-install clpmfile :localp localp :validate validate)))
+        (bundle-install clpmfile :validate validate)))
     ;; Load the existing lockfile
-    (setf lockfile (load-lockfile lockfile-pathname :localp localp))
-    (unless localp
-      (mapc #'sync-source (clpmfile-sources clpmfile)))
+    (setf lockfile (load-lockfile lockfile-pathname :localp (config-value :local)))
+    (unless (config-value :local)
+      (dolist (s (clpmfile-sources clpmfile))
+        (unless (source-can-lazy-sync-p s)
+          (sync-source s))))
     ;; Map all update systems to their projects.
     (dolist (system update-systems)
       (when-let* ((system-release (find system (context-system-releases lockfile)

@@ -7,6 +7,7 @@
     (:use #:cl
           #:alexandria
           #:clpm/cli/common-args
+          #:clpm/config
           #:clpm/log
           #:clpm/version)
   (:import-from #:adopt)
@@ -64,6 +65,7 @@
              (pop ,(first args)))
            (when (gethash :help ,(second args))
              (adopt:print-help-and-exit ,ui))
+           (config-add-cli-source! ,(second args))
            ,@body))
        (setf (gethash ,(last-elt path) (ensure-ht-path *commands*
                                                        ',(butlast path)))
