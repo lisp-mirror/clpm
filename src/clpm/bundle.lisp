@@ -36,14 +36,8 @@
         (when override
           (merge-pathnames override clpmfile-directory))))))
 
-(defun load-lockfile (pathname &key localp)
-  (handler-bind
-      ((source-no-such-object
-         (lambda (c)
-           (when (and (find-restart 'sync-and-retry) (not localp))
-             (log:info "Syncing source and retrying")
-             (invoke-restart 'sync-and-retry c)))))
-    (load-anonymous-context-from-pathname pathname)))
+(defun load-lockfile (pathname)
+  (load-anonymous-context-from-pathname pathname))
 
 (defun bundle-install (clpmfile-designator &key (validate (constantly t)))
   "Given a clpmfile instance, install all releases from its lock file, creating
@@ -59,7 +53,7 @@ the lock file if necessary."
         (unless (source-can-lazy-sync-p s)
           (sync-source s))))
     (if (probe-file lockfile-pathname)
-        (setf lockfile (load-lockfile lockfile-pathname :localp (config-value :local)))
+        (setf lockfile (load-lockfile lockfile-pathname))
         (setf lockfile (create-empty-lockfile clpmfile)))
     ;; Nuke the lockfile's requirements so that we pick up deletions from the
     ;; clpmfile.
@@ -85,7 +79,7 @@ the lock file if necessary."
          lockfile)
     (unless (probe-file lockfile-pathname)
       (error "Lockfile ~A does not exist" lockfile-pathname))
-    (setf lockfile (load-lockfile lockfile-pathname :localp t))
+    (setf lockfile (load-lockfile lockfile-pathname))
     (unless ignore-missing-releases
       (let* ((releases (context-releases lockfile))
              (missing-releases (remove-if #'release-installed-p releases)))
@@ -111,7 +105,7 @@ the lock file if necessary."
       (return-from bundle-update
         (bundle-install clpmfile :validate validate)))
     ;; Load the existing lockfile
-    (setf lockfile (load-lockfile lockfile-pathname :localp (config-value :local)))
+    (setf lockfile (load-lockfile lockfile-pathname))
     (unless (config-value :local)
       (dolist (s (clpmfile-sources clpmfile))
         (unless (source-can-lazy-sync-p s)

@@ -428,6 +428,8 @@ in place with the same name. Return the new requirement if it was modified."
     (when (typep source 'fs-source)
       (push (project-release (source-project source :all) :newest)
             (context-releases context)))
+    (unless (or (source-can-lazy-sync-p source) (config-value :local))
+      (sync-source source))
     (setf (context-sources context) (append (context-sources context) (list source)))))
 
 (defun load-context-from-stream (stream &key pathname (sources nil sources-provided-p))
