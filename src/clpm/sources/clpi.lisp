@@ -9,6 +9,7 @@
           #:alexandria
           #:anaphora
           #:clpm/cache
+          #:clpm/config
           #:clpm/data
           #:clpm/http-client
           #:clpm/requirement
@@ -66,16 +67,18 @@
         (setf url (puri:copy-uri url))
         (setf url (puri:parse-uri url)))
     (setf (source-url source) url))
-  (setf (clpi-source-index source)
-        (make-instance 'clpi:dual-index
-                       :primary (make-instance 'clpi:http-index
-                                               :http-client (get-http-client)
-                                               :url url)
-                       :secondary (make-instance 'clpi:file-index
-                                                 :root (merge-pathnames
-                                                        "clpi/"
-                                                        (source-cache-directory source))
-                                                 :secondary-p t))))
+  (let ((file-index (make-instance 'clpi:file-index
+                                   :root (merge-pathnames
+                                          "clpi/"
+                                          (source-cache-directory source)))))
+    (setf (clpi-source-index source)
+          (if (config-value :local)
+              file-index
+              (make-instance 'clpi:dual-index
+                             :primary (make-instance 'clpi:http-index
+                                                     :http-client (get-http-client)
+                                                     :url url)
+                             :secondary file-index)))))
 
 (defmethod source-cache-directory ((source clpi-source))
   "Compute the cache location for this source, based on its canonical url."

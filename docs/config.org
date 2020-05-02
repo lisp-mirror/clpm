@@ -65,6 +65,9 @@ The current configuration can be printed by running =clpm config info=.
   The root table, containing all other tables and some direct options.
 
   + =:context= :: A string naming the default context.
+  + =:local= :: If true, sources do not download metadata from the
+    internet. Currently, they may still download tarballs from the internet,
+    but this may change in a future version.
 
 * =(:archives)=
   This table contains all options for dealing with archives.

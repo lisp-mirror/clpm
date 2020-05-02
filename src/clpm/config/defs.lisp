@@ -182,6 +182,14 @@
      :documentation
      "The HTTP client implementation to use.")
 
+    ((:local)
+     :type boolean
+     :default nil
+     :documentation
+     "If T, sources do not download metadata from the internet. Currently, they
+     may still download tarballs from the internet, but this may change in a
+     future version.")
+
     ((:tar)
      :type hash-table)
     ((:tar :path)
