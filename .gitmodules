@@ -21,7 +21,7 @@
 	url = https://github.com/trivial-gray-streams/trivial-gray-streams.git
 [submodule "ext/flexi-streams"]
 	path = ext/flexi-streams
-	url = https://github.com/daewok/flexi-streams.git
+	url = https://github.com/edicl/flexi-streams.git
 [submodule "ext/cl-ppcre"]
 	path = ext/cl-ppcre
 	url = https://github.com/edicl/cl-ppcre.git
