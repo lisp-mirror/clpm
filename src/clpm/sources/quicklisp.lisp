@@ -27,9 +27,7 @@
 ;; * Source
 
 (defclass ql-source (ql-clpi-source)
-  ((url
-    :initarg :url
-    :accessor ql-source-url)))
+  ())
 
 (defmethod make-source ((type (eql 'ql-source)) &rest initargs &key url name)
   (let ((url-string (if (stringp url) url (uri-to-string url))))
@@ -48,7 +46,7 @@
     (if (puri:uri-p url)
         (setf url (puri:copy-uri url))
         (setf url (puri:parse-uri url)))
-    (setf (ql-source-url source) url))
+    (setf (source-url source) url))
   (setf (clpi-source-index source)
         (make-instance 'clpi:file-index
                        :root (merge-pathnames
@@ -57,7 +55,7 @@
 
 (defmethod source-cache-directory ((source ql-source))
   "Compute the cache location for this source, based on its canonical url."
-  (let ((url (ql-source-url source)))
+  (let ((url (source-url source)))
     (clpm-cache-pathname
      `("sources"
        "quicklisp"
@@ -75,7 +73,7 @@
 
 (defmethod source-lib-directory ((source ql-source))
   "Compute the cache location for this source, based on its canonical url."
-  (let ((url (ql-source-url source)))
+  (let ((url (source-url source)))
     (clpm-data-pathname
      `("sources"
        "quicklisp"
@@ -90,7 +88,7 @@
 
 (defmethod source-to-form ((source ql-source))
   (list (source-name source)
-        :url (uri-to-string (ql-source-url source))
+        :url (uri-to-string (source-url source))
         :type (source-type-keyword source)))
 
 (defmethod source-type-keyword ((source ql-source))
@@ -99,7 +97,7 @@
 (defmethod sync-source ((source ql-source))
   (let ((index (clpi-source-index source))
         (ql-dist (make-instance 'ql-clpi:ql-dist
-                                :uri (ql-source-url source)
+                                :uri (source-url source)
                                 :cache-pathname (merge-pathnames
                                                  "quicklisp/"
                                                  (source-cache-directory source))

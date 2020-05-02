@@ -35,6 +35,9 @@
   ((name
     :initarg :name
     :reader source-name)
+   (url
+    :initarg :url
+    :accessor source-url)
    (index
     :accessor clpi-source-index)
    (system-ht
@@ -45,9 +48,7 @@
     :reader clpi-source-project-ht)))
 
 (defclass clpi-dual-source (clpi-source)
-  ((url
-    :initarg :url
-    :accessor source-url)))
+  ())
 
 (defmethod make-source ((type (eql 'clpi-dual-source)) &rest initargs &key url name)
   (let ((url-string (if (stringp url) url (uri-to-string url))))

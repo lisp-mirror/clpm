@@ -46,17 +46,18 @@
            #:source-can-lazy-sync-p
            #:source-ensure-system
            #:source-lib-directory
+           #:source-missing-project
+           #:source-missing-system
            #:source-name
+           #:source-no-such-object
            #:source-project
            #:source-project-release
            #:source-projects
            #:source-system
            #:source-systems
-           #:source-missing-project
-           #:source-missing-system
-           #:source-no-such-object
            #:source-to-form
            #:source-type-keyword
+           #:source-url
            #:sync-and-retry
            #:sync-source
            #:system-name
