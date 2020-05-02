@@ -187,3 +187,15 @@
 [submodule "ext/clpm-multi-http-client"]
 	path = ext/clpm-multi-http-client
 	url = https://gitlab.common-lisp.net/clpm/clpm-multi-http-client.git
+[submodule "ext/parse-float"]
+	path = ext/parse-float
+	url = https://github.com/soemraws/parse-float.git
+[submodule "ext/cl-date-time-parser"]
+	path = ext/cl-date-time-parser
+	url = https://github.com/tkych/cl-date-time-parser
+[submodule "ext/clpi"]
+	path = ext/clpi
+	url = https://gitlab.common-lisp.net/clpm/clpi.git
+[submodule "ext/ql-clpi"]
+	path = ext/ql-clpi
+	url = https://gitlab.common-lisp.net/clpm/ql-clpi.git

@@ -14,6 +14,7 @@
   (:import-from #:flexi-streams)
   (:import-from #:puri)
   (:export #:ensure-file-fetched
+           #:get-http-client
            #:http-request))
 
 (in-package #:clpm/http-client)

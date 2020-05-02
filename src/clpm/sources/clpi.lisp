@@ -1,4 +1,4 @@
-;;;; CLPI derived sources
+;;;; CLPI sources
 ;;;;
 ;;;; This software is part of CLPM. See README.org for more information. See
 ;;;; LICENSE for license information.
@@ -13,37 +13,49 @@
           #:clpm/http-client
           #:clpm/requirement
           #:clpm/sources/defs
-          #:clpm/sources/flat-file
           #:clpm/sources/tarball-release
           #:clpm/utils
           #:clpm/version-strings
-          #:do-urlencode
-          #:split-sequence)
-  (:import-from #:puri)
-  (:export #:clpi-source))
+          #:do-urlencode)
+  (:import-from #:clpi)
+  (:export #:clpi-backing-object
+           #:clpi-dual-source
+           #:clpi-release
+           #:clpi-source
+           #:clpi-source-index
+           #:clpi-source-release-class))
 
 (in-package #:clpm/sources/clpi)
 
 
-;; * Definitions
-;; ** Source
+;; * Source
 
-(defclass clpi-source (ff-source)
+(defclass clpi-source (clpm-source)
   ((name
     :initarg :name
     :reader source-name)
-   (url
+   (index
+    :accessor clpi-source-index)
+   (system-ht
+    :initform (make-hash-table :test 'equal)
+    :reader clpi-source-system-ht)
+   (project-ht
+    :initform (make-hash-table :test 'equal)
+    :reader clpi-source-project-ht)))
+
+(defclass clpi-dual-source (clpi-source)
+  ((url
     :initarg :url
     :accessor source-url)))
 
-(defmethod make-source ((type (eql 'clpi-source)) &rest initargs &key url name)
+(defmethod make-source ((type (eql 'clpi-dual-source)) &rest initargs &key url name)
   (let ((url-string (if (stringp url) url (uri-to-string url))))
     (ensure-gethash (list type name url-string) *source-cache*
                     (apply #'make-instance
                            type
                            initargs))))
 
-(defmethod initialize-instance :after ((source clpi-source)
+(defmethod initialize-instance :after ((source clpi-dual-source)
                                        &rest initargs
                                        &key url)
   (declare (ignore initargs))
@@ -53,46 +65,17 @@
     (if (puri:uri-p url)
         (setf url (puri:copy-uri url))
         (setf url (puri:parse-uri url)))
-    (setf (source-url source) url)))
-
-;; ** Project
-
-(defclass clpi-project (ff-project)
-  ())
-
-;; ** Release
-
-(defclass clpi-release (ff-release
-                        tarball-release)
-  ((url
-    :initarg :url
-    :reader tarball-release/url)
-   (tar-prefix
-    :initarg :tar-prefix
-    :reader tarball-release/prefix)
-   (size
-    :initarg :size
-    :reader tarball-release/desired-size)
-   (file-md5
-    :initarg :file-md5
-    :reader tarball-release/desired-md5)))
-
-;; ** System Release
-
-(defclass clpi-system-release (ff-system-release)
-  ())
-
-
-;; * Basic source methods
-
-(defmethod release-> ((release-1 clpi-release)
-                      (release-2 clpi-release))
-  (string> (release-version release-1)
-           (release-version release-2)))
-
-(defmethod release-satisfies-version-spec-p ((release clpi-release)
-                                             version-spec)
-  (version-spec-satisfied-p/semantic version-spec (release-version release)))
+    (setf (source-url source) url))
+  (setf (clpi-source-index source)
+        (make-instance 'clpi:dual-index
+                       :primary (make-instance 'clpi:http-index
+                                               :http-client (get-http-client)
+                                               :url url)
+                       :secondary (make-instance 'clpi:file-index
+                                                 :root (merge-pathnames
+                                                        "clpi/"
+                                                        (source-cache-directory source))
+                                                 :secondary-p t))))
 
 (defmethod source-cache-directory ((source clpi-source))
   "Compute the cache location for this source, based on its canonical url."
@@ -124,102 +107,229 @@
                        (urlencode (subseq it 1))))))
      :ensure-directory t)))
 
+(defmethod source-project ((source clpi-source) name &optional (error t))
+  (ensure-gethash name (clpi-source-project-ht source)
+                  (let ((index-project (clpi:index-project (clpi-source-index source)
+                                                           name nil)))
+                    (if index-project
+                        (make-instance 'clpi-project
+                                       :source source
+                                       :backing-object index-project)
+                        (when error
+                          (error 'source-missing-project
+                                 :source source
+                                 :project-name name))))))
+
+(defmethod source-system ((source clpi-source) system-name &optional (error t))
+  (ensure-gethash system-name (clpi-source-system-ht source)
+                  (let ((index-system (clpi:index-system (clpi-source-index source)
+                                                         system-name nil)))
+                    (if index-system
+                        (make-instance 'clpi-system
+                                       :source source
+                                       :backing-object index-system)
+                        (when error
+                          (error 'source-missing-system
+                                 :source source
+                                 :system-name system-name))))))
+
 (defmethod source-type-keyword ((source clpi-source))
   :clpi)
 
 (defmethod source-to-form ((source clpi-source))
   (list (source-name source)
         :url (uri-to-string (source-url source))
-        :type :clpi))
+        :type (source-type-keyword source)))
+
+(defmethod sync-source ((source clpi-dual-source))
+  (clpi:dual-index-sync (clpi-source-index source)))
+
+(defgeneric clpi-source-release-class (source))
+
+(defmethod clpi-source-release-class ((source clpi-source))
+  'clpi-release)
+
+
+;; * Project
+
+(defclass clpi-backed-object ()
+  ((backing-object
+    :initarg :backing-object
+    :reader clpi-backing-object)))
+
+(defclass clpi-project (clpi-backed-object)
+  ((source
+    :initarg :source
+    :reader project-source)
+   (release-ht
+    :initform (make-hash-table :test 'equal)
+    :reader clpi-project-release-ht)))
+
+(defmethod project-name ((project clpi-project))
+  (clpi:project-name (clpi-backing-object project)))
+
+(defmethod project-release ((project clpi-project) version-string &optional (error t))
+  (ensure-gethash version-string (clpi-project-release-ht project)
+                  (let ((index-release (clpi:project-release (clpi-backing-object project)
+                                                             version-string nil)))
+                    (if index-release
+                        (make-instance (clpi-source-release-class (project-source project))
+                                       :source (project-source project)
+                                       :project project
+                                       :backing-object index-release)
+                        (when error
+                          (error 'project-missing-version
+                                 :source (project-source project)
+                                 :version version-string
+                                 :project project))))))
+
+(defmethod project-releases ((project clpi-project))
+  (mapcar (curry #'project-release project)
+          (clpi:project-versions (clpi-backing-object project))))
+
+
+;; * Release
+
+(defclass clpi-release (clpi-backed-object
+                        tarball-release)
+  ((source
+    :initarg :source
+    :reader release-source)
+   (project
+    :initarg :project
+    :reader release-project)
+   (system-release-ht
+    :initform (make-hash-table :test 'equal)
+    :reader release-system-release-ht)
+   (system-file-ht
+    :initform (make-hash-table :test 'equal)
+    :reader release-system-file-ht)))
+
+(defmethod release-> ((release-1 clpi-release)
+                      (release-2 clpi-release))
+  (string> (release-version release-1)
+           (release-version release-2)))
+
+(defmethod release-satisfies-version-spec-p ((release clpi-release) version-spec)
+  (let ((scheme (clpi:project-version-scheme (clpi:project (clpi-backing-object release))))
+        (version (release-version release)))
+    (case scheme
+      (:date
+       (version-spec-satisfied-p/simple-string version-spec version))
+      (:semver
+       (version-spec-satisfied-p/semantic version-spec version))
+      (t
+       t))))
+
+(defmethod release-system-file ((release clpi-release) system-file-namestring)
+  (ensure-gethash system-file-namestring (release-system-file-ht release)
+                  (make-instance 'clpi-system-file
+                                 :source (release-source release)
+                                 :release release
+                                 :backing-object (clpi:release-system-file
+                                                  (clpi-backing-object release)
+                                                  system-file-namestring))))
+
+(defmethod release-system-files ((release clpi-release))
+  (mapcar (curry #'release-system-file release)
+          (clpi:release-system-file-namestrings (clpi-backing-object release))))
+
+(defmethod release-system-release ((release clpi-release) system-name &optional error)
+  (ensure-gethash system-name (release-system-release-ht release)
+                  (let ((index-system-release (clpi:release-system-release (clpi-backing-object release)
+                                                                           system-name
+                                                                           nil)))
+                    (if index-system-release
+                        (make-instance 'clpi-system-release
+                                       :source (release-source release)
+                                       :backing-object index-system-release
+                                       :release release)
+                        (when error
+                          (error 'release-missing-system-release
+                                 :source (release-source release)
+                                 :release release
+                                 :system-name system-name))))))
+
+(defmethod release-systems ((release clpi-release))
+  (mapcar (curry #'source-system
+                 (release-source release))
+          (clpi:release-system-names (clpi-backing-object release))))
+
+(defmethod release-version ((release clpi-release))
+  (clpi:release-version (clpi-backing-object release)))
+
+(defmethod tarball-release-url ((release clpi-release))
+  (clpi:release-url (clpi-backing-object release)))
+
+(defmethod tarball-release-desired-md5 ((release clpi-release))
+  (clpi:release-md5 (clpi-backing-object release)))
+
+(defmethod tarball-release-desired-size ((release clpi-release))
+  (clpi:release-size (clpi-backing-object release)))
+
+
+;; * System
+
+(defclass clpi-system (clpi-backed-object)
+  ((source
+    :initarg :source
+    :reader system-source)))
+
+(defmethod system-name ((system clpi-system))
+  (clpi:system-name (clpi-backing-object system)))
+
+(defmethod system-system-releases ((system clpi-system))
+  (let* ((clpi-releases (clpi:system-releases (clpi-backing-object system) nil))
+         (releases (mapcar (lambda (r)
+                             (source-project-release (system-source system)
+                                                     (clpi:project-name (clpi:project r))
+                                                     (clpi:release-version r)))
+                           clpi-releases)))
+    (mapcar (lambda (r) (release-system-release r (system-name system))) releases)))
+
+
+;; * System file
+
+(defclass clpi-system-file (clpi-backed-object)
+  ((source
+    :initarg :source
+    :reader system-file-source)
+   (release
+    :initarg :release
+    :reader system-file-release)))
+
+(defmethod system-file-absolute-asd-pathname ((system-file clpi-system-file))
+  (merge-pathnames (system-file-asd-enough-namestring system-file)
+                   (release-lib-pathname (system-file-release system-file))))
+
+(defmethod system-file-asd-enough-namestring ((system-file clpi-system-file))
+  (clpi:system-file-enough-namestring (clpi-backing-object system-file)))
+
+
+;; * System release
+
+(defclass clpi-system-release (clpi-backed-object
+                                  clpm-system-release)
+  ((source
+    :initarg :source
+    :reader system-release-source)
+   (release
+    :initarg :release
+    :reader system-release-release)))
 
 (defmethod system-release-> ((sr-1 clpi-system-release) (sr-2 clpi-system-release))
   (release-> (system-release-release sr-1) (system-release-release sr-2)))
 
 (defmethod system-release-requirements ((system-release clpi-system-release))
-  (let ((deps (remove-if (rcurry #'member (list "asdf" "uiop") :test #'string-equal)
-                         (ff-system-release-dependencies system-release))))
-    (mapcar (lambda (dep-name)
-              (make-instance 'system-requirement
-                             :name dep-name))
-            deps)))
+  (mapcar #'convert-asd-system-spec-to-req
+          (clpi:system-release-dependencies (clpi-backing-object system-release))))
 
 (defmethod system-release-satisfies-version-spec-p ((system-release clpi-system-release)
                                                     version-spec)
-  (version-spec-satisfied-p/semantic version-spec (system-release-system-version system-release)))
+  (let ((system-version (clpi:system-release-version (clpi-backing-object system-release))))
+    (or (null system-version)
+        (version-spec-satisfied-p/dotted version-spec system-version))))
 
-
-;; * Flat file methods
-
-(defmethod ff-source-project-class ((source clpi-source))
-  'clpi-project)
-
-(defmethod ff-source-release-class ((source clpi-source))
-  'clpi-release)
-
-(defmethod ff-source-system-release-class ((source clpi-source))
-  'clpi-system-release)
-
-(defmethod source-project :around ((source clpi-source) project-name &optional (error t))
-  (declare (ignore error))
-  (restart-case
-      (call-next-method)
-    (sync-and-retry (c)
-      :report "Sync and try again"
-      (declare (ignore c))
-      (sync-source source)
-      (call-next-method))))
-
-(defmethod project-release :around ((project clpi-project) version-string &optional (error t))
-  (declare (ignore error))
-  (restart-case
-      (call-next-method)
-    (sync-and-retry (c)
-      :report "Sync and try again"
-      (declare (ignore c))
-      (sync-source (project-source project))
-      (call-next-method))))
-
-
-;; * Syncing
-
-(defmethod sync-source ((source clpi-source))
-  (let* ((root-url (source-url source))
-         (base-url (puri:merge-uris "package-index/v0.3/" root-url))
-         (project-index-pn (ff-source-repo-project-index-pathname source))
-         (system-index-pn (ff-source-repo-system-index-pathname source))
-         (index-modified-p nil))
-
-    (when (ensure-file-fetched project-index-pn
-                               (puri:merge-uris "project-index" base-url))
-      (setf index-modified-p t))
-    (when (ensure-file-fetched system-index-pn
-                               (puri:merge-uris "system-index" base-url))
-      (setf index-modified-p t))
-
-    (when index-modified-p
-      (uiop:with-safe-io-syntax ()
-        (with-open-file (s project-index-pn)
-          (with-forms-from-stream (s form)
-            (destructuring-bind (project-name &rest args) form
-              (declare (ignore args))
-              (let ((releases-url (puri:merge-uris (uiop:strcat "projects/" project-name "/releases")
-                                                   base-url))
-                    (releases-pn (merge-pathnames "releases"
-                                                  (ff-source-repo-project-pathname source project-name)))
-                    (metadata-url (puri:merge-uris (uiop:strcat "projects/" project-name "/metadata")
-                                                   base-url))
-                    (metadata-pn (merge-pathnames "metadata"
-                                                  (ff-source-repo-project-pathname source project-name))))
-                (ensure-file-fetched releases-pn releases-url)
-                (ensure-file-fetched metadata-pn metadata-url)))))
-
-        (with-open-file (s system-index-pn)
-          (with-forms-from-stream (s form)
-            (destructuring-bind (system-name &rest args) form
-              (declare (ignore args))
-              (let ((url (puri:merge-uris (uiop:strcat "systems/" (urlencode (urlencode system-name)) "/releases")
-                                          base-url))
-                    (pn (merge-pathnames "releases"
-                                         (ff-source-repo-system-pathname source system-name))))
-                (ensure-file-fetched pn url))))))
-      t)))
+(defmethod system-release-system ((system-release clpi-system-release))
+  (source-system (system-release-source system-release)
+                 (clpi:system-release-system-name (clpi-backing-object system-release))))

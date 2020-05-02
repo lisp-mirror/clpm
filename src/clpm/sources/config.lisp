@@ -10,6 +10,7 @@
           #:clpm/sources/clpi
           #:clpm/sources/defs
           #:clpm/sources/fs
+          #:clpm/sources/ql-clpi
           #:clpm/sources/quicklisp
           #:clpm/sources/vcs
           #:clpm/utils)
@@ -24,11 +25,13 @@
 (defun resolve-type (type)
   (ecase type
     (:clpi
-     'clpi-source)
+     'clpi-dual-source)
     (:file-system
      'fs-source)
+    (:ql-clpi
+     'ql-clpi-dual-source)
     (:quicklisp
-     'ql-flat-source)
+     'ql-source)
     (:vcs
      'vcs-source)))
 
