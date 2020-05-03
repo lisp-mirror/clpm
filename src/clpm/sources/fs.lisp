@@ -89,6 +89,9 @@ FS-SOURCE-REGISTER-ASD."))
     (dolist (system-file system-files)
       (fs-source-register-asd source system-file))))
 
+(defmethod source-can-lazy-sync-p ((source fs-source))
+  t)
+
 (defmethod source-project ((source fs-source) project-name &optional (error t))
   "If the project name is :ALL, return the singleton project. Otherwise return
 nil or error."

@@ -82,6 +82,9 @@ source using VCS-SOURCE-REGISTER_PROJECT!."))
                   :source source
                   :name system-name)))
 
+(defmethod source-can-lazy-sync-p ((source vcs-source))
+  t)
+
 (defmethod source-project ((source vcs-source) project-name &optional (error t))
   (or (gethash project-name (vcs-source-projects-by-name source))
       (when error

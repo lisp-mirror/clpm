@@ -12,9 +12,11 @@
           #:clpm/config
           #:clpm/data
           #:clpm/http-client
+          #:clpm/repos
           #:clpm/requirement
           #:clpm/sources/defs
           #:clpm/sources/tarball-release
+          #:clpm/sources/vcs
           #:clpm/utils
           #:clpm/version-strings
           #:do-urlencode)
@@ -170,7 +172,12 @@
     :reader project-source)
    (release-ht
     :initform (make-hash-table :test 'equal)
-    :reader clpi-project-release-ht)))
+    :reader clpi-project-release-ht)
+   (repo
+    :reader project-repo)
+   (vcs-release-ht
+    :initform (make-hash-table :test 'equal)
+    :reader clpi-project-vcs-release-ht)))
 
 (defmethod project-name ((project clpi-project))
   (clpi:project-name (clpi-backing-object project)))
@@ -193,6 +200,28 @@
 (defmethod project-releases ((project clpi-project))
   (mapcar (curry #'project-release project)
           (clpi:project-versions (clpi-backing-object project))))
+
+(defmethod slot-unbound (class (project clpi-project) (slot-name (eql 'repo)))
+  (let (repo
+        (clpi-repo (clpi:project-repo (clpi-backing-object project))))
+    (when clpi-repo
+      (setf repo (make-repo-from-description (clpi:repo-to-description clpi-repo))))
+    (setf (slot-value project slot-name)
+          repo)))
+
+(defmethod project-vcs-release ((project clpi-project) &key commit branch tag)
+  (let* ((ref (cond
+                (commit `(:commit ,commit))
+                (branch `(:branch ,branch))
+                (tag `(:tag ,tag))))
+         (release (ensure-gethash ref (clpi-project-vcs-release-ht project)
+                                  (make-vcs-release (project-source project) project ref))))
+    (unless commit
+      (setf release (ensure-gethash `(:commit ,(vcs-release-commit release))
+                                    (clpi-project-vcs-release-ht project)
+                                    release)))
+    release))
+
 
 
 ;; * Release
@@ -326,6 +355,11 @@
 
 (defmethod system-release-> ((sr-1 clpi-system-release) (sr-2 clpi-system-release))
   (release-> (system-release-release sr-1) (system-release-release sr-2)))
+
+(defmethod system-release-asd-pathname ((system-release clpi-system-release))
+  (clpi:system-file-enough-namestring
+   (clpi:system-release-system-file
+    (clpi-backing-object system-release))))
 
 (defmethod system-release-requirements ((system-release clpi-system-release))
   (mapcar #'convert-asd-system-spec-to-req
