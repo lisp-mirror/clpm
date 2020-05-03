@@ -86,11 +86,17 @@
   (let* ((defsystem-deps (asdf:system-defsystem-depends-on system))
          (source-file (asdf:system-source-file system))
          (*cache* (make-hash-table :test 'equalp))
-         (depends-on (asdf:system-depends-on system)))
+         (depends-on (asdf:system-depends-on system))
+         (description (asdf:system-description system))
+         (license (asdf:system-license system)))
 
     `(,(asdf:component-name system)
       :depends-on ,depends-on
       :version ,(asdf:component-version system)
+      ,@(when license
+          (list :license license))
+      ,@(when description
+          (list :description description))
       :defsystem-depends-on ,defsystem-deps
       :source-file ,source-file
       :loaded-systems ,(gethash source-file *directly-loaded-systems*))))

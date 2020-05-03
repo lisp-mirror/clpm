@@ -19,6 +19,7 @@
            #:process-stream
            #:retriable-error
            #:run-program-augment-env-args
+           #:sort-plist
            #:uri-to-string
            #:url-port
            #:with-forms-from-stream
@@ -212,3 +213,20 @@ overwrites the value from ~default-ht~."
             (setf (gethash k out) v)))))
      new-ht)
     out))
+
+(defun sort-plist (plist order)
+  (let ((missing (gensym))
+        (out))
+    (loop
+      :for key :in order
+      :for value := (getf plist key missing)
+      :unless (eql value missing)
+        :do (push key out)
+            (push value out))
+    (loop
+      :for key :in plist :by #'cddr
+      :for value :in (rest plist) :by #'cddr
+      :unless (member key order)
+        :do (push key out)
+            (push value out))
+    (nreverse out)))

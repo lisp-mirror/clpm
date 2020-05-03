@@ -12,6 +12,7 @@
           #:clpm/context
           #:clpm/groveler
           #:clpm/source
+          #:clpm/utils
           #:do-urlencode)
   (:import-from #:adopt)
   (:import-from #:uiop
@@ -62,6 +63,20 @@
                    *option-asds*
                    *option-deps-from-lockfile*)))
 
+(defun sort-dependencies (deps)
+  (labels ((find-system-name (dep)
+             (if (listp dep)
+                 (ecase (first dep)
+                   (:version
+                    (second dep))
+                   (:feature
+                    (find-system-name (third dep)))
+                   (:require
+                    (second dep)))
+                 dep)))
+    (sort (copy-list (remove-duplicates deps :test #'equal))
+          #'string< :key #'find-system-name)))
+
 (define-cli-command (("clpi" "systems") *clpi-systems-ui*) (arguments options)
   (when arguments
     (warn "This command takes no arguments"))
@@ -76,7 +91,8 @@
     (uiop:with-safe-io-syntax ()
       (let ((*print-case* :downcase))
         (dolist (asd asds)
-          (let ((absolute-asd-pathname (merge-pathnames asd)))
+          (let ((absolute-asd-pathname (merge-pathnames asd))
+                (primary-systems (make-hash-table :test 'equal)))
             ;; Load the asd into the groveler
             (handler-bind ((groveler-dependency-missing
                              (lambda (c)
@@ -89,19 +105,41 @@
                                      (invoke-restart 'add-asd-and-retry
                                                      (system-release-absolute-asd-pathname matching-sr))))))))
               (active-groveler-load-asd! absolute-asd-pathname))
+
+
             (dolist (system-name (active-groveler-systems-in-file absolute-asd-pathname))
               (destructuring-bind (&key depends-on version defsystem-depends-on loaded-systems
+                                     license description
                                    &allow-other-keys)
                   (rest (active-groveler-system-deps system-name))
-                (format *stdout* "~A ~S~%"
-                        (urlencode system-name)
-                        `((,project-name ,project-version)
-                          :system-file ,asd
-                          ,@(when version
-                              (list :version version))
-                          :dependencies ,(sort (remove-duplicates (append depends-on
-                                                                          defsystem-depends-on
-                                                                          loaded-systems)
-                                                                  :test #'equal)
-                                               #'string<))))))))))
+                (let ((primary-name (asdf:primary-system-name system-name))
+                      (all-deps (append depends-on defsystem-depends-on loaded-systems)))
+                  (if (equal primary-name system-name)
+                      (progn
+                        (setf (getf (gethash primary-name primary-systems) :system-file) asd)
+                        (when version
+                          (setf (getf (gethash primary-name primary-systems) :version) version))
+                        (when description
+                          (setf (getf (gethash primary-name primary-systems) :description) description))
+                        (when license
+                          (setf (getf (gethash primary-name primary-systems) :license) license))
+                        (when all-deps
+                          (setf (getf (gethash primary-name primary-systems) :dependencies)
+                                (sort-dependencies all-deps))))
+                      (progn
+                        (push `(,system-name
+                                ,@(when version
+                                    (list :version version))
+                                ,@(when all-deps
+                                    (list :dependencies (sort-dependencies all-deps))))
+                              (getf (gethash primary-name primary-systems) :secondary-systems)))))))
+            (maphash
+             (lambda (primary-system-name description)
+               (format *stdout* "~A ~S~%"
+                       (urlencode primary-system-name)
+                       (list* (list project-name project-version)
+                              (sort-plist description
+                                          '(:system-file :version :description :license
+                                            :dependencies :secondary-systems)))))
+             primary-systems))))))
   t)
