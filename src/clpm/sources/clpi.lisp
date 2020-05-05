@@ -12,6 +12,7 @@
           #:clpm/config
           #:clpm/data
           #:clpm/http-client
+          #:clpm/install/defs
           #:clpm/repos
           #:clpm/requirement
           #:clpm/sources/defs
@@ -42,6 +43,8 @@
     :accessor source-url)
    (index
     :accessor clpi-source-index)
+   (local-index
+    :accessor clpi-source-local-index)
    (system-ht
     :initform (make-hash-table :test 'equal)
     :reader clpi-source-system-ht)
@@ -59,8 +62,7 @@
                            type
                            initargs))))
 
-(defmethod initialize-instance :after ((source clpi-dual-source)
-                                       &rest initargs
+(defmethod initialize-instance :after ((source clpi-source) &rest initargs
                                        &key url)
   (declare (ignore initargs))
   (unless url
@@ -70,6 +72,15 @@
         (setf url (puri:copy-uri url))
         (setf url (puri:parse-uri url)))
     (setf (source-url source) url))
+  (setf (clpi-source-local-index source)
+        (make-instance 'clpi:file-index
+                       :root (merge-pathnames "clpi/"
+                                              (source-lib-directory source)))))
+
+(defmethod initialize-instance :after ((source clpi-dual-source)
+                                       &rest initargs
+                                       &key url)
+  (declare (ignore initargs))
   (let ((file-index (make-instance 'clpi:file-index
                                    :root (merge-pathnames
                                           "clpi/"
@@ -122,6 +133,28 @@
                  (list "_"
                        (urlencode (subseq it 1))))))
      :ensure-directory t)))
+
+(defun ensure-local-project (source project)
+  (let ((local-index (clpi-source-local-index source))
+        (backing-project (clpi-backing-object project)))
+    (or (clpi:index-project local-index (clpi:project-name backing-project) nil)
+        (let ((new-project
+                (make-instance (clpi:index-project-class local-index)
+                               :index local-index
+                               :name (clpi:project-name backing-project)
+                               :version-scheme (clpi:project-version-scheme backing-project))))
+          (clpi:index-add-project local-index new-project)
+          new-project))))
+
+(defun ensure-local-system (source system-name)
+  (let ((local-index (clpi-source-local-index source)))
+    (or (clpi:index-system local-index system-name nil)
+        (let ((new-system
+                (make-instance (clpi:index-system-class local-index)
+                               :index local-index
+                               :name system-name)))
+          (clpi:index-add-system local-index new-system)
+          new-system))))
 
 (defmethod source-project ((source clpi-source) name &optional (error t))
   (ensure-gethash name (clpi-source-project-ht source)
@@ -237,7 +270,8 @@
 
 ;; * Release
 
-(defclass clpi-release (clpi-backed-object
+(defclass clpi-release (clpm-release
+                        clpi-backed-object
                         tarball-release)
   ((source
     :initarg :source
@@ -313,6 +347,27 @@
 
 (defmethod tarball-release-desired-size ((release clpi-release))
   (clpi:release-size (clpi-backing-object release)))
+
+(defun copy-clpi-release (clpi-release clpi-project)
+  (apply #'make-instance
+         (clpi:project-release-class (clpi:project clpi-release))
+         :version (clpi:release-version clpi-release)
+         :project clpi-project
+         (clpi:release-plist clpi-release)))
+
+(defmethod install-release ((release clpi-release))
+  (when (call-next-method)
+    (let* ((source (release-source release))
+           (project (release-project release))
+           (local-index (clpi-source-local-index source))
+           (local-project (ensure-local-project source project))
+           (local-release (copy-clpi-release (clpi-backing-object release) local-project)))
+      (clpi:project-add-release local-project local-release)
+      (dolist (sr (clpi:release-system-releases local-release))
+        (clpi:system-add-system-release (ensure-local-system source (clpi:system-release-system-name sr))
+                                        sr))
+      (clpi:index-save local-index))
+    t))
 
 
 ;; * System

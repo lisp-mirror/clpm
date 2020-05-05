@@ -151,4 +151,5 @@
                                         :element-type '(unsigned-byte 8))
           (unarchive 'gzipped-tar-archive
                      archive-stream install-root
-                     :strip-components 1))))))
+                     :strip-components 1)))
+      t)))
