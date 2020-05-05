@@ -5,6 +5,9 @@
   + Pull HTTP client into separate library
     (=clpm-multi-http-client=). Additionally, this library supports connection
     pooling with Drakma, so make Drakma the default on non Windows platforms.
+  + Pull ASDF system groveler into separate project.
+  + Pull CLPI documentation and implementation into separate project.
+  + Pull QL integration for CLPI into separate project.
 
 * v0.2.1 - 2020-04-05
 
