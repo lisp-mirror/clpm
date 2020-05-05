@@ -11,6 +11,7 @@
           #:clpm/cli/subcommands
           #:clpm/context
           #:clpm/groveler
+          #:clpm/requirement
           #:clpm/source
           #:clpm/utils
           #:do-urlencode)
@@ -97,14 +98,20 @@
             (handler-bind ((groveler-dependency-missing
                              (lambda (c)
                                (when context
-                                 (let* ((missing-system (groveler-dependency-missing/system c))
-                                        (matching-sr (find missing-system (context-system-releases context)
+                                 (let* ((missing-system-spec (groveler-dependency-missing-system c))
+                                        (missing-req (convert-asd-system-spec-to-req missing-system-spec))
+                                        (missing-system-name (requirement-name missing-req))
+                                        (matching-sr (find missing-system-name
+                                                           (context-system-releases context)
                                                            :test #'equal
                                                            :key (compose #'system-name #'system-release-system))))
-                                   (when matching-sr
-                                     (invoke-restart 'add-asd-and-retry
-                                                     (system-release-absolute-asd-pathname matching-sr))))))))
-              (active-groveler-load-asd! absolute-asd-pathname))
+                                   (when (and matching-sr
+                                              (system-release-satisfies-version-spec-p
+                                               matching-sr
+                                               (requirement-version-spec missing-req)))
+                                     (groveler-add-asd-and-retry
+                                      (system-release-absolute-asd-pathname matching-sr))))))))
+              (active-groveler-load-asd absolute-asd-pathname))
 
 
             (dolist (system-name (active-groveler-systems-in-file absolute-asd-pathname))

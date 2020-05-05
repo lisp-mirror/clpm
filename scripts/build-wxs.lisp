@@ -152,13 +152,6 @@
                              "DiskId" "1"
                              "Win64" "yes")
                 ,@(directory-files (merge-pathnames "lib/clpm/src/clpm-client/" *build-root-pathname*))))
-              (("Directory" "Id" "GrovelerDir"
-                            "Name" "clpm-groveler")
-               (("Component" "Id" "CLPM_Groveler"
-                             "Guid" "639DDC25-7C6D-4F7B-809E-A7989A3D15BE"
-                             "DiskId" "1"
-                             "Win64" "yes")
-                ,@(directory-files (merge-pathnames "lib/clpm/src/clpm-groveler/" *build-root-pathname*))))
               ,src-dir-tree)))))))
 
        (("Feature" "Id" "Minimal"
@@ -168,7 +161,6 @@
         (("ComponentRef" "Id" "CLPM_Bin"))
         (("ComponentRef" "Id" "CLPM_Libs"))
         (("ComponentRef" "Id" "CLPM_Client"))
-        (("ComponentRef" "Id" "CLPM_Groveler"))
         ,@(mapcar (lambda (id) `(("ComponentRef" "Id" ,id))) src-dir-component-names)
         (("Feature" "Id" "SetPath"
                     "Level" "1"

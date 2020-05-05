@@ -162,7 +162,7 @@ incompatible, a new one is created."
                   (groveler-loaded-asds (node-groveler node))
                   :test #'equal)
        ;; This groveler is compatible, load the asd.
-       (groveler-load-asd! (node-groveler node) asd-pathname)
+       (groveler-load-asd (node-groveler node) asd-pathname)
        (push asd-namestring (node-groveler-loaded-asds node)))
       ((set-equal (list* asd-namestring (node-groveler-loaded-asds node))
                   (groveler-loaded-asds (node-groveler node))
@@ -178,8 +178,8 @@ incompatible, a new one is created."
                   asd-pathname)
        (setf (node-groveler node) (make-groveler))
        (dolist (f (reverse (node-groveler-loaded-asds node)))
-         (groveler-load-asd! (node-groveler node) f))
-       (groveler-load-asd! (node-groveler node) asd-pathname)
+         (groveler-load-asd (node-groveler node) f))
+       (groveler-load-asd (node-groveler node) asd-pathname)
        (push asd-namestring (node-groveler-loaded-asds node))))))
 
 (defun node-register-asd-loaded-in-groveler! (node asd-pathname)

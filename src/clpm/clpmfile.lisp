@@ -9,7 +9,6 @@
           #:anaphora
           #:iterate
           #:clpm/config
-          #:clpm/deps
           #:clpm/repos
           #:clpm/requirement
           #:clpm/source

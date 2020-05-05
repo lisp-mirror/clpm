@@ -26,7 +26,7 @@
   (constantly nil))
 
 (defun handle-groveler-missing-dependency (parent-node nominal-node c)
-  (let* ((missing-system-spec (groveler-dependency-missing/system c))
+  (let* ((missing-system-spec (groveler-dependency-missing-system c))
          (missing-req (convert-asd-system-spec-to-req missing-system-spec :why :grovel)))
     (multiple-value-bind (status satisfying-system-release)
         (requirement-state missing-req nominal-node)
@@ -36,15 +36,15 @@
            (install-release (system-release-release satisfying-system-release)))
          (log:debug "Groveler is missing ~S, but it is already in resolution. Adding it."
                     missing-system-spec)
-         (invoke-restart 'add-asd-and-retry
-                         (system-release-absolute-asd-pathname satisfying-system-release)
-                         (lambda ()
-                           (log:debug "Groveler successfully added ~S. Adding ~S to search state."
-                                      missing-system-spec
-                                      (namestring (system-release-absolute-asd-pathname satisfying-system-release)))
-                           (node-register-asd-loaded-in-groveler!
-                            nominal-node
-                            (system-release-absolute-asd-pathname satisfying-system-release))))
+         (groveler-add-asd-and-retry
+          (system-release-absolute-asd-pathname satisfying-system-release)
+          (lambda ()
+            (log:debug "Groveler successfully added ~S. Adding ~S to search state."
+                       missing-system-spec
+                       (namestring (system-release-absolute-asd-pathname satisfying-system-release)))
+            (node-register-asd-loaded-in-groveler!
+             nominal-node
+             (system-release-absolute-asd-pathname satisfying-system-release))))
          nil)
         (:unsat
          (make-terminal-generator))

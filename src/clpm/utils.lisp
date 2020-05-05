@@ -14,7 +14,6 @@
   (:export #:*live-script-location*
            #:ensure-uri-scheme-https!
            #:merge-hts
-           #:mktemp
            #:posix-environment-alist
            #:process-stream
            #:retriable-error
@@ -73,23 +72,6 @@ process."
 #-(or sbcl ccl)
 (defun run-program-augment-env-args (new-env-alist)
   (error "not implemented"))
-
-#+(and sbcl unix)
-(defun mktemp ()
-  "Make a temporary directory and return its pathname."
-  (let ((template-pathname (merge-pathnames "clpm-XXXXXX"
-                                            (uiop:temporary-directory))))
-    (uiop:ensure-directory-pathname (sb-posix:mkdtemp (namestring template-pathname)))))
-
-#-(and sbcl unix)
-(defun mktemp ()
-  "Make a temporary directory and return its pathname."
-  ;; This is likely not a secure implementation, but it at least gives us a
-  ;; fallback on, for example, Windows.
-  (let ((pn (merge-pathnames (format nil "clpm-grovel/~A/" (make-v4-uuid))
-                             (uiop:temporary-directory))))
-    (ensure-directories-exist pn)
-    pn))
 
 (defun uri-to-string (uri)
   "Convert a puri URI to a string."

@@ -199,3 +199,6 @@
 [submodule "ext/ql-clpi"]
 	path = ext/ql-clpi
 	url = https://gitlab.common-lisp.net/clpm/ql-clpi.git
+[submodule "ext/asdf-system-groveler"]
+	path = ext/asdf-system-groveler
+	url = https://gitlab.common-lisp.net/clpm/asdf-system-groveler.git

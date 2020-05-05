@@ -279,7 +279,7 @@ contains."
   (unless (fs-system-file/groveled-p system-file)
     ;; Sigh. We need to grovel the file to make sure we know everything it
     ;; defines.
-    (active-groveler-ensure-asd-loaded! (system-file-absolute-asd-pathname system-file))
+    (active-groveler-ensure-asd-loaded (system-file-absolute-asd-pathname system-file))
     (let ((systems-in-file (active-groveler-systems-in-file (system-file-absolute-asd-pathname system-file)))
           (source (system-file-source system-file)))
       (dolist (system-name systems-in-file)
@@ -345,11 +345,9 @@ contains."
 (defun parse-system-release-info-from-groveler! (system-release info)
   "Take the info provided by the groveler and modify system-release in place to
 include it."
-  (destructuring-bind (system-name
-                       &key version depends-on defsystem-depends-on loaded-systems
+  (destructuring-bind (&key version depends-on defsystem-depends-on loaded-systems
                        &allow-other-keys)
       info
-    (declare (ignore system-name))
     (setf (system-release-system-version system-release) version)
     (setf (system-release-requirements system-release)
           (mapcar #'convert-asd-system-spec-to-req
@@ -357,7 +355,7 @@ include it."
 
 (defun grovel-system-release! (system-release)
   "Invoke the groveler to get info on this system."
-  (active-groveler-ensure-asd-loaded! (system-release-absolute-asd-pathname system-release))
+  (active-groveler-ensure-asd-loaded (system-release-absolute-asd-pathname system-release))
   (let ((info (active-groveler-system-deps (system-name (system-release-system system-release)))))
     (parse-system-release-info-from-groveler! system-release info)))
 

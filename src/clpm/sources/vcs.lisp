@@ -364,7 +364,7 @@ already created."
   (unless (vcs-system-file/groveled-p system-file)
     ;; Sigh. We need to grovel the file to make sure we know ~everything it
     ;; defines.
-    (active-groveler-ensure-asd-loaded! (system-file-absolute-asd-pathname system-file))
+    (active-groveler-ensure-asd-loaded (system-file-absolute-asd-pathname system-file))
     (let ((system-names (active-groveler-systems-in-file (system-file-absolute-asd-pathname system-file))))
       (dolist (system-name system-names)
         ;; Get the system release from the release (which will register it in
@@ -425,18 +425,16 @@ already created."
   "Take the info provided by the groveler and modify system-release in place to
 include it."
   (log:debug "Parsing from groveler: ~S" info)
-  (destructuring-bind (system-name
-                       &key version depends-on defsystem-depends-on loaded-systems
+  (destructuring-bind (&key version depends-on defsystem-depends-on loaded-systems
                        &allow-other-keys)
       info
-    (declare (ignore system-name))
     (setf (system-release-system-version system-release) version)
     (setf (system-release-requirements system-release)
           (mapcar #'convert-asd-system-spec-to-req
                   (append depends-on defsystem-depends-on loaded-systems)))))
 
 (defun grovel-system-release! (system-release)
-  (active-groveler-ensure-asd-loaded! (system-release-absolute-asd-pathname system-release))
+  (active-groveler-ensure-asd-loaded (system-release-absolute-asd-pathname system-release))
   (let ((info (active-groveler-system-deps (system-name (system-release-system system-release)))))
     (parse-system-release-info-from-groveler! system-release info)))
 
