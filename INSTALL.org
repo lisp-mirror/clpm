@@ -6,11 +6,14 @@
 CLPM is distributed in both source and binary form. For either version, first
 install the dependencies:
 
-+ tar :: Required.
+
++ A Lisp implementation :: SBCL is currently required if you are installing
+  from source. SBCL or CCL are the most tested implementations for groveling
+  dependencies from .asd files (necessary if you are installing a development
+  version of a project).
 + git :: If you want to use development versions of your dependencies.
-+ sbcl or ccl :: Either is required if systems need to be groveled for
-  dependencies (likely needed if you use development versions of any
-  dependency). SBCL is required if you are installing from source.
++ tar :: Required.
+
 
 * Prebuilt binaries
   To install CLPM in binary form, download the appropriate file from

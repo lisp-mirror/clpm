@@ -131,6 +131,18 @@
 
     ((:grovel)
      :type hash-table)
+    ((:grovel :lisp)
+     :type hash-table)
+    ((:grovel :lisp :implementation)
+     :type keyword
+     :default :auto
+     :documentation
+     "The implementation to use when groveling. Must be recognized by
+      lisp-invocation library.")
+    ((:grovel :lisp :path)
+     :type string
+     :documentation
+     "The command to use when executing the Lisp process for groveling.")
     ((:grovel :sandbox)
      :type hash-table)
     ((:grovel :sandbox :type)
@@ -277,6 +289,8 @@ path. Everything is a `:keyword` except for wildcards."
           t)
          (t
           (error "Unable to parse ~S as a boolean." orig-value)))))
+    ((eql type 'keyword)
+     (make-keyword (uiop:standard-case-symbol-name value)))
     ((and (listp type)
           (eql (first type) 'member)
           (every (lambda (x) (or (keywordp x) (eql x nil) (eql x t))) (rest type)))

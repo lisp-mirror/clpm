@@ -8,9 +8,11 @@
     (:use #:cl
           #:anaphora
           #:asdf-system-groveler
+          #:clpm/config
           #:clpm/log
           #:clpm/sandbox
-          #:exit-hooks)
+          #:exit-hooks
+          #:lisp-invocation)
   (:shadow #:make-groveler)
   (:reexport #:asdf-system-groveler)
   (:export #:*active-groveler*
@@ -25,12 +27,32 @@
 
 (defvar *active-groveler* nil)
 
+(defun implementation-installed-p (implementation)
+  (ignore-errors
+   (zerop (nth-value 2 (uiop:run-program
+                        (lisp-invocation-arglist
+                         :implementation-type implementation
+                         :lisp-path (config-value :grovel :lisp :path)
+                         :eval "(print (lisp-implementation-type))"
+                         :eval (quit-form :code 0 :implementation-type implementation))
+                        :input nil
+                        :output nil
+                        :error-output nil)))))
+
+(defun get-groveler-implementation ()
+  (let ((config-value (config-value :grovel :lisp :implementation)))
+    (if (eql config-value :auto)
+        (or (find-if #'implementation-installed-p '(:sbcl :ccl :ecl :abcl :clasp :cmu :clisp :acl :lw))
+            (error "Unable to find an installed lisp implementation."))
+        config-value)))
+
 (defun make-groveler ()
   (let ((dir (asdf-system-groveler:mkdtemp (merge-pathnames "clpm"
                                                             (uiop:temporary-directory)))))
     (flet ((rewrite (args)
              (sandbox-augment-command args :read-write-pathnames (list dir))))
-      (aprog1 (asdf-system-groveler:make-groveler :sbcl
+      (aprog1 (asdf-system-groveler:make-groveler (get-groveler-implementation)
+                                                  :lisp-path (config-value :grovel :lisp :path)
                                                   :asdf-fasl-cache-dir dir
                                                   :keep-asdf-fasl-cache-dir nil
                                                   :rewrite-arguments-callback #'rewrite)
