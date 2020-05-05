@@ -8,6 +8,7 @@
   + Pull ASDF system groveler into separate project.
   + Pull CLPI documentation and implementation into separate project.
   + Pull QL integration for CLPI into separate project.
+  + Build binaries with SBCL 2.0.4.
 
 * v0.2.1 - 2020-04-05
 

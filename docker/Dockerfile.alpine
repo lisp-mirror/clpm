@@ -7,7 +7,7 @@
 
 # Use Bionic as Disco upgraded libc, making it more difficult to run the built
 # executable on older systems.
-FROM daewok/sbcl:2.0.3-alpine3.11-build
+FROM daewok/sbcl:2.0.4-alpine3.11-build
 
 COPY docker/customize-target-features.lisp /usr/local/src/sbcl-${SBCL_VERSION}/
 
