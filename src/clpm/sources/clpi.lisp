@@ -98,6 +98,13 @@
                        (urlencode (subseq it 1))))))
      :ensure-directory t)))
 
+(defmethod source-ensure-system ((source clpi-dual-source) system-name)
+  (or (source-system source system-name nil)
+      (setf (gethash system-name (clpi-source-system-ht source))
+            (make-instance 'vcs-system
+                           :name system-name
+                           :source source))))
+
 (defmethod source-can-lazy-sync-p ((source clpi-dual-source))
   t)
 
@@ -181,6 +188,10 @@
 
 (defmethod project-name ((project clpi-project))
   (clpi:project-name (clpi-backing-object project)))
+
+(defmethod project-release ((project clpi-project) (version-string list) &optional error)
+  (declare (ignore error))
+  (apply #'project-vcs-release project version-string))
 
 (defmethod project-release ((project clpi-project) version-string &optional (error t))
   (ensure-gethash version-string (clpi-project-release-ht project)
@@ -309,7 +320,10 @@
 (defclass clpi-system (clpi-backed-object)
   ((source
     :initarg :source
-    :reader system-source)))
+    :reader system-source)
+   (vcs-releases
+    :initform (make-hash-table :test 'equal)
+    :reader clpi-system-vcs-releases)))
 
 (defmethod system-name ((system clpi-system))
   (clpi:system-name (clpi-backing-object system)))
@@ -321,7 +335,12 @@
                                                      (clpi:project-name (clpi:project r))
                                                      (clpi:release-version r)))
                            clpi-releases)))
-    (mapcar (lambda (r) (release-system-release r (system-name system))) releases)))
+    (append (mapcar (lambda (r) (release-system-release r (system-name system))) releases)
+            (hash-table-values (clpi-system-vcs-releases system)))))
+
+(defmethod system-register-release! ((system clpi-system) (release vcs-release))
+  (setf (gethash (release-version release) (clpi-system-vcs-releases system))
+        release))
 
 
 ;; * System file

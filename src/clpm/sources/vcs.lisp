@@ -22,9 +22,11 @@
            #:make-vcs-release
            #:vcs-project/cache-directory
            #:vcs-project/path
+           #:vcs-release
            #:vcs-release-commit
            #:vcs-source
-           #:vcs-source-register-project!))
+           #:vcs-source-register-project!
+           #:vcs-system))
 
 (in-package #:clpm/sources/vcs)
 
