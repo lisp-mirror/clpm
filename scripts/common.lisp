@@ -9,7 +9,7 @@
 (in-package #:clpm-scripts)
 
 ;; Load in ASDF.
-(require :asdf)
+(load (merge-pathnames "../ext/asdf.lisp" *load-truename*))
 
 ;; Setup logical pathnames
 (load (merge-pathnames "../logical-pathname.lisp" *load-truename*))

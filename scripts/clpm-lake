@@ -7,7 +7,8 @@
 
 (in-package #:cl-user)
 
-(require :asdf)
+;; Load in ASDF.
+(load (merge-pathnames "../ext/asdf.lisp" *load-truename*))
 
 (defvar *setup-file-pathname* *load-truename*
   "The pathname to this file.")
