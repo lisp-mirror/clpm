@@ -4,7 +4,7 @@
 # LICENSE for license information.
 
 ARG windows_version=1909
-FROM daewok/sbcl:2.0.4-windowsservercore-$windows_version
+FROM daewok/sbcl:2.0.3-windowsservercore-$windows_version
 
 WORKDIR "C:/"
 
