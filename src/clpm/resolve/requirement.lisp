@@ -105,6 +105,8 @@ system releases are active."
       ((and (release-satisfies-version-spec-p release version-spec)
             (subsetp system-releases (node-activated-system-releases node)))
        (values :sat nil))
+      ((release-satisfies-version-spec-p release version-spec)
+       :unknown)
       (t
        :unsat))))
 
