@@ -6,6 +6,6 @@
 (uiop:define-package #:clpm/cli/clpi
     (:use #:cl
           #:clpm/cli/clpi/common
-          #:clpm/cli/clpi/systems))
+          #:clpm/cli/clpi/release))
 
 (in-package #:clpm/cli/clpi)

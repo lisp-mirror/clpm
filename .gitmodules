@@ -202,3 +202,6 @@
 [submodule "ext/asdf-system-groveler"]
 	path = ext/asdf-system-groveler
 	url = https://gitlab.common-lisp.net/clpm/asdf-system-groveler.git
+[submodule "ext/jsown"]
+	path = ext/jsown
+	url = https://github.com/madnificent/jsown.git
