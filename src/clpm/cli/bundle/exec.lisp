@@ -60,11 +60,13 @@
 (define-cli-command (("bundle" "exec") *bundle-exec-ui*) (args options)
   (let* ((clpmfile-pathname (merge-pathnames (gethash :bundle-file options)
                                              (uiop:getcwd)))
-         (clpmfile (get-clpmfile clpmfile-pathname))
+         (clpmfile (get-clpmfile clpmfile-pathname :installed-only-p t))
          (lockfile-pathname (clpmfile-lockfile-pathname clpmfile))
          (*default-pathname-defaults* (uiop:pathname-directory-pathname clpmfile-pathname))
          (include-client-p (gethash :bundle-exec-with-client options))
-         (cl-source-registry-form (bundle-source-registry clpmfile-pathname :include-client-p include-client-p))
+         (cl-source-registry-form (bundle-source-registry clpmfile-pathname
+                                                          :include-client-p include-client-p
+                                                          :installed-only-p t))
          (cl-source-registry-value (format nil "~S" cl-source-registry-form))
          (output-translations-form (compute-output-translations clpmfile-pathname))
          (command args))

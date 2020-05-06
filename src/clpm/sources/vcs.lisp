@@ -62,7 +62,8 @@ source using VCS-SOURCE-REGISTER_PROJECT!."))
 
 (defmethod initialize-instance :after ((source vcs-source)
                                        &rest initargs
-                                       &key projects)
+                                       &key projects
+                                         &allow-other-keys)
   (declare (ignore initargs))
   (dolist (project projects)
     (destructuring-bind (project-name . repo-form) project

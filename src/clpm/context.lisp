@@ -18,6 +18,7 @@
            #:context-diff
            #:context-diff-has-diff-p
            #:context-diff-to-plist
+           #:context-installed-only-p
            #:context-name
            #:context-releases
            #:context-requirements
@@ -44,6 +45,10 @@
     :initform nil
     :initarg :name
     :accessor context-name)
+   (installed-only-p
+    :initarg :installed-only-p
+    :initform nil
+    :reader context-installed-only-p)
    (pathname
     :initarg :pathname
     :accessor context-pathname)
@@ -337,9 +342,9 @@ in place with the same name. Return the new requirement if it was modified."
 
 ;; * Deserializing
 
-(defun load-anonymous-context-from-pathname (pn)
+(defun load-anonymous-context-from-pathname (pn &key installed-only-p)
   (with-open-file (s pn)
-    (load-context-from-stream s :pathname pn)))
+    (load-context-from-stream s :pathname pn :installed-only-p installed-only-p)))
 
 (defun context-downselect-sources (name sources)
   (let ((allowed-source-names (config-value :contexts name :sources)))
@@ -424,15 +429,18 @@ in place with the same name. Return the new requirement if it was modified."
 (defmethod process-form (context (section (eql :reverse-dependencies)) form))
 
 (defmethod process-form (context (section (eql :sources)) form)
-  (let ((source (load-source-from-form form)))
+  (let ((source (load-source-from-form form :installed-only-p (context-installed-only-p context))))
     (when (typep source 'fs-source)
       (push (project-release (source-project source :all) :newest)
             (context-releases context)))
-    (unless (or (source-can-lazy-sync-p source) (config-value :local))
+    (unless (or (source-can-lazy-sync-p source)
+                (config-value :local)
+                (context-installed-only-p context))
       (sync-source source))
     (setf (context-sources context) (append (context-sources context) (list source)))))
 
-(defun load-context-from-stream (stream &key pathname (sources nil sources-provided-p))
+(defun load-context-from-stream (stream &key pathname (sources nil sources-provided-p)
+                                          installed-only-p)
   (uiop:with-safe-io-syntax ()
     ;; The first form in the stream must be an API declaration.
     (let ((f (read stream nil)))
@@ -441,6 +449,7 @@ in place with the same name. Return the new requirement if it was modified."
     (let ((out (apply #'make-instance
                       'context
                       :sources sources
+                      :installed-only-p installed-only-p
                       (when pathname
                         (list :pathname pathname)))))
       ;; The next forms are either tags or lists. The tags denote sections.

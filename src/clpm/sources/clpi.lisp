@@ -55,7 +55,8 @@
 (defclass clpi-dual-source (clpi-source)
   ())
 
-(defmethod make-source ((type (eql 'clpi-dual-source)) &rest initargs &key url name)
+(defmethod make-source ((type (eql 'clpi-dual-source)) &rest initargs
+                        &key url name &allow-other-keys)
   (let ((url-string (if (stringp url) url (uri-to-string url))))
     (ensure-gethash (list type name url-string) *source-cache*
                     (apply #'make-instance
@@ -79,14 +80,16 @@
 
 (defmethod initialize-instance :after ((source clpi-dual-source)
                                        &rest initargs
-                                       &key url)
+                                       &key url installed-only-p)
   (declare (ignore initargs))
   (let ((file-index (make-instance 'clpi:file-index
                                    :root (merge-pathnames
                                           "clpi/"
-                                          (source-cache-directory source)))))
+                                          (if installed-only-p
+                                              (source-lib-directory source)
+                                              (source-cache-directory source))))))
     (setf (clpi-source-index source)
-          (if (config-value :local)
+          (if (or (config-value :local) installed-only-p)
               file-index
               (make-instance 'clpi:dual-index
                              :primary (make-instance 'clpi:http-index
@@ -109,7 +112,7 @@
                        (urlencode (subseq it 1))))))
      :ensure-directory t)))
 
-(defmethod source-ensure-system ((source clpi-dual-source) system-name)
+(defmethod source-ensure-system ((source clpi-source) system-name)
   (or (source-system source system-name nil)
       (setf (gethash system-name (clpi-source-system-ht source))
             (make-instance 'vcs-system

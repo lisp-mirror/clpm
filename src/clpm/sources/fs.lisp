@@ -73,7 +73,8 @@ FS-SOURCE-REGISTER-ASD."))
 (defmethod initialize-instance :after ((source fs-source)
                                        &rest initargs
                                        &key
-                                         system-files)
+                                         system-files
+                                       &allow-other-keys)
   "Construct the singleton project and release."
   (declare (ignore initargs))
   (assert (uiop:directory-pathname-p (fs-source-root-pathname source)))

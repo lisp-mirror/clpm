@@ -32,6 +32,12 @@
     :accessor clpmfile-pathname
     :documentation
     "The pathname to this file.")
+   (installed-only-p
+    :initarg :installed-only-p
+    :initform nil
+    :reader clpmfile-installed-only-p
+    :documentation
+    "If sources should be created to only look at their installed releases.")
    (user-global-sources
     :initarg :user-global-sources
     :initform nil
@@ -112,16 +118,17 @@ clpmfile is located."
          (clpmfile-vcs-source clpmfile)
          (clpmfile-user-global-sources clpmfile)))
 
-(defgeneric get-clpmfile (clpmfile-designator))
+(defgeneric get-clpmfile (clpmfile-designator &key installed-only-p))
 
-(defmethod get-clpmfile ((clpmfile-designator clpmfile))
+(defmethod get-clpmfile ((clpmfile-designator clpmfile) &key installed-only-p)
+  (declare (ignore installed-only-p))
   clpmfile-designator)
 
-(defmethod get-clpmfile ((clpmfile-designator pathname))
-  (read-clpmfile clpmfile-designator))
+(defmethod get-clpmfile ((clpmfile-designator pathname) &key installed-only-p)
+  (read-clpmfile clpmfile-designator :installed-only-p installed-only-p))
 
-(defmethod get-clpmfile ((clpmfile-designator string))
-  (get-clpmfile (pathname clpmfile-designator)))
+(defmethod get-clpmfile ((clpmfile-designator string) &key installed-only-p)
+  (get-clpmfile (pathname clpmfile-designator) :installed-only-p installed-only-p))
 
 
 ;; * Deserializing
@@ -223,7 +230,7 @@ instance."
   "Load a :source statement from a clpmfile and add it to the list of sources."
   (unless (stringp (first args))
     (error "The first argument to :SOURCE must be a string"))
-  (push (load-source-from-form args)
+  (push (load-source-from-form args :installed-only-p (clpmfile-installed-only-p clpmfile))
         (clpmfile-user-global-sources clpmfile)))
 
 (defmethod parse-clpmfile-form (clpmfile (type (eql :system)) args)
@@ -239,8 +246,9 @@ instance."
                          :why t)
           (clpmfile-user-requirements clpmfile))))
 
-(defun read-clpmfile-from-stream (stream pathname)
-  (let ((clpmfile (make-instance 'clpmfile :pathname pathname))
+(defun read-clpmfile-from-stream (stream pathname &key installed-only-p)
+  (let ((clpmfile (make-instance 'clpmfile :pathname pathname
+                                 :installed-only-p installed-only-p))
         (source-allowed-p t))
     (uiop:with-safe-io-syntax ()
       ;; The first form in the stream must be an API declaration.
@@ -262,11 +270,11 @@ instance."
       (nreversef (clpmfile-user-requirements clpmfile))
       clpmfile)))
 
-(defun read-clpmfile (pathname)
+(defun read-clpmfile (pathname &key installed-only-p)
   "Read a ~clpmfile~ instance from ~pathname~."
   (let* ((*default-pathname-defaults* (uiop:pathname-directory-pathname pathname)))
     (with-open-file (stream pathname)
-      (read-clpmfile-from-stream stream pathname))))
+      (read-clpmfile-from-stream stream pathname :installed-only-p installed-only-p))))
 
 (defmethod print-object ((obj clpmfile) stream)
   (print-unreadable-object (obj stream :type t)

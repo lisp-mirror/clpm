@@ -27,7 +27,9 @@
 (defclass ql-clpi-dual-source (ql-clpi-source clpi-dual-source)
   ())
 
-(defmethod make-source ((type (eql 'ql-clpi-dual-source)) &rest initargs &key url name)
+(defmethod make-source ((type (eql 'ql-clpi-dual-source)) &rest initargs
+                        &key url name
+                        &allow-other-keys)
   (let ((url-string (if (stringp url) url (uri-to-string url))))
     (ensure-gethash (list type name url-string) *source-cache*
                     (apply #'make-instance

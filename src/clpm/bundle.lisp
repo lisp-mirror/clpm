@@ -36,8 +36,8 @@
         (when override
           (merge-pathnames override clpmfile-directory))))))
 
-(defun load-lockfile (pathname)
-  (load-anonymous-context-from-pathname pathname))
+(defun load-lockfile (pathname &key installed-only-p)
+  (load-anonymous-context-from-pathname pathname :installed-only-p installed-only-p))
 
 (defun bundle-install (clpmfile-designator &key (validate (constantly t)))
   "Given a clpmfile instance, install all releases from its lock file, creating
@@ -71,7 +71,9 @@ the lock file if necessary."
         (serialize-context-to-stream lockfile stream)))
     changedp))
 
-(defun bundle-source-registry (clpmfile-designator &key include-client-p ignore-missing-releases)
+(defun bundle-source-registry (clpmfile-designator
+                               &key include-client-p ignore-missing-releases
+                                 installed-only-p)
   (let* ((*fetch-repo-automatically* nil)
          (clpmfile (get-clpmfile clpmfile-designator))
          (lockfile-pathname (clpmfile-lockfile-pathname clpmfile))
@@ -79,7 +81,7 @@ the lock file if necessary."
          lockfile)
     (unless (probe-file lockfile-pathname)
       (error "Lockfile ~A does not exist" lockfile-pathname))
-    (setf lockfile (load-lockfile lockfile-pathname))
+    (setf lockfile (load-lockfile lockfile-pathname :installed-only-p installed-only-p))
     (unless ignore-missing-releases
       (let* ((releases (context-releases lockfile))
              (missing-releases (remove-if #'release-installed-p releases)))

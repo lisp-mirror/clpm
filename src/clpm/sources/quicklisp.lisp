@@ -29,7 +29,7 @@
 (defclass ql-source (ql-clpi-source)
   ())
 
-(defmethod make-source ((type (eql 'ql-source)) &rest initargs &key url name)
+(defmethod make-source ((type (eql 'ql-source)) &rest initargs &key url name &allow-other-keys)
   (let ((url-string (if (stringp url) url (uri-to-string url))))
     (ensure-gethash (list type name url-string) *source-cache*
                     (apply #'make-instance
@@ -38,7 +38,7 @@
 
 (defmethod initialize-instance :after ((source ql-source)
                                        &rest initargs
-                                       &key url)
+                                       &key url installed-only-p)
   (declare (ignore initargs))
   (unless url
     (error "URL is required"))
@@ -51,7 +51,9 @@
         (make-instance 'clpi:file-index
                        :root (merge-pathnames
                               "clpi/"
-                              (source-cache-directory source)))))
+                              (if installed-only-p
+                                  (source-lib-directory source)
+                                  (source-cache-directory source))))))
 
 (defmethod source-cache-directory ((source ql-source))
   "Compute the cache location for this source, based on its canonical url."

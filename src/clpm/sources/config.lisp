@@ -35,7 +35,7 @@
     (:vcs
      'vcs-source)))
 
-(defun load-source-from-form (f)
+(defun load-source-from-form (f &key installed-only-p)
   (destructuring-bind (name &rest args &key type &allow-other-keys)
       f
     (assert (or (eql type :file-system)
@@ -45,6 +45,7 @@
     (apply #'make-source
            (resolve-type type)
            :name name
+           :installed-only-p installed-only-p
            (remove-from-plist args :type))))
 
 (defun load-sources ()
