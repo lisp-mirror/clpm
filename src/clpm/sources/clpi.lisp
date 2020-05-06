@@ -262,7 +262,9 @@
                 (branch `(:branch ,branch))
                 (tag `(:tag ,tag))))
          (release (ensure-gethash ref (clpi-project-vcs-release-ht project)
-                                  (make-vcs-release (project-source project) project ref))))
+                                  (make-vcs-release (project-source project) project ref
+                                                    :local-release-class 'clpi-vcs-local-release
+                                                    :remote-release-class 'clpi-vcs-remote-release))))
     (unless commit
       (setf release (ensure-gethash `(:commit ,(vcs-release-commit release))
                                     (clpi-project-vcs-release-ht project)
@@ -288,6 +290,12 @@
    (system-file-ht
     :initform (make-hash-table :test 'equal)
     :reader release-system-file-ht)))
+
+(defclass clpi-vcs-local-release (vcs-local-release)
+  ())
+
+(defclass clpi-vcs-remote-release (vcs-remote-release)
+  ())
 
 (defmethod release-> ((release-1 clpi-release)
                       (release-2 clpi-release))
@@ -371,6 +379,26 @@
                                         sr))
       (clpi:index-save local-index))
     t))
+
+(defmethod install-release ((release clpi-vcs-remote-release))
+  (prog1 (call-next-method)
+    (let* ((source (release-source release))
+           (project (release-project release))
+           (local-index (clpi-source-local-index source))
+           (local-project (ensure-local-project source project)))
+      (setf (clpi:project-repo local-project)
+            (clpi:project-repo (clpi-backing-object project)))
+      (clpi:index-save local-index))))
+
+(defmethod install-release ((release clpi-vcs-local-release))
+  (prog1 (call-next-method)
+    (let* ((source (release-source release))
+           (project (release-project release))
+           (local-index (clpi-source-local-index source))
+           (local-project (ensure-local-project source project)))
+      (setf (clpi:project-repo local-project)
+            (clpi:project-repo (clpi-backing-object project)))
+      (clpi:index-save local-index))))
 
 
 ;; * System

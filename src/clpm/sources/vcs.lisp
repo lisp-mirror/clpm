@@ -20,10 +20,12 @@
   (:export #:*vcs-project-override-fun*
            #:ensure-vcs-release-installed!
            #:make-vcs-release
+           #:vcs-local-release
            #:vcs-project/cache-directory
            #:vcs-project/path
            #:vcs-release
            #:vcs-release-commit
+           #:vcs-remote-release
            #:vcs-source
            #:vcs-source-register-project!
            #:vcs-system))
@@ -132,16 +134,18 @@ source using VCS-SOURCE-REGISTER_PROJECT!."))
 pathname. If a directory pathname is returned, then that is assumed to be a
 local override when requesting a VCS release.")
 
-(defun make-vcs-release (source project ref)
+(defun make-vcs-release (source project ref
+                         &key (local-release-class 'vcs-local-release)
+                           (remote-release-class 'vcs-remote-release))
   (let ((override-pathname (funcall *vcs-project-override-fun* (project-name project))))
     (if override-pathname
-        (make-instance 'vcs-local-release
+        (make-instance local-release-class
                        :source source
                        :project project
                        :ref ref
                        :repo (make-instance 'local-git-override-repo
                                             :pathname override-pathname))
-        (make-instance 'vcs-remote-release
+        (make-instance remote-release-class
                        :source source
                        :project project
                        :ref ref))))
