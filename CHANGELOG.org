@@ -10,6 +10,9 @@
   + Pull QL integration for CLPI into separate project.
   + Add =(:grovel :lisp :implementation)= and =(:grovel :lisp :path)= for
     controlling what Lisp implementation is used by the groveler.
+  + Installing releases now writes project and release metadata to CLPM's data
+    dir. This allows the CLPM cache to be cleared, but have data on installed
+    projects remain.
 
 * v0.2.1 - 2020-04-05
 
