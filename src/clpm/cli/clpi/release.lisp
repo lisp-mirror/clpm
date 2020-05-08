@@ -74,13 +74,13 @@ with an HTTP client to submit the data to a CLPI server.")
       (ecase (first f)
         ((:and :or)
          (jsown:new-js
-           ("type" (first f))
+           ("type" (string-downcase (symbol-name (first f))))
            ("features" (mapcar #'asdf-feature-expression-to-jsown (rest f)))))
         (:not
          (jsown:new-js
            ("type" "not")
            ("feature" (asdf-feature-expression-to-jsown (second f))))))
-      f))
+      (string-downcase (symbol-name f))))
 
 (defgeneric asdf-complex-dep-to-jsown (type args))
 
@@ -169,6 +169,7 @@ with an HTTP client to submit the data to a CLPI server.")
                        ("projectName" project-name)
                        ("version" project-version)
                        ("url" release-url)
+                       ("archiveType" "tar.gz")
                        ("systems" system-objs))))
       (terpri *standard-output*)))
   t)
