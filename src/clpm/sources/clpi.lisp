@@ -26,10 +26,10 @@
            #:clpi-dual-source
            #:clpi-release
            #:clpi-source
-           #:clpi-source-dual-index-type
-           #:clpi-source-file-index-type
+           #:clpi-source-index-type
            #:clpi-source-index
-           #:clpi-source-release-class))
+           #:clpi-source-release-class
+           #:make-clpi-source-object-store))
 
 (in-package #:clpm/sources/clpi)
 
@@ -57,15 +57,43 @@
 (defclass clpi-dual-source (clpi-source)
   ())
 
-(defgeneric clpi-source-file-index-type (source))
+(defgeneric clpi-source-index-type (source))
 
-(defmethod clpi-source-file-index-type ((source clpi-source))
-  'clpi:file-index)
+(defmethod clpi-source-index-type ((source clpi-source))
+  'clpi:index)
 
-(defgeneric clpi-source-dual-index-type (source))
+(defgeneric make-clpi-source-object-store (source installed-only-p))
 
-(defmethod clpi-source-dual-index-type ((source clpi-source))
-  'clpi:dual-index)
+(defmethod make-clpi-source-object-store ((source clpi-source) installed-only-p)
+  (make-instance 'clpi:file-object-store
+                 :root (merge-pathnames
+                        "clpi/"
+                        (if installed-only-p
+                            (source-lib-directory source)
+                            (source-cache-directory source)))))
+
+(defmethod make-clpi-source-object-store ((source clpi-dual-source) installed-only-p)
+  (let ((secondary (make-instance 'clpi:file-object-store
+                                  :root (merge-pathnames
+                                         "clpi/"
+                                         (if installed-only-p
+                                             (source-lib-directory source)
+                                             (source-cache-directory source))))))
+    (if (or (config-value :local) installed-only-p)
+        secondary
+        (make-instance 'clpi:dual-object-store
+                       :primary (make-instance 'clpi:http-object-store
+                                               :http-client (get-http-client)
+                                               :url (source-url source))
+                       :secondary secondary))))
+
+(defmethod make-clpi-source-object-store ((source clpi-dual-source) installed-only-p)
+  (make-instance 'clpi:file-object-store
+                 :root (merge-pathnames
+                        "clpi/"
+                        (if installed-only-p
+                            (source-lib-directory source)
+                            (source-cache-directory source)))))
 
 (defmethod make-source ((type (eql 'clpi-dual-source)) &rest initargs
                         &key url name &allow-other-keys)
@@ -76,7 +104,7 @@
                            initargs))))
 
 (defmethod initialize-instance :after ((source clpi-source) &rest initargs
-                                       &key url)
+                                       &key url installed-only-p)
   (declare (ignore initargs))
   (unless url
     (error "URL is required"))
@@ -85,29 +113,16 @@
         (setf url (puri:copy-uri url))
         (setf url (puri:parse-uri url)))
     (setf (source-url source) url))
+  (setf (clpi-source-index source)
+        (make-instance (clpi-source-index-type source)
+                       :object-store
+                       (make-clpi-source-object-store source installed-only-p)))
   (setf (clpi-source-local-index source)
-        (make-instance (clpi-source-file-index-type source)
-                       :root (merge-pathnames "clpi/"
-                                              (source-lib-directory source)))))
-
-(defmethod initialize-instance :after ((source clpi-dual-source)
-                                       &rest initargs
-                                       &key url installed-only-p)
-  (declare (ignore initargs))
-  (let ((file-index (make-instance (clpi-source-file-index-type source)
-                                   :root (merge-pathnames
-                                          "clpi/"
-                                          (if installed-only-p
-                                              (source-lib-directory source)
-                                              (source-cache-directory source))))))
-    (setf (clpi-source-index source)
-          (if (or (config-value :local) installed-only-p)
-              file-index
-              (make-instance (clpi-source-dual-index-type source)
-                             :primary (make-instance 'clpi:http-index
-                                                     :http-client (get-http-client)
-                                                     :url url)
-                             :secondary file-index)))))
+        (make-instance (clpi-source-index-type source)
+                       :object-store
+                       (make-instance 'clpi:file-object-store
+                                      :root (merge-pathnames "clpi/"
+                                                             (source-lib-directory source))))))
 
 (defmethod source-cache-directory ((source clpi-source))
   "Compute the cache location for this source, based on its canonical url."
@@ -206,7 +221,7 @@
         :type (source-type-keyword source)))
 
 (defmethod sync-source ((source clpi-dual-source))
-  (clpi:dual-index-sync (clpi-source-index source)))
+  (clpi:index-sync (clpi-source-index source)))
 
 (defgeneric clpi-source-release-class (source))
 
