@@ -26,6 +26,8 @@
            #:clpi-dual-source
            #:clpi-release
            #:clpi-source
+           #:clpi-source-dual-index-type
+           #:clpi-source-file-index-type
            #:clpi-source-index
            #:clpi-source-release-class))
 
@@ -55,6 +57,16 @@
 (defclass clpi-dual-source (clpi-source)
   ())
 
+(defgeneric clpi-source-file-index-type (source))
+
+(defmethod clpi-source-file-index-type ((source clpi-source))
+  'clpi:file-index)
+
+(defgeneric clpi-source-dual-index-type (source))
+
+(defmethod clpi-source-dual-index-type ((source clpi-source))
+  'clpi:dual-index)
+
 (defmethod make-source ((type (eql 'clpi-dual-source)) &rest initargs
                         &key url name &allow-other-keys)
   (let ((url-string (if (stringp url) url (uri-to-string url))))
@@ -74,7 +86,7 @@
         (setf url (puri:parse-uri url)))
     (setf (source-url source) url))
   (setf (clpi-source-local-index source)
-        (make-instance 'clpi:file-index
+        (make-instance (clpi-source-file-index-type source)
                        :root (merge-pathnames "clpi/"
                                               (source-lib-directory source)))))
 
@@ -82,7 +94,7 @@
                                        &rest initargs
                                        &key url installed-only-p)
   (declare (ignore initargs))
-  (let ((file-index (make-instance 'clpi:file-index
+  (let ((file-index (make-instance (clpi-source-file-index-type source)
                                    :root (merge-pathnames
                                           "clpi/"
                                           (if installed-only-p
@@ -91,7 +103,7 @@
     (setf (clpi-source-index source)
           (if (or (config-value :local) installed-only-p)
               file-index
-              (make-instance 'clpi:dual-index
+              (make-instance (clpi-source-dual-index-type source)
                              :primary (make-instance 'clpi:http-index
                                                      :http-client (get-http-client)
                                                      :url url)

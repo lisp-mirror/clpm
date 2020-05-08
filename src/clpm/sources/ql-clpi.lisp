@@ -27,6 +27,12 @@
 (defclass ql-clpi-dual-source (ql-clpi-source clpi-dual-source)
   ())
 
+(defmethod clpi-source-file-index-type ((source ql-clpi-source))
+  'ql-clpi:ql-file-index)
+
+(defmethod clpi-source-dual-index-type ((source ql-clpi-dual-source))
+  'ql-clpi:ql-dual-index)
+
 (defmethod make-source ((type (eql 'ql-clpi-dual-source)) &rest initargs
                         &key url name
                         &allow-other-keys)

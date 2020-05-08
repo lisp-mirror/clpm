@@ -36,25 +36,6 @@
                            type
                            initargs))))
 
-(defmethod initialize-instance :after ((source ql-source)
-                                       &rest initargs
-                                       &key url installed-only-p)
-  (declare (ignore initargs))
-  (unless url
-    (error "URL is required"))
-  (let ((url url))
-    (if (puri:uri-p url)
-        (setf url (puri:copy-uri url))
-        (setf url (puri:parse-uri url)))
-    (setf (source-url source) url))
-  (setf (clpi-source-index source)
-        (make-instance 'clpi:file-index
-                       :root (merge-pathnames
-                              "clpi/"
-                              (if installed-only-p
-                                  (source-lib-directory source)
-                                  (source-cache-directory source))))))
-
 (defmethod source-cache-directory ((source ql-source))
   "Compute the cache location for this source, based on its canonical url."
   (let ((url (source-url source)))
