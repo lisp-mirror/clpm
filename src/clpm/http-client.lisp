@@ -13,6 +13,12 @@
           #:iterate)
   (:import-from #:flexi-streams)
   (:import-from #:puri)
+  #+:clpm-curl
+  (:import-from #:clpm-multi-http-client-impl/curl)
+  #+:clpm-dexador
+  (:import-from #:clpm-multi-http-client-impl/dexador)
+  #+:clpm-drakma
+  (:import-from #:clpm-multi-http-client-impl/drakma)
   (:export #:ensure-file-fetched
            #:get-http-client
            #:http-request))
@@ -29,26 +35,26 @@
 
 (defgeneric make-http-client (type))
 
+#+:clpm-curl
 (defmethod make-http-client ((type (eql :curl)))
-  (let ((class (uiop:find-symbol* :curl-client :clpm-multi-http-client/curl)))
-    (apply #'make-instance
-           class
-           (awhen (config-value :curl)
-             (hash-table-plist it)))))
+  (apply #'make-instance
+         'clpm-multi-http-client-impl/curl:curl-client
+         (awhen (config-value :curl)
+           (hash-table-plist it))))
 
+#+:clpm-dexador
 (defmethod make-http-client ((type (eql :dexador)))
-  (let ((class (uiop:find-symbol* :dexador-client :clpm-multi-http-client/dexador)))
-    (apply #'make-instance
-           class
-           (awhen (config-value :dexador)
-             (hash-table-plist it)))))
+  (apply #'make-instance
+         'clpm-multi-http-client-impl/dexador:dexador-client
+         (awhen (config-value :dexador)
+           (hash-table-plist it))))
 
+#+:clpm-drakma
 (defmethod make-http-client ((type (eql :drakma)))
-  (let ((class (uiop:find-symbol* :drakma-client :clpm-multi-http-client/drakma)))
-    (apply #'make-instance
-           class
-           (awhen (config-value :drakma)
-             (hash-table-plist it)))))
+  (apply #'make-instance
+         'clpm-multi-http-client-impl/drakma:drakma-client
+         (awhen (config-value :drakma)
+           (hash-table-plist it))))
 
 
 (defun get-http-client ()

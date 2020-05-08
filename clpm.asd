@@ -20,9 +20,9 @@
   :build-operation "deploy-op"
   :build-pathname #+win32 "clpm.exe" #-win32 "clpm"
   :depends-on (#:clpm/clpm
-               (:feature :clpm-curl #:clpm-multi-http-client/curl)
-               (:feature :clpm-dexador #:clpm-multi-http-client/dexador)
-               (:feature :clpm-drakma #:clpm-multi-http-client/drakma)
+               (:feature :clpm-curl #:clpm-multi-http-client-impl/curl)
+               (:feature :clpm-dexador #:clpm-multi-http-client-impl/dexador)
+               (:feature :clpm-drakma #:clpm-multi-http-client-impl/drakma)
                (:feature :clpm-firejail #:clpm/sandbox/firejail)
                (:feature :clpm-openssl #:clpm/http-client/cl-plus-ssl)))
 
