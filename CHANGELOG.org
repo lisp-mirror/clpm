@@ -14,6 +14,8 @@
     dir. This allows the CLPM cache to be cleared, but have data on installed
     projects remain.
   + Add the =(:log :level)= config option for controlling log verbosity.
+  + Add =--no-resolve= option to =bundle install= to prevent re-resolving
+    requirements when you know the lock file is up to date.
 
 * v0.2.1 - 2020-04-05
 

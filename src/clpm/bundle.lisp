@@ -39,7 +39,7 @@
 (defun load-lockfile (pathname &key installed-only-p)
   (load-anonymous-context-from-pathname pathname :installed-only-p installed-only-p))
 
-(defun bundle-install (clpmfile-designator &key (validate (constantly t)))
+(defun bundle-install (clpmfile-designator &key (validate (constantly t)) no-resolve)
   "Given a clpmfile instance, install all releases from its lock file, creating
 the lock file if necessary."
   (let* ((*fetch-repo-automatically* (not (config-value :local)))
@@ -55,20 +55,23 @@ the lock file if necessary."
     (if (probe-file lockfile-pathname)
         (setf lockfile (load-lockfile lockfile-pathname))
         (setf lockfile (create-empty-lockfile clpmfile)))
-    ;; Nuke the lockfile's requirements so that we pick up deletions from the
-    ;; clpmfile.
-    (setf (context-requirements lockfile) nil)
-    (setf lockfile (install-requirements (clpmfile-all-requirements clpmfile)
-                                         :context lockfile
-                                         :validate (lambda (diff)
-                                                     (aprog1 (funcall validate diff)
-                                                       (setf changedp it)))
-                                         :update-projects (config-table-keys :bundle :local)))
-    (when changedp
-      (with-open-file (stream lockfile-pathname
-                              :direction :output
-                              :if-exists :supersede)
-        (serialize-context-to-stream lockfile stream)))
+    (if no-resolve
+        (mapc #'install-release (context-releases lockfile))
+        (progn
+          ;; Nuke the lockfile's requirements so that we pick up deletions from the
+          ;; clpmfile.
+          (setf (context-requirements lockfile) nil)
+          (setf lockfile (install-requirements (clpmfile-all-requirements clpmfile)
+                                               :context lockfile
+                                               :validate (lambda (diff)
+                                                           (aprog1 (funcall validate diff)
+                                                             (setf changedp it)))
+                                               :update-projects (config-table-keys :bundle :local)))
+          (when changedp
+            (with-open-file (stream lockfile-pathname
+                                    :direction :output
+                                    :if-exists :supersede)
+              (serialize-context-to-stream lockfile stream)))))
     changedp))
 
 (defun bundle-source-registry (clpmfile-designator

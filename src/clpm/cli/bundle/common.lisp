@@ -12,7 +12,8 @@
           #:clpm/utils)
   (:import-from #:adopt)
   (:import-from #:cl-ppcre)
-  (:export #:*group-bundle*))
+  (:export #:*group-bundle*
+           #:*option-no-resolve*))
 
 (in-package #:clpm/cli/bundle/common)
 
@@ -24,6 +25,13 @@
    :initial-value "clpmfile"
    :help "The path to the clpmfile"
    :reduce #'adopt:last))
+
+(defparameter *option-no-resolve*
+  (adopt:make-option
+   :bundle-no-resolve
+   :long "no-resolve"
+   :help "Do not attempt to resolve any requirements. Use requirements exactly as given in lock file."
+   :reduce (constantly t)))
 
 (defparameter *group-bundle*
   (adopt:make-group

@@ -41,7 +41,8 @@ exist in the lock file.")
                    *group-bundle*
                    *option-local*
                    *option-yes*
-                   *option-output*)))
+                   *option-output*
+                   *option-no-resolve*)))
 
 (defun sexp-interaction-y-or-n-p ()
   (uiop:with-safe-io-syntax ()
@@ -70,4 +71,5 @@ exist in the lock file.")
                                              (uiop:getcwd)))
          (*default-pathname-defaults* (uiop:pathname-directory-pathname clpmfile-pathname)))
     (bundle-install clpmfile-pathname :validate (make-validate-fun (gethash :yes options)
-                                                                   (gethash :output options)))))
+                                                                   (gethash :output options))
+                    :no-resolve (gethash :bundle-no-resolve options))))
