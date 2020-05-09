@@ -44,8 +44,8 @@ The type of every source must be specified with a keyword.
      HTTPS scheme, then every interaction with this source will take place
      using HTTPS.
 
-   For instance, to use the primary Quicklisp source, you use the following
-   description:
+   For instance, to use the primary Quicklisp distribution, you use the
+   following description:
 
    #+begin_src common-lisp
      ("quicklisp"
@@ -53,16 +53,55 @@ The type of every source must be specified with a keyword.
       :url "https://beta.quicklisp.org/dist/quicklisp.txt")
    #+end_src
 
+   Currently, information cannot be fetched from a Quicklisp distribution on
+   demand, data must be synced between your computer and the distribution. This
+   happens automatically when using =bundle= commands. In order to sync
+   manually (for installing into a global context or when you expect to have
+   bad internet soon), run the following, where =$SOURCE_NAME= is the name of
+   the source in your config file:
+
+   #+begin_src shell
+     clpm sync $SOURCE_NAME
+   #+end_src
+
 ** CLPI
 
-   Common Lisp Package Index style sources are currently under development. At
-   the moment, the only documentation of them exists in CLPM's source code. The
-   goal is to produce a package index that contains all of the releases of
-   projects, along with system versions and dependencies, and extra metadata
-   such as upstream repo location.
+   Common Lisp Project Index style sources are currently under development in
+   the [[https://gitlab.common-lisp.net/clpm/clpi][CLPI project]].
 
    The primary CLPM author currently uses a CLPI style source to index packages
-   located on a private Gitlab instance. If you are interested in using a CLPI
-   style source, please reach out.
+   located on a private Gitlab instance. If you are interested in doing
+   something similar, please reach out.
 
-   The type specifier is =:clpi=.
+   The type specifier is =:clpi= and a =:url= is also required.
+
+   While CLPI sources *can* be synced, it is currently a fairly slow affair due
+   to how many objects the information is spread between. It is recommended
+   that you just let CLPM fetch data on demand.
+
+** QL-CLPI
+
+   This type of source is an extension of CLPI sources to include extra
+   information relevant to representing a Quicklisp distribution in a CLPI
+   style repository. Currently, this extra information includes version aliases
+   as the same version of a project is routinely present in multiple Quicklisp
+   distribution releases. Development of this source type happens in the
+   [[https://gitlab.common-lisp.net/clpm/ql-clpi][QL-CLPI project]].
+
+   The type designator for this source is =:ql-clpi=. It can be configured with
+   the following options:
+
+   + =:url= :: The URL to the index.
+
+   For instance, to use the a mirror of the primary Quicklisp distribution, you
+   use the following description:
+
+   #+begin_src common-lisp
+     ("quicklisp"
+      :type :ql-clpi
+      :url "https://quicklisp.common-lisp-project-index.org/")
+   #+end_src
+
+   While QL-CLPI sources *can* be synced, it is currently a fairly slow affair
+   due to how many objects the information is spread between. It is recommended
+   that you just let CLPM fetch data on demand.

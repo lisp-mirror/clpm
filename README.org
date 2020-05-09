@@ -94,14 +94,14 @@ files.
   Now that you have CLPM installed, this section walks you through how to set
   it up as a Quicklisp alternative.
 
-  First, configure CLPM to use the Quicklisp index as a source for packages and
-  to use HTTPS to fetch files from it [fn:1]. Create a file called
+  First, configure CLPM to use a mirror of the primary Quicklisp distribution
+  as a source for packages [fn:1]. Create a file called
   =~/.config/clpm/sources.conf= with the following contents:
 
   #+begin_src common-lisp
     ("quicklisp"
-     :type :quicklisp
-     :url "https://beta.quicklisp.org/dist/quicklisp.txt")
+     :type :ql-clpi
+     :url "https://quicklisp.common-lisp-project-index.org/")
   #+end_src
 
   See [[file:docs/sources.org][sources]] for more details on configuring sources.
@@ -113,17 +113,8 @@ files.
     clpm client rc --quicklisp-alternative
   #+end_src
 
-  Then, sync your local copy of the Quicklisp metadata by running:
-
-  #+begin_src shell
-    clpm sync
-  #+end_src
-
-  Syncing may take a while the first time as it needs to fetch and process the
-  metadata for every Quicklisp release.
-
-  Then you can start your favorite lisp and try loading a system, such as
-  alexandria:
+  Then you can start your favorite Common Lisp implementation and try loading a
+  system, such as alexandria:
 
   #+begin_src common-lisp
     (asdf:load-system :alexandria)
@@ -167,12 +158,12 @@ files.
    everywhere possible. This trend is not going away, therefore CLPM should
    natively support HTTPS.
 
-   As no Lisp implementation I am aware of has native support for TLS, this
-   means that CLPM has to use third party tools to achieve this support. This
-   further drives the separation of the core and client, as CLPM can use
-   foreign libraries to provide TLS support and this is not something that
-   should be brought into a development image that does not need it
-   otherwise.
+   As only LispWorks is the only Common Lisp implementation I am aware of that
+   has native support for TLS, this means that CLPM has to use third party
+   tools to achieve this support. This further drives the separation of the
+   core and client, as CLPM can use foreign libraries to provide TLS support
+   and this is not something that should be brought into a development image
+   that does not otherwise need it.
 
    Additionally, Quicklisp packages are served over HTTPS. While the Quicklisp
    client cannot take advantage of that (without
@@ -189,7 +180,7 @@ files.
    To this end, CLPM can be used without ever loading the client (for example,
    =clpm bundle exec= configures ASDF entirely through environment variables)
    and if you do choose to use the client for better interactive development,
-   CLPM is able to remove itself from the image when it is dumped.
+   the client is able to remove itself from the image when it is dumped.
 
 ** Support CI/CD workflows
 
@@ -222,7 +213,7 @@ files.
 
    Therefore, CLPM supports both the status quo (a Quicklisp package index
    versioned by date) as well as a work in progress package index (working name
-   of CLPI). This new Common Lisp Package Index includes both extra metadata
+   of CLPI). This new Common Lisp Project Index includes both extra metadata
    about projects (such as the upstream repo which can be used to check out
    development versions) and requires that systems are versioned in order to be
    released.
@@ -240,7 +231,11 @@ files.
 
 * Footnotes
 
-[fn:1] All files in the primary Quicklisp distribution are served over both
-HTTPS and HTTP, even though the Quicklisp client cannot use HTTPS itself.
+[fn:1] This mirror is generated using the [[https://gitlab.common-lisp.net/clpm/ql-clpi][ql-clpi project]], which stores
+information about the projects and releases in a [[https://gitlab.common-lisp.net/clpm/clpi][Common Lisp Project Index]]. A
+goal of CLPI is to make it easy to download only the pieces of information
+needed to perform the operation at hand, instead of needing to sync all data
+about all releases locally. If you wish to not use this mirror, see [[file:docs/sources.org][sources]] for
+information on how to use a Quicklisp distribution directly.
 
 [fn:2] See, for example: [[https://www.quicklisp.org/beta/][Quicklisp]], [[https://github.com/fukamachi/qlot/][Qlot]], and [[https://github.com/CodyReichert/qi][Qi]].
