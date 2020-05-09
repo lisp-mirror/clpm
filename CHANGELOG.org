@@ -13,6 +13,7 @@
   + Installing releases now writes project and release metadata to CLPM's data
     dir. This allows the CLPM cache to be cleared, but have data on installed
     projects remain.
+  + Add the =(:log :level)= config option for controlling log verbosity.
 
 * v0.2.1 - 2020-04-05
 

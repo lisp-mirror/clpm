@@ -8,6 +8,7 @@
           #:alexandria
           #:clpm/cli/common-args
           #:clpm/cli/subcommands
+          #:clpm/config
           #:clpm/log)
   (:import-from #:adopt)
   (:export #:*common-arguments*
@@ -48,7 +49,11 @@ please report a bug and provide the stack trace.~%")
           #+clisp system::simple-interrupt-condition
           #+ecl ext:interactive-interrupt
           #+allegro excl:interrupt-signal
-          (lambda (c) (declare (ignore c)) (uiop:quit 2)))
+          (lambda (c)
+            (when (or (eql (config-value :log :level) :debug)
+                      (eql (config-value :log :level) :trace))
+              (uiop:print-condition-backtrace c :stream *error-output*))
+            (uiop:quit 2)))
          ;; On warning, print it and optionally the backtrace.
          (warning (lambda (c)
                     (log:warn "~A" c)
@@ -65,25 +70,4 @@ please report a bug and provide the stack trace.~%")
           ;; We need to ignore unrecognized options here since we don't yet
           ;; know the correct set of options to use!
           (parse-options-ignoring-unrecognized *default-ui*)
-        ;; Compute verbosity
-        (case (gethash :verbose options)
-          (0
-           (log:config '(clpm) :warn
-                       :this :stream *error-output* :immediate-flush :own
-                       :pattern "%;<;;>;5p [%g{}{}{:downcase}] - %<{pretty}%m%>%n"))
-          (1
-           (log:config '(clpm) :info
-                       :this :stream *error-output* :immediate-flush :own
-                       :pattern "%;<;;>;5p [%g{}{}{:downcase}] - %<{pretty}%m%>%n")
-           (log:debug "Setting CLPM log level to info"))
-          (2
-           (log:config '(clpm) :debug
-                       :this :stream *error-output* :immediate-flush :own
-                       :pattern "%;<;;>;5p [%g{}{}{:downcase}] - %<{pretty}%m%>%n")
-           (log:debug "Setting CLPM log level to debug"))
-          (t
-           (log:config '(clpm) :trace
-                       :this :stream *error-output* :immediate-flush :own
-                       :pattern "%;<;;>;5p [%g{}{}{:downcase}] - %<{pretty}%m%>%n")
-           (log:debug "Setting CLPM log level to trace")))
         (dispatch-subcommand *commands* arguments options *default-ui*)))))

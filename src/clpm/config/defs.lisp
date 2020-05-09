@@ -203,6 +203,14 @@
      may still download tarballs from the internet, but this may change in a
      future version.")
 
+    ((:log)
+     :type hash-table)
+    ((:log :level)
+     :type (member :off :fatal :error :warn :info :debug :trace)
+     :default :warn
+     :documentation
+     "The default logging level of the application.")
+
     ((:tar)
      :type hash-table)
     ((:tar :path)

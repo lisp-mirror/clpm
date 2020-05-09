@@ -66,6 +66,7 @@
            (when (gethash :help ,(second args))
              (adopt:print-help-and-exit ,ui))
            (config-add-cli-source! ,(second args))
+           (set-log-level)
            ,@body))
        (setf (gethash ,(last-elt path) (ensure-ht-path *commands*
                                                        ',(butlast path)))
@@ -114,3 +115,11 @@
        (format *standard-output* "Available subcommands: ~{~A~^ ~}~%"
                (available-subcommands working-ht))
        (adopt:exit 1)))))
+
+(defun set-log-level ()
+  (log:config '(clpm) (config-value :log :level)
+              :this
+              :stream *error-output*
+              :immediate-flush :own
+              :pattern "%;<;;>;5p [%g{}{}{:downcase}] - %<{pretty}%m%>%n")
+  (log:debug "Log level set to ~S" (config-value :log :level)))

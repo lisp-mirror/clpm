@@ -39,7 +39,7 @@
    :reduce (constantly t)))
 
 (defparameter *option-verbose*
-  (adopt:make-option :verbose
+  (adopt:make-option :cli-config-log-level
                      :long "verbose"
                      :short #\V
                      :help "Increase verbosity of output. Can be specified multiple times."

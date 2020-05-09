@@ -32,7 +32,7 @@ about the build, host, and features.")
    :contents (list *group-common*)))
 
 (defun print-version (options)
-  (if (plusp (gethash :verbose options))
+  (if (plusp (gethash :cli-config-log-level options))
       (progn
         (format *stdout* "CLPM version ~A~%" (clpm-version))
         (format *stdout* "~A ~A~%" (lisp-implementation-type) (lisp-implementation-version))
