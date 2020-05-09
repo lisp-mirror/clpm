@@ -87,14 +87,6 @@
                                                :url (source-url source))
                        :secondary secondary))))
 
-(defmethod make-clpi-source-object-store ((source clpi-dual-source) installed-only-p)
-  (make-instance 'clpi:file-object-store
-                 :root (merge-pathnames
-                        "clpi/"
-                        (if installed-only-p
-                            (source-lib-directory source)
-                            (source-cache-directory source)))))
-
 (defmethod make-source ((type (eql 'clpi-dual-source)) &rest initargs
                         &key url name &allow-other-keys)
   (let ((url-string (if (stringp url) url (uri-to-string url))))
