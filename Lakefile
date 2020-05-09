@@ -297,7 +297,7 @@ specified by the tuple."
 
 (task "build" ()
   "Build CLPM"
-  (sh "sbcl --no-sysinit --no-userinit --load scripts/build.lisp"))
+  (sh "sbcl --no-sysinit --no-userinit --disable-debugger --load scripts/build.lisp"))
 
 (task "package" ()
   "Package CLPM"
