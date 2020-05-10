@@ -32,6 +32,11 @@
 
     ((:bundle)
      :type hash-table)
+    ((:bundle :clpmfile)
+     :type (or string pathname)
+     :default "clpmfile"
+     :documentation
+     "Path to the clpmfile to use when running bundle commands. Relative pathnames are resolved relative to the current directory.")
     ((:bundle :local)
      :type hash-table)
     ((:bundle :local :*)

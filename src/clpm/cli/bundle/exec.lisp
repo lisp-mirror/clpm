@@ -58,8 +58,7 @@
              :implementation :**/ :*.*.*)))))))
 
 (define-cli-command (("bundle" "exec") *bundle-exec-ui*) (args options)
-  (let* ((clpmfile-pathname (merge-pathnames (gethash :bundle-file options)
-                                             (uiop:getcwd)))
+  (let* ((clpmfile-pathname (bundle-clpmfile-pathname))
          (clpmfile (get-clpmfile clpmfile-pathname :installed-only-p t))
          (lockfile-pathname (clpmfile-lockfile-pathname clpmfile))
          (*default-pathname-defaults* (uiop:pathname-directory-pathname clpmfile-pathname))

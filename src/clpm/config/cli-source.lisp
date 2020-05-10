@@ -12,13 +12,18 @@
 (in-package #:clpm/config/cli-source)
 
 (defclass config-cli-source ()
-  ((local)
+  ((bundle-clpmfile)
+   (local)
    (log-level))
   (:documentation
    "A configuration source backed by CLI arguments."))
 
 (defmethod initialize-instance :after ((config-source config-cli-source)
                                        &key arg-ht)
+  (multiple-value-bind (value exists-p)
+      (gethash :cli-config-bundle-clpmfile arg-ht)
+    (when exists-p
+      (setf (slot-value config-source 'bundle-clpmfile) value)))
   (multiple-value-bind (value exists-p)
       (gethash :cli-config-local arg-ht)
     (when exists-p
@@ -33,6 +38,9 @@
 
 (defmethod config-source-value ((config-source config-cli-source) path)
   (cond
+    ((and (equal path '(:bundle :clpmfile))
+          (slot-boundp config-source 'bundle-clpmfile))
+     (values (slot-value config-source 'bundle-clpmfile) t))
     ((and (equal path '(:local))
           (slot-boundp config-source 'local))
      (values (slot-value config-source 'local) t))

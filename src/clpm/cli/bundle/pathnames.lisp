@@ -5,6 +5,7 @@
 
 (uiop:define-package #:clpm/cli/bundle/pathnames
     (:use #:cl
+          #:clpm/bundle
           #:clpm/cli/bundle/common
           #:clpm/cli/common-args
           #:clpm/cli/config/common
@@ -26,8 +27,7 @@
                    *group-bundle*)))
 
 (define-cli-command (("bundle" "pathnames") *bundle-pathnames-ui*) (args options)
-  (let* ((clpmfile-pathname (merge-pathnames (gethash :bundle-file options)
-                                             (uiop:getcwd)))
+  (let* ((clpmfile-pathname (bundle-clpmfile-pathname))
          (lockfile-pathname (merge-pathnames (make-pathname :type "lock")
                                              clpmfile-pathname))
          (lockfile (read-lockfile lockfile-pathname))

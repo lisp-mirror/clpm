@@ -16,13 +16,18 @@
           #:clpm/repos
           #:clpm/resolve
           #:clpm/source)
-  (:export #:bundle-install
+  (:export #:bundle-clpmfile-pathname
+           #:bundle-install
            #:bundle-source-registry
            #:bundle-update))
 
 (in-package #:clpm/bundle)
 
 (setup-logger)
+
+(defun bundle-clpmfile-pathname ()
+  (merge-pathnames (config-value :bundle :clpmfile)
+                   (uiop:getcwd)))
 
 (defun create-empty-lockfile (clpmfile)
   (make-instance 'context

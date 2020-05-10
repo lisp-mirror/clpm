@@ -6,6 +6,7 @@
 (uiop:define-package #:clpm/cli/bundle/common
     (:use #:cl
           #:alexandria
+          #:clpm/bundle
           #:clpm/cli/common-args
           #:clpm/cli/subcommands
           #:clpm/config
@@ -19,10 +20,9 @@
 
 (defparameter *option-file*
   (adopt:make-option
-   :bundle-file
+   :cli-config-bundle-clpmfile
    :short #\f
    :parameter "FILE"
-   :initial-value "clpmfile"
    :help "The path to the clpmfile"
    :reduce #'adopt:last))
 
@@ -52,9 +52,8 @@
 (define-cli-command-folder
     (("bundle") *default-ui*)
     (args options)
-    (declare (ignore args))
-    (let* ((clpmfile-path (merge-pathnames (gethash :bundle-file options)
-                                           (uiop:getcwd)))
+    (declare (ignore args options))
+    (let* ((clpmfile-path (bundle-clpmfile-pathname))
            (local-config (merge-pathnames ".clpm/bundle.conf"
                                           (uiop:pathname-directory-pathname clpmfile-path)))
            (*default-pathname-defaults* (uiop:pathname-directory-pathname clpmfile-path)))
