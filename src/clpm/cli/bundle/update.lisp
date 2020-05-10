@@ -54,7 +54,6 @@ preference is to update everything to the latest version possible.")
 
 (define-cli-command (("bundle" "update") *bundle-update-ui*) (args options)
   (let* ((clpmfile-pathname (bundle-clpmfile-pathname))
-         (*default-pathname-defaults* (uiop:pathname-directory-pathname clpmfile-pathname))
          (yesp (gethash :yes options))
          (output (gethash :output options)))
     (bundle-update clpmfile-pathname :update-systems args

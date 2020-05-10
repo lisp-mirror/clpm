@@ -37,7 +37,6 @@
 (define-cli-command (("bundle" "source-registry") *bundle-source-registry-ui*) (args options)
   (declare (ignore args))
   (let* ((clpmfile-pathname (bundle-clpmfile-pathname))
-         (*default-pathname-defaults* (uiop:pathname-directory-pathname clpmfile-pathname))
          (include-client-p (gethash :bundle-exec-with-client options))
          (cl-source-registry-form (bundle-source-registry clpmfile-pathname :include-client-p include-client-p)))
     (format t "~S~%" cl-source-registry-form)

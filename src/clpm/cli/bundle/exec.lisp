@@ -61,7 +61,6 @@
   (let* ((clpmfile-pathname (bundle-clpmfile-pathname))
          (clpmfile (get-clpmfile clpmfile-pathname :installed-only-p t))
          (lockfile-pathname (clpmfile-lockfile-pathname clpmfile))
-         (*default-pathname-defaults* (uiop:pathname-directory-pathname clpmfile-pathname))
          (include-client-p (gethash :bundle-exec-with-client options))
          (cl-source-registry-form (bundle-source-registry clpmfile-pathname
                                                           :include-client-p include-client-p
