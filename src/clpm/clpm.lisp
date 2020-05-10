@@ -18,8 +18,10 @@
         #:clpm/cli/sync
         #:clpm/cli/update
         #:clpm/cli/version
+        #:clpm/context
         #:clpm/deploy
         #:clpm/install
-        #:clpm/man))
+        #:clpm/man
+        #:clpm/version))
 
 (in-package #:clpm/clpm)
