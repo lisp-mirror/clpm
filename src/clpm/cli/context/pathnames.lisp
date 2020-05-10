@@ -9,7 +9,7 @@
           #:clpm/context
           #:clpm/cli/context/common
           #:clpm/cli/common-args
-          #:clpm/cli/subcommands)
+          #:clpm/cli/interface-defs)
   (:import-from #:adopt))
 
 (in-package #:clpm/cli/context/pathnames)
@@ -24,6 +24,7 @@
                    *option-output*)))
 
 (define-cli-command (("context" "pathnames") *context-pathnames-ui*) (args options)
+  (declare (ignore options))
   (assert (length= 1 args))
   (format t "~{~A~^~%~}" (context-asd-pathnames (first args)))
   t)

@@ -8,7 +8,7 @@
           #:alexandria
           #:clpm/bundle
           #:clpm/cli/common-args
-          #:clpm/cli/subcommands
+          #:clpm/cli/interface-defs
           #:clpm/config
           #:clpm/utils)
   (:import-from #:adopt)
@@ -49,13 +49,13 @@
    :contents (list *group-common*
                    *group-bundle*)))
 
-(define-cli-command-folder
-    (("bundle") *default-ui*)
-    (args options)
-    (declare (ignore args options))
-    (let* ((clpmfile-path (bundle-clpmfile-pathname))
-           (local-config (merge-pathnames ".clpm/bundle.conf"
-                                          (uiop:pathname-directory-pathname clpmfile-path)))
-           (*default-pathname-defaults* (uiop:pathname-directory-pathname clpmfile-path)))
-      (when (probe-file local-config)
-        (config-add-file-source! local-config))))
+(define-cli-command-folder (("bundle") *default-ui*) (thunk ui args options)
+  (declare (ignore ui args options))
+
+  (let* ((clpmfile-path (bundle-clpmfile-pathname))
+         (local-config (merge-pathnames ".clpm/bundle.conf"
+                                        (uiop:pathname-directory-pathname clpmfile-path)))
+         (*default-pathname-defaults* (uiop:pathname-directory-pathname clpmfile-path)))
+    (when (probe-file local-config)
+      (config-add-file-source! local-config))
+    (funcall thunk)))

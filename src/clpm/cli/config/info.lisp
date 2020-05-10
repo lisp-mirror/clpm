@@ -7,7 +7,7 @@
     (:use #:cl
           #:clpm/cli/common-args
           #:clpm/cli/config/common
-          #:clpm/cli/subcommands
+          #:clpm/cli/interface-defs
           #:clpm/config)
   (:import-from #:uiop
                 #:*stdout*))
@@ -22,7 +22,8 @@
    :help "Common Lisp Package Manager"
    :contents (list *group-common*)))
 
-(define-cli-command (("config" "info") *config-info-ui*) (arguments options)
+(define-cli-command (("config" "info") *config-info-ui*) (args options)
+  (declare (ignore args options))
   (format *stdout* "Config directories: ~A~%~%" *clpm-config-directories*)
   (format *stdout* "Current configuration:~%~A~%" (with-output-to-string (s) (print-config s)))
   t)

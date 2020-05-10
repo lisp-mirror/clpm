@@ -6,7 +6,7 @@
 (uiop:define-package #:clpm/cli/hack
     (:use #:cl
           #:clpm/cli/common-args
-          #:clpm/cli/subcommands
+          #:clpm/cli/interface-defs
           #:clpm/log
           #:clpm/repos
           #:clpm/source)

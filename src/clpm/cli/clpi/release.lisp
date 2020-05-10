@@ -9,7 +9,7 @@
           #:clpm/cli/common-args
           #:clpm/cli/clpi/common
           #:clpm/cli/defs
-          #:clpm/cli/subcommands
+          #:clpm/cli/interface-defs
           #:clpm/context
           #:clpm/groveler
           #:clpm/requirement

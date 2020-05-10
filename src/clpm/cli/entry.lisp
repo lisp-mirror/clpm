@@ -7,7 +7,7 @@
     (:use #:cl
           #:alexandria
           #:clpm/cli/common-args
-          #:clpm/cli/subcommands
+          #:clpm/cli/interface-defs
           #:clpm/config
           #:clpm/log)
   (:import-from #:adopt)
@@ -29,16 +29,35 @@
    :help "Common Lisp Package Manager"
    :contents (list *group-common*)))
 
-(defun parse-options-ignoring-unrecognized (ui)
-  (handler-bind ((adopt:unrecognized-option #'adopt:discard-option))
-    (adopt:parse-options ui)))
-
 (defun clpm-debugger (c v)
   (declare (ignore v))
   (format *error-output* "Uncaught error. You should not have ended up here, ~
 please report a bug and provide the stack trace.~%")
   (uiop:print-condition-backtrace c)
   (uiop:quit 1))
+
+(defun set-log-level ()
+  (log:config '(clpm) (config-value :log :level)
+              :this
+              :stream *error-output*
+              :immediate-flush :own
+              :pattern "%;<;;>;5p [%g{}{}{:downcase}] - %<{pretty}%m%>%n")
+  (log:debug "Log level set to ~S" (config-value :log :level)))
+
+(define-cli-command-folder (() *default-ui*) (thunk ui args options)
+  (declare (ignore args))
+  ;; Print the help if requested.
+  (when (gethash :help options)
+    (adopt:print-help-and-exit ui))
+  ;; Augment the config with options from the CLI.
+  (config-add-cli-source! options)
+  ;; Set the log level.
+  (set-log-level)
+  ;; Give ourselves a reasonable default, since the spec doesn't *require*
+  ;; this...
+  (let ((*default-pathname-defaults* (uiop:pathname-directory-pathname (uiop:getcwd))))
+    (funcall thunk)))
+
 
 (defun main ()
   (let ((*debugger-hook* #'clpm-debugger))
@@ -66,8 +85,4 @@ please report a bug and provide the stack trace.~%")
          (error (lambda (c)
                   (uiop:print-condition-backtrace c)
                   (uiop:quit 1))))
-      (multiple-value-bind (arguments options)
-          ;; We need to ignore unrecognized options here since we don't yet
-          ;; know the correct set of options to use!
-          (parse-options-ignoring-unrecognized *default-ui*)
-        (dispatch-subcommand *commands* arguments options *default-ui*)))))
+      (dispatch-command nil))))

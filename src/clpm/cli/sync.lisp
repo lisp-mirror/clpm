@@ -7,7 +7,7 @@
     (:use #:cl
           #:clpm/cli/common-args
           #:clpm/cli/defs
-          #:clpm/cli/subcommands
+          #:clpm/cli/interface-defs
           #:clpm/config
           #:clpm/log
           #:clpm/source)
@@ -32,6 +32,7 @@
    :contents (list *group-common*)))
 
 (define-cli-command (("sync") *sync-ui*) (args options)
+  (declare (ignore options))
   (let ((sources (sources)))
     (when args
       (setf sources

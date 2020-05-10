@@ -6,7 +6,7 @@
 (uiop:define-package #:clpm/cli/license-info
     (:use #:cl
           #:clpm/cli/common-args
-          #:clpm/cli/subcommands
+          #:clpm/cli/interface-defs
           #:clpm-licenses)
   (:import-from #:uiop
                 #:*stdout*))
@@ -46,6 +46,7 @@
                  project-name license))
   (fresh-line stream))
 
-(define-cli-command (("license-info") *license-info-ui*) (arguments options)
+(define-cli-command (("license-info") *license-info-ui*) (args options)
+  (declare (ignore args options))
   (print-licenses *stdout*)
   t)

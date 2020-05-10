@@ -6,7 +6,7 @@
 (uiop:define-package #:clpm/man
     (:use #:cl
           #:alexandria
-          #:clpm/cli/subcommands)
+          #:clpm/cli/interface-defs)
   (:import-from #:adopt)
   (:export #:output-manual))
 

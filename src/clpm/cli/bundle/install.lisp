@@ -10,7 +10,7 @@
           #:clpm/cli/bundle/common
           #:clpm/cli/common-args
           #:clpm/cli/defs
-          #:clpm/cli/subcommands
+          #:clpm/cli/interface-defs
           #:clpm/context
           #:clpm/log)
   (:import-from #:adopt))
@@ -67,6 +67,7 @@ exist in the lock file.")
          (or yes-p (y-or-n-p "Proceed?")))))))
 
 (define-cli-command (("bundle" "install") *bundle-install-ui*) (args options)
+  (declare (ignore args))
   (let* ((clpmfile-pathname (bundle-clpmfile-pathname))
          (*default-pathname-defaults* (uiop:pathname-directory-pathname clpmfile-pathname)))
     (bundle-install clpmfile-pathname :validate (make-validate-fun (gethash :yes options)

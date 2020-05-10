@@ -6,7 +6,7 @@
 (uiop:define-package #:clpm/cli/client/repl
     (:use #:cl
           #:clpm/cli/client/common
-          #:clpm/cli/subcommands)
+          #:clpm/cli/interface-defs)
   (:import-from #:uiop
                 #:*stdout*))
 
@@ -19,7 +19,8 @@
    :usage "client repl [options]"
    :help "Starts a REPL for interacting with CLPM. Intended to be used by clpm-client library, interface is not guaranteed to be stable yet."))
 
-(define-cli-command (("client" "repl") *client-repl-ui*) (arguments options)
+(define-cli-command (("client" "repl") *client-repl-ui*) (args options)
+  (declare (ignore args options))
   (with-standard-io-syntax
     (let ((*package* (find-package :clpm)))
       (print "ready" *stdout*)

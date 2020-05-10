@@ -9,7 +9,7 @@
           #:clpm/context
           #:clpm/cli/context/common
           #:clpm/cli/common-args
-          #:clpm/cli/subcommands
+          #:clpm/cli/interface-defs
           #:clpm/source)
   (:import-from #:adopt))
 

@@ -8,7 +8,7 @@
           #:clpm/bundle
           #:clpm/cli/bundle/common
           #:clpm/cli/common-args
-          #:clpm/cli/subcommands
+          #:clpm/cli/interface-defs
           #:clpm/clpmfile
           #:clpm/log)
   (:import-from #:adopt))
@@ -35,6 +35,7 @@
                    *option-with-client*)))
 
 (define-cli-command (("bundle" "source-registry") *bundle-source-registry-ui*) (args options)
+  (declare (ignore args))
   (let* ((clpmfile-pathname (bundle-clpmfile-pathname))
          (*default-pathname-defaults* (uiop:pathname-directory-pathname clpmfile-pathname))
          (include-client-p (gethash :bundle-exec-with-client options))

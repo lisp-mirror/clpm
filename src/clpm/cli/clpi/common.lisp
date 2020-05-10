@@ -6,7 +6,7 @@
 (uiop:define-package #:clpm/cli/clpi/common
     (:use #:cl
           #:clpm/cli/common-args
-          #:clpm/cli/subcommands)
+          #:clpm/cli/interface-defs)
   (:import-from #:adopt))
 
 (in-package #:clpm/cli/clpi/common)

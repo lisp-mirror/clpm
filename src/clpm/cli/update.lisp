@@ -6,7 +6,7 @@
 (uiop:define-package #:clpm/cli/update
     (:use #:cl
           #:clpm/cli/common-args
-          #:clpm/cli/subcommands
+          #:clpm/cli/interface-defs
           #:clpm/context
           #:clpm/install
           #:clpm/log

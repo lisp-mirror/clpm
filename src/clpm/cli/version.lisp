@@ -7,7 +7,7 @@
     (:use #:cl
           #:clpm/cli/common-args
           #:clpm/cli/defs
-          #:clpm/cli/subcommands
+          #:clpm/cli/interface-defs
           #:clpm/log
           #:clpm/version)
   (:import-from #:adopt)
@@ -46,5 +46,6 @@ about the build, host, and features.")
 
 
 (define-cli-command (("version") *version-ui*) (args options)
+  (declare (ignore args))
   (print-version options)
   t)

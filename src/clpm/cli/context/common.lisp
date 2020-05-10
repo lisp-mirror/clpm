@@ -7,7 +7,7 @@
     (:use #:cl
           #:alexandria
           #:clpm/cli/common-args
-          #:clpm/cli/subcommands)
+          #:clpm/cli/interface-defs)
   (:import-from #:adopt)
   (:import-from #:cl-ppcre))
 
@@ -21,7 +21,4 @@
    :help "Context commands"
    :contents (list *group-common*)))
 
-(define-cli-command-folder
-    (("context") *default-ui*)
-    (args options)
-    (declare (ignore args options)))
+(define-cli-command-folder (("context") *default-ui*))

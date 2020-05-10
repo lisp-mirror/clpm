@@ -9,7 +9,7 @@
           #:clpm/cache
           #:clpm/cli/bundle/common
           #:clpm/cli/common-args
-          #:clpm/cli/subcommands
+          #:clpm/cli/interface-defs
           #:clpm/clpmfile
           #:clpm/config
           #:clpm/execvpe

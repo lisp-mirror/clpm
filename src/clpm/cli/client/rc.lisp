@@ -7,7 +7,7 @@
     (:use #:cl
           #:clpm/cli/common-args
           #:clpm/cli/client/common
-          #:clpm/cli/subcommands
+          #:clpm/cli/interface-defs
           #:clpm/client
           #:named-readtables)
   (:import-from #:uiop
@@ -53,7 +53,8 @@
   (asdf:load-system \"clpm-client\")
   (uiop:symbol-call :clpm-client :activate-clpm-asdf-integration))")
 
-(define-cli-command (("client" "rc") *client-rc-ui*) (arguments options)
+(define-cli-command (("client" "rc") *client-rc-ui*) (args options)
+  (declare (ignore args))
   (uiop:with-safe-io-syntax ()
     (let ((*print-case* :downcase))
       (if (gethash :quicklisp-alternative options)
