@@ -28,16 +28,7 @@
 (define-cli-command (("context" "find") *context-find-ui*) (args options)
   (assert (length= 1 args))
   (let* ((context-name (gethash :context options "default"))
-         (context (get-context context-name))
-         (system-release (find (first args) (context-system-releases context)
-                               :key (compose #'system-name #'system-release-system)
-                               :test #'equal)))
-    (when system-release
-      (eswitch ((gethash :output options) :test 'equal)
-        (nil
-         (format t "~A~%" (system-release-absolute-asd-pathname system-release)))
-        ("sexp"
-         (uiop:with-safe-io-syntax ()
-           (prin1 (system-release-absolute-asd-pathname system-release))
-           (terpri))))
+         (pathname (context-find-system-asd-pathname context-name (first args))))
+    (when pathname
+      (format t "~A~%" pathname)
       t)))

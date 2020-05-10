@@ -25,13 +25,5 @@
 
 (define-cli-command (("context" "pathnames") *context-pathnames-ui*) (args options)
   (assert (length= 1 args))
-  (let* ((context (get-context (first args)))
-         (context-pathnames (context-asd-pathnames context)))
-    (eswitch ((gethash :output options) :test 'equal)
-      (nil
-       (format t "~{~A~^~%~}" context-pathnames))
-      ("sexp"
-       (uiop:with-safe-io-syntax ()
-         (prin1 context-pathnames)
-         (terpri))))
-    t))
+  (format t "~{~A~^~%~}" (context-asd-pathnames (first args)))
+  t)

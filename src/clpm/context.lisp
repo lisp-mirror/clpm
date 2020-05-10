@@ -18,6 +18,7 @@
            #:context-diff
            #:context-diff-has-diff-p
            #:context-diff-to-plist
+           #:context-find-system-asd-pathname
            #:context-installed-only-p
            #:context-name
            #:context-releases
@@ -130,7 +131,8 @@ in place with the same name. Return the new requirement if it was modified."
 ;; * ASDF Integration
 
 (defun context-asd-pathnames (context)
-  (let* ((releases (context-releases context))
+  (let* ((context (get-context context))
+         (releases (context-releases context))
          (system-files (flatten (mapcar #'release-system-files releases))))
     (mapcar #'system-file-absolute-asd-pathname system-files)))
 
@@ -145,6 +147,13 @@ in place with the same name. Return the new requirement if it was modified."
     :ignore-inherited-configuration
     ,@(context-to-asdf-source-registry.d-forms context)
     ,@extra-forms))
+
+(defun context-find-system-asd-pathname (context system-name)
+  (when-let* ((context (get-context context))
+              (system-release (find system-name (context-system-releases context)
+                                    :key (compose #'system-name #'system-release-system)
+                                    :test #'equal)))
+    (system-release-absolute-asd-pathname system-release)))
 
 (defun context-write-asdf-files (context)
   (assert (context-name context))
