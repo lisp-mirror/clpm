@@ -26,6 +26,7 @@
 (defparameter *option-local*
   (adopt:make-option
    :cli-config-local
+   :initial-value :missing
    :long "local"
    :help "Do not sync remote sources, use only the data located in the local cache"
    :reduce (constantly t)))

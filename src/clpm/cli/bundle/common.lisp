@@ -24,6 +24,7 @@
    :short #\f
    :parameter "FILE"
    :help "The path to the clpmfile"
+   :initial-value :missing
    :reduce #'adopt:last))
 
 (defparameter *option-no-resolve*

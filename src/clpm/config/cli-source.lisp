@@ -20,16 +20,13 @@
 
 (defmethod initialize-instance :after ((config-source config-cli-source)
                                        &key arg-ht)
-  (multiple-value-bind (value exists-p)
-      (gethash :cli-config-bundle-clpmfile arg-ht)
-    (when exists-p
+  (multiple-value-bind (value exists-p) (gethash :cli-config-bundle-clpmfile arg-ht)
+    (when (and exists-p (not (eql value :missing)))
       (setf (slot-value config-source 'bundle-clpmfile) value)))
-  (multiple-value-bind (value exists-p)
-      (gethash :cli-config-local arg-ht)
-    (when exists-p
+  (multiple-value-bind (value exists-p) (gethash :cli-config-local arg-ht)
+    (when (and exists-p (not (eql value :missing)))
       (setf (slot-value config-source 'local) value)))
-  (multiple-value-bind (value exists-p)
-      (gethash :cli-config-log-level arg-ht)
+  (multiple-value-bind (value exists-p) (gethash :cli-config-log-level arg-ht)
     (when (and exists-p (plusp value))
       (case value
         (1 (setf (slot-value config-source 'log-level) :info))
