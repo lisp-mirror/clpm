@@ -134,21 +134,17 @@
                version-string
                install-project-p
                name)
-    (let ((updated-context (install (if install-project-p
-                                        :project
-                                        :system)
-                                    name
-                                    :version-spec version-string
-                                    :source source-name
-                                    :context context-name
-                                    :no-deps-p no-deps-p
-                                    :commit commit
-                                    :branch branch
-                                    :tag tag
-                                    :validate (make-validate-fun yes-p output)
-                                    :save-context-p t)))
-      (when (equal output "sexp")
-        (uiop:with-safe-io-syntax ()
-          (prin1 (context-asd-pathnames updated-context)))))
-
+    (install (if install-project-p
+                 :project
+                 :system)
+             name
+             :version-spec version-string
+             :source source-name
+             :context context-name
+             :no-deps-p no-deps-p
+             :commit commit
+             :branch branch
+             :tag tag
+             :validate (make-validate-fun yes-p output)
+             :save-context-p t)
     t))

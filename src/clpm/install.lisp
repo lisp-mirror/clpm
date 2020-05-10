@@ -72,9 +72,12 @@
     (dolist (r reqs)
       (context-add-requirement! new-context r))
     (setf new-context (resolve-requirements new-context :update-projects update-projects))
-    (when (funcall validate (context-diff orig-context new-context))
-      (mapc #'install-release (context-releases new-context))
-      (when save-context-p
-        (context-write-asdf-files new-context)
-        (save-global-context new-context)))
-    new-context))
+    (let ((result (funcall validate (context-diff orig-context new-context))))
+      (if result
+          (progn
+            (mapc #'install-release (context-releases new-context))
+            (when save-context-p
+              (context-write-asdf-files new-context)
+              (save-global-context new-context))
+            new-context)
+          orig-context))))
