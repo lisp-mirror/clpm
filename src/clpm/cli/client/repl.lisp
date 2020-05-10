@@ -23,8 +23,6 @@
   (declare (ignore args options))
   (with-standard-io-syntax
     (let ((*package* (find-package :clpm)))
-      (print "ready" *stdout*)
-      (terpri *stdout*)
       (loop
         (print (eval (read)) *stdout*)
         (terpri *stdout*)
