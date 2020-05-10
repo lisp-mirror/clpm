@@ -6,6 +6,7 @@
 (uiop:define-package #:clpm/clpm
     (:nicknames #:clpm)
   (:use #:cl
+        #:clpm/bundle
         #:clpm/cli/bundle
         #:clpm/cli/client
         #:clpm/cli/clpi
