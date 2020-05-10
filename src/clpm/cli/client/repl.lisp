@@ -20,10 +20,12 @@
    :help "Starts a REPL for interacting with CLPM. Intended to be used by clpm-client library, interface is not guaranteed to be stable yet."))
 
 (define-cli-command (("client" "repl") *client-repl-ui*) (arguments options)
-  (uiop:with-safe-io-syntax (:package :clpm)
-    (print "ready" *stdout*)
-    (terpri *stdout*)
-    (loop
-      (print (eval (read)) *stdout*)
-      (terpri *stdout*)))
+  (with-standard-io-syntax
+    (let ((*package* (find-package :clpm)))
+      (print "ready" *stdout*)
+      (terpri *stdout*)
+      (loop
+        (print (eval (read)) *stdout*)
+        (terpri *stdout*)
+        (finish-output *stdout*))))
   t)
