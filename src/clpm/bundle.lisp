@@ -20,6 +20,7 @@
            #:bundle-install
            #:bundle-source-registry
            #:bundle-update
+           #:with-bundle-default-pathname-defaults
            #:with-bundle-local-config))
 
 (in-package #:clpm/bundle)
@@ -37,8 +38,18 @@ clpmfile located at PN added to the config."
                                                    (uiop:pathname-directory-pathname pn)))
     (funcall thunk)))
 
-(defmacro with-bundle-local-config ((&optional (clpmfile-pn (bundle-clpmfile-pathname))) &body body)
+(defmacro with-bundle-local-config ((&optional (clpmfile-pn '(bundle-clpmfile-pathname))) &body body)
   `(call-with-bundle-local-config (lambda () ,@body) ,clpmfile-pn))
+
+(defun call-with-bundle-default-pathname-defaults (thunk pn)
+  "Call THUNK in a dynamic environment that has *DEFAULT-PATHNAME-DEFAULTS*
+bound to PN's folder."
+  (let ((*default-pathname-defaults* (uiop:pathname-directory-pathname pn)))
+    (funcall thunk)))
+
+(defmacro with-bundle-default-pathname-defaults ((&optional (clpmfile-pn '(bundle-clpmfile-pathname)))
+                                                 &body body)
+  `(call-with-bundle-default-pathname-defaults (lambda () ,@body) ,clpmfile-pn))
 
 (defun create-empty-lockfile (clpmfile)
   (make-instance 'context

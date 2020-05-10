@@ -51,11 +51,6 @@
 
 (define-cli-command-folder (("bundle") *default-ui*) (thunk ui args options)
   (declare (ignore ui args options))
-
-  (let* ((clpmfile-path (bundle-clpmfile-pathname))
-         (local-config (merge-pathnames ".clpm/bundle.conf"
-                                        (uiop:pathname-directory-pathname clpmfile-path)))
-         (*default-pathname-defaults* (uiop:pathname-directory-pathname clpmfile-path)))
-    (when (probe-file local-config)
-      (config-add-file-source! local-config))
-    (funcall thunk)))
+  (with-bundle-default-pathname-defaults ()
+    (with-bundle-local-config ()
+      (funcall thunk))))
