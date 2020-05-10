@@ -19,7 +19,8 @@
   (:export #:bundle-clpmfile-pathname
            #:bundle-install
            #:bundle-source-registry
-           #:bundle-update))
+           #:bundle-update
+           #:with-bundle-local-config))
 
 (in-package #:clpm/bundle)
 
@@ -28,6 +29,16 @@
 (defun bundle-clpmfile-pathname ()
   (merge-pathnames (config-value :bundle :clpmfile)
                    (uiop:getcwd)))
+
+(defun call-with-bundle-local-config (thunk pn)
+  "Call THUNK in a dynamic environment that has the local config for the
+clpmfile located at PN added to the config."
+  (with-config-file-source-added ((merge-pathnames ".clpm/bundle.conf"
+                                                   (uiop:pathname-directory-pathname pn)))
+    (funcall thunk)))
+
+(defmacro with-bundle-local-config ((&optional (clpmfile-pn (bundle-clpmfile-pathname))) &body body)
+  `(call-with-bundle-local-config (lambda () ,@body) ,clpmfile-pn))
 
 (defun create-empty-lockfile (clpmfile)
   (make-instance 'context
