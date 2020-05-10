@@ -6,6 +6,7 @@
 (uiop:define-package #:clpm/cli/client
     (:use #:cl
           #:clpm/cli/client/common
-          #:clpm/cli/client/rc))
+          #:clpm/cli/client/rc
+          #:clpm/cli/client/repl))
 
 (in-package #:clpm/cli/client)

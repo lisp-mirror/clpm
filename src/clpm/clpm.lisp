@@ -4,20 +4,22 @@
 ;;;; LICENSE for license information.
 
 (uiop:define-package #:clpm/clpm
-    (:use #:cl
-          #:clpm/cli/bundle
-          #:clpm/cli/client
-          #:clpm/cli/clpi
-          #:clpm/cli/config
-          #:clpm/cli/context
-          #:clpm/cli/entry
-          #:clpm/cli/hack
-          #:clpm/cli/install
-          #:clpm/cli/license-info
-          #:clpm/cli/sync
-          #:clpm/cli/update
-          #:clpm/cli/version
-          #:clpm/deploy
-          #:clpm/man))
+    (:nicknames #:clpm)
+  (:use #:cl
+        #:clpm/cli/bundle
+        #:clpm/cli/client
+        #:clpm/cli/clpi
+        #:clpm/cli/config
+        #:clpm/cli/context
+        #:clpm/cli/entry
+        #:clpm/cli/hack
+        #:clpm/cli/install
+        #:clpm/cli/license-info
+        #:clpm/cli/sync
+        #:clpm/cli/update
+        #:clpm/cli/version
+        #:clpm/deploy
+        #:clpm/install
+        #:clpm/man))
 
 (in-package #:clpm/clpm)
