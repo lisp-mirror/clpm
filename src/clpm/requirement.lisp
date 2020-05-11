@@ -15,6 +15,7 @@
            #:requirement-name
            #:requirement-no-deps-p
            #:requirement-pathname
+           #:requirement-ref
            #:requirement-repo
            #:requirement-source
            #:requirement-systems
@@ -75,6 +76,12 @@ this source.")
     :reader requirement-repo
     :documentation
     "The repo object describing the upstream repo for this requirement.")
+   (ref
+    :initarg :ref
+    :initform nil
+    :reader requirement-ref
+    :Documentation
+    "The ref to install.")
    (branch
     :initarg :branch
     :initform nil
