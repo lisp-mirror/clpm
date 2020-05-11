@@ -3,82 +3,61 @@
 ;;;; This software is part of CLPM. See README.org for more information. See
 ;;;; LICENSE for license information.
 
-(uiop:define-package #:clpm-client/bundle
-    (:use #:cl
-          #:clpm-client/clpm
-          #:clpm-client/env)
-  (:import-from #:uiop
-                #:getenv
-                #:pathname-directory-pathname
-                #:with-current-directory)
-  (:export #:clpm-bundle-command
-           #:clpm-bundle-install
-           #:clpm-bundle-source-registry
-           #:clpmfile-pathname
-           #:clpm-inside-bundle-exec-p))
+(in-package #:clpm-client)
 
-(in-package #:clpm-client/bundle)
+(defun bundle-install (&key clpmfile no-resolve (validate 'context-diff-approved-p))
+  "Ensure a bundle is installed.
 
-(defun clpm-inside-bundle-exec-p ()
-  "Returns T iff we were spawned by a `clpm bundle exec` command."
-  (not (null (getenv "CLPM_BUNDLE_CLPMFILE"))))
+CLPMFILE must be a pathname pointing a clpmfile or NIL. If NIL, the current
+clpmfile (typically specified in the CLPM_BUNDLE_CLPMFILE environment variable)
+is used.
 
-(defun clpmfile-pathname ()
-  "If spawned by a `clpm bundle exec` command, return the pathname to the
-clpmfile."
-  (pathname (getenv "CLPM_BUNDLE_CLPMFILE")))
+If NO-RESOLVE is non-NIL, then the bundle will be installed completely from its
+lock file, without reresolving any requirements.
 
-(defun clpmfile-directory-pathname ()
-  "The directory pathname containing the clpmfile."
-  (pathname-directory-pathname (clpmfile-pathname)))
+VALIDATE is a function that takes a CONTEXT-DIFF instance and returns non-NIL if
+the diff is approved and the install can continue. If NIL, the install is
+aborted."
+  (let (diff-description)
+    (with-clpm-proc (proc)
+      (clpm-proc-print
+       proc
+       `(with-bundle-default-pathname-defaults (,@(when (pathnamep clpmfile) (list clpmfile)))
+          (with-bundle-local-config (,@(when (pathnamep clpmfile) (list clpmfile)))
+            (bundle-install ,(if (pathnamep clpmfile) clpmfile '(bundle-clpmfile-pathname))
+                            :validate ,(make-diff-validator-fun)
+                            :no-resolve ,no-resolve))))
+      (setf diff-description (clpm-proc-read proc))
+      (let ((validate-result (funcall validate (make-context-diff-from-description diff-description))))
+        (clpm-proc-print proc validate-result)
+        (clpm-proc-read proc)
+        validate-result))))
 
-(defun clpm-bundle-command ()
-  "Return a command (list of string) suitable for invoking the same CLPM
-executable that spawned this bundle exec environment."
-  (let ((bin (uiop:getenv "CLPM_BUNDLE_BIN")))
-    (if bin
-        (list bin)
-        (let ((live-script (uiop:getenv "CLPM_BUNDLE_BIN_LIVE_SCRIPT"))
-              (lisp-implementation (uiop:getenv "CLPM_BUNDLE_BIN_LISP_IMPLEMENTATION")))
-          (cond
-            ((equalp "sbcl" lisp-implementation)
-             (list "sbcl" "--load" live-script "--"))
-            (t
-             (error "Unknown lisp implementation")))))))
+(defun bundle-update (&key projects systems clpmfile (validate 'context-diff-approved-p))
+  "Update a bundle.
 
-(defun clpm-bundle-source-registry ()
-  "Return a source-registry form for this bundle."
-  (uiop:with-safe-io-syntax ()
-    (read-from-string
-     (run-clpm `("bundle" "source-registry"
-                          "-f" ,(uiop:native-namestring (clpmfile-pathname))
-                          "--with-client")
-               :output '(:string :stripped t)))))
+PROJECTS is a list of projects to update. SYSTEMS is a list of systems to
+update. If both are NIL, all projects are available for updating.
 
-(defun clpm-bundle-install (&key (validate (constantly t)))
-  "Run `clpm bundle install`. VALIDATE will be called with a diff and its return
-value is passed to the bindle install command. Returns T iff the command exited
-successfully."
-  (let* ((proc (launch-clpm `("bundle" "install"
-                                       "-f" ,(uiop:native-namestring (clpmfile-pathname))
-                                       "--output" "sexp")
-                            :output :stream
-                            :input :stream
-                            :error-output :stream))
-         (diff (uiop:with-safe-io-syntax ()
-                 (read (uiop:process-info-output proc) nil))))
-    (when diff
-      (let ((result (funcall validate diff)))
-        (uiop:with-safe-io-syntax ()
-          (prin1 result (uiop:process-info-input proc))
-          (terpri (uiop:process-info-input proc))
-          (finish-output (uiop:process-info-input proc)))))
-    (when *clpm-dribble*
-      (uiop:copy-stream-to-stream (uiop:process-info-error-output proc)
-                                  *clpm-dribble*
-                                  :linewise t
-                                  :prefix *clpm-dribble-prefix*))
-    (close (uiop:process-info-error-output proc))
-    (close (uiop:process-info-input proc))
-    (close (uiop:process-info-output proc))
-    (zerop (uiop:wait-process proc))))
+CLPMFILE must be a pathname pointing a clpmfile or NIL. If NIL, the current
+clpmfile (typically specified in the CLPM_BUNDLE_CLPMFILE environment variable)
+is used.
+
+VALIDATE is a function that takes a CONTEXT-DIFF instance and returns non-NIL if
+the diff is approved and the install can continue. If NIL, the install is
+aborted."
+  (let (diff-description)
+    (with-clpm-proc (proc)
+      (clpm-proc-print
+       proc
+       `(with-bundle-default-pathname-defaults (,@(when (pathnamep clpmfile) (list clpmfile)))
+          (with-bundle-local-config (,@(when (pathnamep clpmfile) (list clpmfile)))
+            (bundle-update ,(if (pathnamep clpmfile) clpmfile '(bundle-clpmfile-pathname))
+                           :update-systems ',systems
+                           :update-projects ',projects
+                           :validate ,(make-diff-validator-fun)))))
+      (setf diff-description (clpm-proc-read proc))
+      (let ((validate-result (funcall validate (make-context-diff-from-description diff-description))))
+        (clpm-proc-print proc validate-result)
+        (clpm-proc-read proc)
+        validate-result))))

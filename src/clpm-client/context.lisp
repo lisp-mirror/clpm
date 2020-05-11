@@ -1,45 +1,66 @@
-;;;; CLPM Context
+;;;; CLPM Contexts
 ;;;;
 ;;;; This software is part of CLPM. See README.org for more information. See
 ;;;; LICENSE for license information.
 
-(uiop:define-package #:clpm-client/context
-    (:use #:cl
-          #:clpm-client/clpm)
-  (:export #:*clpm-context*
-           #:clpm-context-asd-directories
-           #:clpm-context-asd-pathnames
-           #:clpm-context-find-system))
+(in-package #:clpm-client)
 
-(in-package #:clpm-client/context)
+(defvar *context* nil
+  "The default context in which to operate. Can either be a string (naming a
+global CLPM context), the symbol :BUNDLE (which refers to the currently active
+bundle, typically determined by the CLPM_BUNDLE_CLPMFILE environment variable),
+or a pathname to a clpmfile.")
 
-(defvar *clpm-context* "default"
-  "The context to operate in when not operating in a bundle.")
+(defun context ()
+  "Returns the current context. Returns *CONTEXT* if it is non-NIL. Otherwise
+returns \"default\" or :BUNDLE."
+  (or *context*
+      (if (inside-bundle-exec-p)
+          :bundle
+          "default")))
 
-(defun clpm-context-asd-pathnames (&optional (context *clpm-context*))
-  "Given a context name, return a list of pathnames to .asd files installed in
-that context."
-  (let ((pathnames-string (ignore-errors
-                           (run-clpm `("context" "pathnames" "--output=sexp" ,context)
-                                     :output '(:string :stripped t)))))
-    (when pathnames-string
-      (uiop:with-safe-io-syntax () (read-from-string pathnames-string)))))
+(defun context-bundle-p (context)
+  "A context names a bundle if it is the symbol :bundle or a pathname."
+  (or (eql context :bundle)
+      (pathnamep context)))
 
-(defun clpm-context-asd-directories (&optional (context *clpm-context*))
+(defun context-asd-pathnames (&optional (context (context)))
+  "Given a context, return a list of pathnames to .asd files installed in that
+context."
+  (assert (not (context-bundle-p context)))
+  (with-clpm-proc (proc)
+    (clpm-proc-print
+     proc
+     `(context-asd-pathnames ,context))
+    (clpm-proc-read proc)))
+
+(defun context-asd-directories (&optional (context (context)))
   "Return the directories containing the .asd files installed in CONTEXT."
-  (remove-duplicates (mapcar #'pathname-directory (clpm-context-asd-pathnames context))
-                     :test #'uiop:pathname-equal))
+  (asd-pathnames-to-directories (context-asd-pathnames context)))
 
-(defun clpm-context-find-system (system-name &key (context *clpm-context*))
+(defun asd-pathnames-to-directories (pathnames)
+  "Given a list of pathnames to .ASD files, return a list of pathnames to the
+directories containing the files."
+  (remove-duplicates (mapcar 'uiop:pathname-directory-pathname pathnames)
+                     :test 'uiop:pathname-equal))
+
+(defun context-find-system-asd-pathname (system-name &optional (context (context)))
   "Find the pathname to a system in the given context."
-  (multiple-value-bind (output error-output code)
-      (run-clpm `("context" "find"
-                            "--context" ,context
-                            "--output=sexp"
-                            ,system-name)
-                :output '(:string :stripped t)
-                :ignore-error-status t)
-    (declare (ignore error-output))
-    (when (zerop code)
-      (uiop:with-safe-io-syntax ()
-        (read-from-string output)))))
+  (assert (not (context-bundle-p context)))
+  (with-clpm-proc (proc)
+    (clpm-proc-print
+     proc
+     `(context-find-system-asd-pathname ,context ,system-name))
+    (clpm-proc-read proc)))
+
+(defun context-source-registry (&optional (context (context)))
+  "Return a source-registry form for the CONTEXT."
+  (with-clpm-proc (proc)
+    (clpm-proc-print
+     proc
+     (if (context-bundle-p context)
+         `(with-bundle-default-pathname-defaults (,@(when (pathnamep context) (list context)))
+            (with-bundle-local-config (,@(when (pathnamep context) (list context)))
+              (bundle-source-registry ,(if (pathnamep context) context '(bundle-clpmfile-pathname)))))
+         `(context-to-asdf-source-registry-form ,context)))
+    (clpm-proc-read proc)))

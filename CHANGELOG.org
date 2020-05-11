@@ -16,6 +16,11 @@
   + Add the =(:log :level)= config option for controlling log verbosity.
   + Add =--no-resolve= option to =bundle install= to prevent re-resolving
     requirements when you know the lock file is up to date.
+  + Client largely rewritten to launch a CLPM process and use a REPL to
+    communicate instead of translating everything to CLI invocations.
+  + Client's INSTALL and UPDATE functions made much simpler and more
+    featureful.
+  + Client's dribble features improved greatly.
 
 * v0.2.1 - 2020-04-05
 
