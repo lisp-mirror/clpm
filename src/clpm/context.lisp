@@ -393,7 +393,7 @@ in place with the same name. Return the new requirement if it was modified."
 (defgeneric process-form (context section form))
 
 (defmethod process-form (context (section (eql :requirements)) form)
-  (destructuring-bind (type &key name version source branch tag commit pathname no-deps-p) form
+  (destructuring-bind (type &key name version source branch tag commit ref pathname no-deps-p) form
     (push (cond
             ((eql type :asd-system)
              (make-instance 'fs-system-requirement
@@ -406,13 +406,14 @@ in place with the same name. Return the new requirement if it was modified."
                             :name pathname
                             :no-deps-p no-deps-p
                             :why t))
-            ((or branch tag commit)
+            ((or branch tag commit ref)
              (make-instance 'vcs-project-requirement
                             :name name
                             :source (get-source source)
                             :commit commit
                             :branch branch
                             :tag tag
+                            :ref ref
                             :no-deps-p no-deps-p
                             :why t))
             (t
