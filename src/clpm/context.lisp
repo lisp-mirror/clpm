@@ -724,6 +724,14 @@ in place with the same name. Return the new requirement if it was modified."
       (write-char #\Space stream)
       (pprint-newline :miser stream)
       (prin1 (requirement-tag req) stream))
+    ;; Ref
+    (when (requirement-ref req)
+      (write-char #\Space stream)
+      (pprint-newline :fill stream)
+      (prin1 :ref stream)
+      (write-char #\Space stream)
+      (pprint-newline :miser stream)
+      (prin1 (requirement-ref req) stream))
     ;; Source
     (when (requirement-source req)
       (write-char #\Space stream)

@@ -252,10 +252,10 @@ project."))
 (defgeneric project-source (project)
   (:documentation "The source that provides the project."))
 
-(defgeneric project-vcs-release (project &key commit branch tag)
+(defgeneric project-vcs-release (project &key commit branch tag ref)
   (:documentation "Return a release of this project, taken from its repo.")
-  (:method :before (project &key commit branch tag)
-    (assert (xor commit branch tag))))
+  (:method :before (project &key commit branch tag ref)
+    (assert (xor commit branch tag ref))))
 
 
 

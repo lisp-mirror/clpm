@@ -275,11 +275,12 @@
     (setf (slot-value project slot-name)
           repo)))
 
-(defmethod project-vcs-release ((project clpi-project) &key commit branch tag)
+(defmethod project-vcs-release ((project clpi-project) &key commit branch tag ref)
   (let* ((ref (cond
                 (commit `(:commit ,commit))
                 (branch `(:branch ,branch))
-                (tag `(:tag ,tag))))
+                (tag `(:tag ,tag))
+                (ref `(:ref ,ref))))
          (release (ensure-gethash ref (clpi-project-vcs-release-ht project)
                                   (make-vcs-release (project-source project) project ref
                                                     :local-release-class 'clpi-vcs-local-release

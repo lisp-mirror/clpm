@@ -180,11 +180,12 @@ local override when requesting a VCS release.")
 (defmethod project-releases ((project vcs-project))
   (hash-table-values (vcs-project-releases-by-spec project)))
 
-(defmethod project-vcs-release ((project vcs-project) &key commit branch tag)
+(defmethod project-vcs-release ((project vcs-project) &key commit branch tag ref)
   (let* ((ref (cond
                 (commit `(:commit ,commit))
                 (branch `(:branch ,branch))
-                (tag `(:tag ,tag))))
+                (tag `(:tag ,tag))
+                (ref `(:ref ,ref))))
          (release (ensure-gethash ref (vcs-project-releases-by-spec project)
                                   (make-vcs-release (project-source project) project ref))))
     (unless commit

@@ -206,6 +206,7 @@ satisfying release."
   (let* ((project-name (requirement-name req))
          (systems (requirement-systems req))
          (system-files (requirement-system-files req))
+         (ref (requirement-ref req))
          (branch (requirement-branch req))
          (commit (requirement-commit req))
          (tag (requirement-tag req))
@@ -214,7 +215,8 @@ satisfying release."
          (vcs-release (project-vcs-release vcs-project
                                            :tag tag
                                            :commit commit
-                                           :branch branch))
+                                           :branch branch
+                                           :ref ref))
          (release-system-files (release-system-files vcs-release)))
     (assert (null system-files))
     ;; If the systems are defined, we only need to grovel the files in which

@@ -215,16 +215,16 @@ optionally changing into the local dir for ~repo~."
                (zerop (nth-value 2 (git-rev-parse ref-name :repo repo :ignore-error-status t))))))))
 
 (defmethod ensure-ref-present-locally! ((repo git-repo) ref)
-  "Given a repo and a reference (either a commit, branch, or tag), ensure that
+  "Given a repo and a reference (either a commit, branch, tag, or ref), ensure that
 ref is present locally, fetching or cloning the repo as necessary."
   (destructuring-bind (ref-type ref-name) ref
-    (declare (ignore ref-name))
     (let ((local-dir (git-repo-local-dir repo)))
       (cond
         ((uiop:probe-file* local-dir)
          ;; Repo is present, need to fetch if the ref is not present or the ref
          ;; is a branch.
          (when (and (or (eql ref-type :branch)
+                        (starts-with-subseq "refs/heads/" ref-name)
                         (not (ref-present-p repo ref)))
                     *fetch-repo-automatically*)
            (with-retries (:max 10 :sleep 5)
