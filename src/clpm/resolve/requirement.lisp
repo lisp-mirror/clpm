@@ -45,7 +45,7 @@ source can be found."))
 (defmethod find-requirement-source :around (req &optional (errorp t))
   "If the requirement has a specific source set, use that. Otherwise, fallback
 to searching."
-  (let ((out (or (requirement-source req)
+  (let ((out (or (get-source (requirement-source req))
                  (call-next-method))))
     (or out
         (when errorp
