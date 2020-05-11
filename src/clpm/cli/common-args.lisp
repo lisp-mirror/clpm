@@ -55,6 +55,7 @@
 
 (defparameter *option-context*
   (adopt:make-option :cli-config-context
+                     :initial-value :missing
                      :long "context"
                      :help "Set the context in which to operate"
                      :parameter "CONTEXT"

@@ -93,7 +93,7 @@
     ((stringp context-designator)
      (load-global-context context-designator nil))
     ((null context-designator)
-     (load-global-context "default" nil))
+     (load-global-context (config-value :context) nil))
     (t
      (error "Unable to translate ~S to a context object" context-designator))))
 
