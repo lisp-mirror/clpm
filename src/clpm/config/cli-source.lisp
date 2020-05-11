@@ -13,6 +13,7 @@
 
 (defclass config-cli-source ()
   ((bundle-clpmfile)
+   (context)
    (local)
    (log-level))
   (:documentation
@@ -23,6 +24,9 @@
   (multiple-value-bind (value exists-p) (gethash :cli-config-bundle-clpmfile arg-ht)
     (when (and exists-p (not (eql value :missing)))
       (setf (slot-value config-source 'bundle-clpmfile) value)))
+  (multiple-value-bind (value exists-p) (gethash :cli-config-context arg-ht)
+    (when (and exists-p (not (eql value :missing)))
+      (setf (slot-value config-source 'context) value)))
   (multiple-value-bind (value exists-p) (gethash :cli-config-local arg-ht)
     (when (and exists-p (not (eql value :missing)))
       (setf (slot-value config-source 'local) value)))
@@ -38,6 +42,9 @@
     ((and (equal path '(:bundle :clpmfile))
           (slot-boundp config-source 'bundle-clpmfile))
      (values (slot-value config-source 'bundle-clpmfile) t))
+    ((and (equal path '(:context))
+          (slot-boundp config-source 'context))
+     (values (slot-value config-source 'context) t))
     ((and (equal path '(:local))
           (slot-boundp config-source 'local))
      (values (slot-value config-source 'local) t))

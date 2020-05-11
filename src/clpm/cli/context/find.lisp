@@ -6,6 +6,7 @@
 (uiop:define-package #:clpm/cli/context/find
     (:use #:cl
           #:alexandria
+          #:clpm/config
           #:clpm/context
           #:clpm/cli/context/common
           #:clpm/cli/common-args
@@ -26,8 +27,9 @@
                    *option-output*)))
 
 (define-cli-command (("context" "find") *context-find-ui*) (args options)
+  (declare (ignore options))
   (assert (length= 1 args))
-  (let* ((context-name (gethash :context options "default"))
+  (let* ((context-name (config-value :context))
          (pathname (context-find-system-asd-pathname context-name (first args))))
     (when pathname
       (format t "~A~%" pathname)

@@ -55,7 +55,7 @@
                                    *option-verbose*)))
 
 (defparameter *option-context*
-  (adopt:make-option :context
+  (adopt:make-option :cli-config-context
                      :long "context"
                      :help "Set the context in which to operate"
                      :parameter "CONTEXT"

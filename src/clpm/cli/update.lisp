@@ -7,6 +7,7 @@
     (:use #:cl
           #:clpm/cli/common-args
           #:clpm/cli/interface-defs
+          #:clpm/config
           #:clpm/context
           #:clpm/install
           #:clpm/log
@@ -42,8 +43,7 @@
 
 (define-cli-command (("update") *update-ui*) (args options)
   (let ((project-names args)
-        (context-name (or (gethash :context options)
-                          "default"))
+        (context-name (config-value :context))
         (yes-p (gethash :install-yes options)))
     (update :validate (make-validate-fun yes-p)
             :context context-name
