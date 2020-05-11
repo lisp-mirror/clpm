@@ -137,7 +137,8 @@ in place with the same name. Return the new requirement if it was modified."
     (mapcar #'system-file-absolute-asd-pathname system-files)))
 
 (defun context-to-asdf-source-registry.d-forms (context)
-  (let* ((system-file-pathnames (context-asd-pathnames context))
+  (let* ((context (get-context context))
+         (system-file-pathnames (context-asd-pathnames context))
          (system-file-directories (remove-duplicates (mapcar #'uiop:pathname-directory-pathname system-file-pathnames)
                                                      :test #'uiop:pathname-equal)))
     (mapcar (lambda (x) (list :directory x)) system-file-directories)))
