@@ -23,8 +23,7 @@
    :usage "context find [options] SYSTEM-NAME"
    :help "List the pathname to a system in the context"
    :contents (list *group-common*
-                   *option-context*
-                   *option-output*)))
+                   *option-context*)))
 
 (define-cli-command (("context" "find") *context-find-ui*) (args options)
   (declare (ignore options))

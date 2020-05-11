@@ -42,20 +42,11 @@ preference is to update everything to the latest version possible.")
    :contents (list *group-common*
                    *group-bundle*
                    *option-local*
-                   *option-yes*
-                   *option-output*)))
-
-(defun make-validate-fun (yesp output)
-  (lambda (diff)
-    (unless (equal output "sexp")
-      ;; We can't print this in a sexp format at the moment.
-      (print-context-diff diff *standard-output*))
-    (or yesp (y-or-n-p "Proceed?"))))
+                   *option-yes*)))
 
 (define-cli-command (("bundle" "update") *bundle-update-ui*) (args options)
   (let* ((clpmfile-pathname (bundle-clpmfile-pathname))
-         (yesp (gethash :yes options))
-         (output (gethash :output options)))
+         (yesp (gethash :yes options)))
     (bundle-update clpmfile-pathname :update-systems args
-                                     :validate (make-validate-fun yesp output))
+                                     :validate (make-diff-validate-fun :yesp yesp))
     t))

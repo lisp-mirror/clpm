@@ -8,6 +8,7 @@
           #:alexandria
           #:clpm/cli/common-args
           #:clpm/config
+          #:clpm/context
           #:clpm/log
           #:clpm/version)
   (:import-from #:adopt)
@@ -15,7 +16,8 @@
            #:*uis*
            #:define-cli-command
            #:define-cli-command-folder
-           #:dispatch-command))
+           #:dispatch-command
+           #:make-diff-validate-fun))
 
 (in-package #:clpm/cli/interface-defs)
 
@@ -123,3 +125,11 @@ command line, and a hash table created by Adopt when parsing the options.")
                 (format *standard-output* "Available subcommands: ~{~A~^ ~}~%"
                         (available-subcommands (rest path-so-far)))
                 (adopt:exit 1)))))))
+
+(defun make-diff-validate-fun (&key yesp (stream *standard-output*))
+  (lambda (diff)
+    (block nil
+      (unless (context-diff-has-diff-p diff)
+        (return t))
+      (print-context-diff diff stream)
+      (or yesp (y-or-n-p "Proceed?")))))

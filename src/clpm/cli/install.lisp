@@ -108,11 +108,6 @@ with version constraint).
                    *option-install-ref*
                    *option-context*)))
 
-(defun make-validate-fun (yes-p)
-  (lambda (diff)
-    (print-context-diff diff *standard-output*)
-    (or yes-p (y-or-n-p "Proceed?"))))
-
 (define-cli-command (("install") *install-ui*) (args options)
   (let* ((version-string (gethash :install-version options))
          (system-specifiers args)
@@ -129,6 +124,6 @@ with version constraint).
              :context context-name
              :no-deps-p no-deps-p
              :ref ref
-             :validate (make-validate-fun yes-p)
+             :validate (make-diff-validate-fun :yesp yes-p)
              :save-context-p t)
     t))

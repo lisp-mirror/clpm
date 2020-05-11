@@ -11,7 +11,6 @@
            #:*option-context*
            #:*option-help*
            #:*option-local*
-           #:*option-output*
            #:*option-yes*
            #:*option-verbose*))
 
@@ -59,11 +58,4 @@
                      :long "context"
                      :help "Set the context in which to operate"
                      :parameter "CONTEXT"
-                     :reduce #'adopt:last))
-
-(defparameter *option-output*
-  (adopt:make-option :output
-                     :long "output"
-                     :help "Set how results are output. Currently meant for use only by the clpm-client library"
-                     :parameter "OUTPUT"
                      :reduce #'adopt:last))

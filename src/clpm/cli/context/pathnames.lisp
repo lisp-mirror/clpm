@@ -20,8 +20,7 @@
    :summary "Common Lisp Package Manager Context Pathnames"
    :usage "context pathnames [options] CONTEXT-NAME"
    :help "List the pathnames to all ASD files in the context"
-   :contents (list *group-common*
-                   *option-output*)))
+   :contents (list *group-common*)))
 
 (define-cli-command (("context" "pathnames") *context-pathnames-ui*) (args options)
   (declare (ignore options))

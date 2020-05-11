@@ -36,16 +36,11 @@
                    *option-update-yes*
                    *option-context*)))
 
-(defun make-validate-fun (yes-p)
-  (lambda (diff)
-    (print-context-diff diff *standard-output*)
-    (or yes-p (y-or-n-p "Proceed?"))))
-
 (define-cli-command (("update") *update-ui*) (args options)
   (let ((project-names args)
         (context-name (config-value :context))
         (yes-p (gethash :install-yes options)))
-    (update :validate (make-validate-fun yes-p)
+    (update :validate (make-diff-validate-fun :yesp yes-p)
             :context context-name
             :update-projects project-names)
     t))

@@ -41,7 +41,6 @@ exist in the lock file.")
                    *group-bundle*
                    *option-local*
                    *option-yes*
-                   *option-output*
                    *option-no-resolve*)))
 
 (defun sexp-interaction-y-or-n-p ()
@@ -51,24 +50,9 @@ exist in the lock file.")
     (finish-output *standard-output*)
     (read *standard-input*)))
 
-(defun make-validate-fun (yes-p output)
-  (lambda (diff)
-    (block nil
-      (unless (context-diff-has-diff-p diff)
-        (return t))
-      (switch (output :test #'equal)
-        ("sexp"
-         (uiop:with-safe-io-syntax ()
-           (prin1 (context-diff-to-plist diff) *standard-output*)
-           (terpri *standard-output*)
-           (or yes-p (sexp-interaction-y-or-n-p))))
-        (t
-         (print-context-diff diff *standard-output*)
-         (or yes-p (y-or-n-p "Proceed?")))))))
-
 (define-cli-command (("bundle" "install") *bundle-install-ui*) (args options)
   (declare (ignore args))
   (let* ((clpmfile-pathname (bundle-clpmfile-pathname)))
-    (bundle-install clpmfile-pathname :validate (make-validate-fun (gethash :yes options)
-                                                                   (gethash :output options))
+    (bundle-install clpmfile-pathname
+                    :validate (make-diff-validate-fun :yesp (gethash :yes options))
                     :no-resolve (gethash :bundle-no-resolve options))))
