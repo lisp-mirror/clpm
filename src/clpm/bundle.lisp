@@ -7,6 +7,7 @@
     (:use #:cl
           #:alexandria
           #:anaphora
+          #:clpm/cache
           #:clpm/client
           #:clpm/clpmfile
           #:clpm/config
@@ -15,9 +16,11 @@
           #:clpm/log
           #:clpm/repos
           #:clpm/resolve
-          #:clpm/source)
+          #:clpm/source
+          #:do-urlencode)
   (:export #:bundle-clpmfile-pathname
            #:bundle-install
+           #:bundle-output-translations
            #:bundle-source-registry
            #:bundle-update
            #:with-bundle-default-pathname-defaults
@@ -100,6 +103,25 @@ the lock file if necessary."
                                     :if-exists :supersede)
               (serialize-context-to-stream lockfile stream)))))
     changedp))
+
+
+(defun bundle-output-translations (clpmfile-designator)
+  (let ((clpmfile-pathname (clpmfile-pathname (get-clpmfile clpmfile-designator))))
+    (case (config-value :bundle :output-translation)
+      ((t)
+       `(:output-translations
+         :ignore-inherited-configuration
+         (t (:root ,@(rest (pathname-directory (clpm-cache-pathname '("bundle" "fasl-cache")
+                                                                    :ensure-directory t)))
+                   ,(urlencode (format nil "~{~A~^/~}" (rest (pathname-directory clpmfile-pathname))))
+                   :implementation :**/ :*.*.*))))
+      (:local
+       `(:output-translations
+         :ignore-inherited-configuration
+         (t (,(uiop:pathname-directory-pathname clpmfile-pathname) ".clpm" "fasl-cache"
+             :implementation :**/ :*.*.*))))
+      (t
+       nil))))
 
 (defun bundle-source-registry (clpmfile-designator
                                &key include-client-p ignore-missing-releases
