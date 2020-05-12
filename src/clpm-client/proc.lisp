@@ -65,7 +65,7 @@ or the same CLPM used to execute the bundle."
   (or *clpm-executable*
       (if (inside-bundle-exec-p)
           (bundle-command)
-          (list "clpm-live"))))
+          (list "clpm"))))
 
 (defun ensure-list (arg)
   (if (listp arg)
