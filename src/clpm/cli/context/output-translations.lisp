@@ -25,8 +25,9 @@
 (define-cli-command (("context" "output-translations") *context-output-translations-ui*) (args options)
   (declare (ignore options))
   (assert (length= 1 args))
-  (with-standard-io-syntax
-    (let ((*print-case* :downcase))
-      (prin1 (context-output-translations (first args))))
-    (terpri))
+  (when-let ((output-translations (context-output-translations (first args))))
+    (with-standard-io-syntax
+      (let ((*print-case* :downcase))
+        (prin1 output-translations))
+      (terpri)))
   t)

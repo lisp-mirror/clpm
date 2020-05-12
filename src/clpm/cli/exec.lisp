@@ -44,6 +44,7 @@
     (with-standard-io-syntax
       (execvpe (first args) (rest args)
                `(("CL_SOURCE_REGISTRY" . ,(prin1-to-string source-registry))
-                 ("ASDF_OUTPUT_TRANSLATIONS" . ,(prin1-to-string output-translations))
+                 ,@(when output-translations
+                     `(("ASDF_OUTPUT_TRANSLATIONS" . ,(prin1-to-string output-translations))))
                  ("CLPM_EXEC_CONTEXT" . ,(config-value :context)))
                t))))

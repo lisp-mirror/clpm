@@ -193,14 +193,12 @@ in place with the same name. Return the new requirement if it was modified."
   (let* ((context (get-context context))
          (name (context-name context))
          (config-value (config-value :contexts name :output-translation)))
-    (if config-value
-        `(:output-translations
-          :ignore-inherited-configuration
-          (t (:root ,@(rest (pathname-directory (clpm-cache-pathname `("contexts" ,name "fasl-cache")
-                                                                     :ensure-directory t)))
-              :implementation :**/ :*.*.*)))
-        `(:output-translations
-          :inherit-configuration))))
+    (when config-value
+      `(:output-translations
+        :ignore-inherited-configuration
+        (t (:root ,@(rest (pathname-directory (clpm-cache-pathname `("contexts" ,name "fasl-cache")
+                                                                   :ensure-directory t)))
+            :implementation :**/ :*.*.*))))))
 
 
 ;; * Diffing
