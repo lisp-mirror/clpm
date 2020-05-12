@@ -7,6 +7,7 @@
     (:use #:cl
           #:alexandria
           #:cl-ansi-text
+          #:clpm/cache
           #:clpm/config
           #:clpm/data
           #:clpm/log
@@ -21,6 +22,7 @@
            #:context-find-system-asd-pathname
            #:context-installed-only-p
            #:context-name
+           #:context-output-translations
            #:context-releases
            #:context-requirements
            #:context-reverse-dependencies
@@ -186,6 +188,19 @@ in place with the same name. Return the new requirement if it was modified."
             (dolist (form registry.d-forms)
               (prin1 form s)
               (terpri s))))))))
+
+(defun context-output-translations (context)
+  (let* ((context (get-context context))
+         (name (context-name context))
+         (config-value (config-value :contexts name :output-translation)))
+    (if config-value
+        `(:output-translations
+          :ignore-inherited-configuration
+          (t (:root ,@(rest (pathname-directory (clpm-cache-pathname `("contexts" ,name "fasl-cache")
+                                                                     :ensure-directory t)))
+              :implementation :**/ :*.*.*)))
+        `(:output-translations
+          :inherit-configuration))))
 
 
 ;; * Diffing

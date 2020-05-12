@@ -61,6 +61,11 @@
     ((:contexts :*)
      :wildcard-types (string)
      :type hash-table)
+    ((:contexts :* :output-translation)
+     :type (member t nil)
+     :default t
+     :documentation
+     "Controls whether output translations are used for this context. NIL corresponds to not configuring the output translations. T (default) configures the output translations to translate everything to a folder in CLPM's cache.")
     ((:contexts :* :source-registry.d-files)
      :wildcard-types (string)
      :type (list (or string pathname))

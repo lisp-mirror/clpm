@@ -7,6 +7,7 @@
     (:use #:cl
           #:clpm/cli/context/common
           #:clpm/cli/context/find
+          #:clpm/cli/context/output-translations
           #:clpm/cli/context/pathnames
           #:clpm/cli/context/source-registry))
 
