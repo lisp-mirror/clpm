@@ -10,10 +10,10 @@
   :depends-on ((:version #:uiop "3.3.0"))
   :serial nil
   :components
-  ((:file "asdf" :depends-on ("package" "cleanup"))
+  ((:file "asdf" :depends-on ("package" "cleanup" "context"))
    (:file "bundle" :depends-on ("package" "proc"))
    (:file "cleanup" :depends-on ("package"))
-   (:file "context" :depends-on ("package" "proc"))
+   (:file "context" :depends-on ("package" "proc" "cleanup"))
    (:file "diff" :depends-on ("package"))
    (:file "env" :depends-on ("package"))
    (:file "install" :depends-on ("package" "proc"))

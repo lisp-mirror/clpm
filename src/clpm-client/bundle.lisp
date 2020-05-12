@@ -20,9 +20,7 @@ CLPMFILE) to the new clpmfile."
 (defun bundle-install (&key clpmfile no-resolve (validate 'context-diff-approved-p))
   "Ensure a bundle is installed. Returns a source registry form if the install completed.
 
-CLPMFILE must be a pathname pointing a clpmfile or NIL. If NIL, the current
-clpmfile (typically specified in the CLPM_BUNDLE_CLPMFILE environment variable)
-is used.
+CLPMFILE must be a pathname pointing a clpmfile.
 
 If NO-RESOLVE is non-NIL, then the bundle will be installed completely from its
 lock file, without reresolving any requirements.
@@ -34,10 +32,10 @@ aborted."
     (with-clpm-proc (proc)
       (clpm-proc-print
        proc
-       `(with-bundle-default-pathname-defaults (,@(when (pathnamep clpmfile) (list clpmfile)))
-          (with-bundle-local-config (,@(when (pathnamep clpmfile) (list clpmfile)))
+       `(with-bundle-default-pathname-defaults (,clpmfile)
+          (with-bundle-local-config (,clpmfile)
             (bundle-source-registry
-             (bundle-install ,(if (pathnamep clpmfile) clpmfile '(bundle-clpmfile-pathname))
+             (bundle-install ,clpmfile
                              :validate ,(make-diff-validator-fun)
                              :no-resolve ,no-resolve)))))
       (setf diff-description (clpm-proc-read proc))
@@ -54,9 +52,7 @@ aborted."
 PROJECTS is a list of projects to update. SYSTEMS is a list of systems to
 update. If both are NIL, all projects are available for updating.
 
-CLPMFILE must be a pathname pointing a clpmfile or NIL. If NIL, the current
-clpmfile (typically specified in the CLPM_BUNDLE_CLPMFILE environment variable)
-is used.
+CLPMFILE must be a pathname pointing a clpmfile.
 
 VALIDATE is a function that takes a CONTEXT-DIFF instance and returns non-NIL if
 the diff is approved and the install can continue. If NIL, the install is
@@ -65,9 +61,9 @@ aborted."
     (with-clpm-proc (proc)
       (clpm-proc-print
        proc
-       `(with-bundle-default-pathname-defaults (,@(when (pathnamep clpmfile) (list clpmfile)))
-          (with-bundle-local-config (,@(when (pathnamep clpmfile) (list clpmfile)))
-            (bundle-update ,(if (pathnamep clpmfile) clpmfile '(bundle-clpmfile-pathname))
+       `(with-bundle-default-pathname-defaults (,clpmfile)
+          (with-bundle-local-config (,clpmfile)
+            (bundle-update ,clpmfile
                            :update-systems ',systems
                            :update-projects ',projects
                            :validate ,(make-diff-validator-fun)))))

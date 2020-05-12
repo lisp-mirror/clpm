@@ -7,11 +7,11 @@
 
 (defun clpm-exec-context ()
   "Returns the context used for `clpm exec` or NIL"
-  (uiop:getenv "CLPM_EXEC_CONTEXT"))
+  (uiop:getenvp "CLPM_EXEC_CONTEXT"))
 
 (defun inside-bundle-exec-p ()
   "Returns non-NIL iff we were spawned by a `clpm bundle exec` command."
-  (uiop:getenv "CLPM_BUNDLE_CLPMFILE"))
+  (uiop:getenvp "CLPM_BUNDLE_CLPMFILE"))
 
 (defun bundle-command ()
   "Return a command (list of string) suitable for invoking the same CLPM

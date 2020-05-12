@@ -24,7 +24,7 @@
   + =context source-registry= CLI added.
   + =context output-translations= CLI added.
   + =exec= CLI added.
-  + =enter-context= function added to client to allow changing source registry
+  + =activate-context= function added to client to allow changing source registry
     and output translations of the current image.
   + Add =bundle init= CLI and =bundle-init= in client to easily create a new
     clpmfile.

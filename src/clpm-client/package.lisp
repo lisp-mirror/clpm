@@ -15,6 +15,8 @@
            #:*default-context*
            #:asdf-integration-active-p
            #:activate-asdf-integration
+           #:activate-context
+           #:active-context
            #:approve-diff
            #:bundle-init
            #:cleanup-clpm-client
@@ -24,7 +26,6 @@
            #:clpm-error-wrapped-condition
            #:clpm-system-definition-search
            #:clpm-version
-           #:context
            #:context-diff
            #:context-diff-empty-p
            #:context-diff-needs-approval
@@ -32,9 +33,11 @@
            #:context-diff-release-diffs
            #:context-source-registry
            #:deactivate-asdf-integration
-           #:enter-context
+           #:default-context
            #:inside-bundle-exec-p
            #:install
+           #:install-and-reload-context-config
+           #:install-without-dependencies-and-reload-context-config
            #:maybe-cleanup-clpm-client
            #:missing-system
            #:missing-system-name
@@ -45,7 +48,8 @@
            #:release-diff-new-version
            #:release-diff-old-source
            #:release-diff-old-version
-           #:release-diff-project-name))
+           #:release-diff-project-name
+           #:reload-context-config))
 
 (in-package #:clpm-client)
 

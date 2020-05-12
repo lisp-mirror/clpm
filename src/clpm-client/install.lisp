@@ -10,7 +10,7 @@
                   version ref source
                   (validate 'context-diff-approved-p)
                   no-deps
-                  (context (context)))
+                  (context (default-context)))
   "Install a set of projects and systems. Returns a source registry form if the
 install completed.
 
@@ -23,7 +23,8 @@ install should proceed."
   (when (and (context-bundle-p context)
              (or projects systems))
     (error "INSTALL currently only accepts NIL for PROJECTS and SYSTEMS when working on bundles."))
-  (if (stringp context)
+  (if (context-bundle-p context)
+      (bundle-install :validate validate :clpmfile context)
       (let (diff-description)
         (with-clpm-proc (proc)
           (clpm-proc-print
@@ -44,5 +45,4 @@ install should proceed."
             (clpm-proc-print proc validate-result)
             (setf source-registry (clpm-proc-read proc))
             (when validate-result
-              source-registry))))
-      (bundle-install :validate validate :clpmfile (when (pathnamep context) context))))
+              source-registry))))))

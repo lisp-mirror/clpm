@@ -9,18 +9,22 @@
 ;; * Variables
 
 (defvar *asdf-system-not-found-behavior* :error
-  "The behavior if ASDF asks CLPM to find a system and CLPM is unable to find
-it. One of:
+  "The behavior if ASDF is unable to find a system and CLPM's ASDF integration
+is active. One of:
 
-+ :ERROR :: Signal a MISSING-SYSTEM condition. If the current context is a
-bundle, the INSTALL-AND-RELOAD-BUNDLE and RELOAD-BUNDLE restarts will be
-available. If the current context is not a bundle, the INSTALL-SYSTEM and
-INSTALL-SYSTEM-WITHOUT-DEPENDENCIES restarts will be available.
++ :ERROR :: Signal a MISSING-SYSTEM condition. The restarts
+RELOAD-CONTEXT-CONFIG, INSTALL-AND-RELOAD-CONTEXT-CONFIG, and
+INSTALL-WITHOUT-DEPENDENCIES-AND-RELOAD-CONTEXT-CONFIG will be available.
 
-+ :INSTALL :: Install the system and its dependencies without prompting.
++ :INSTALL :: Install the system and its dependencies without prompting. If the
+active context is a bundle, the system is currently not added to the bundle (you
+will need to either add it to the clpmfile or as a dependency to some other
+included system for this to have any effect).
 
 + :INSTALL-WITHOUT-DEPS :: Install the system without its dependencies without
-prompting.
+prompting. If the active context is a bundle, the system is currently not added
+to the bundle (you will need to either add it to the clpmfile or as a dependency
+to some other included system for this to have any effect).
 
 + NIL :: Do nothing.")
 
@@ -37,31 +41,24 @@ prompting.
   (:documentation
    "A condition signaled when CLPM thinks a system is not installed."))
 
-(defun install-and-reload-bundle (&optional condition)
-  "Invoke the INSTALL-AND-RELOAD-BUNDLE restart or return NIL if the restart
-does not exist."
-  (let ((restart (find-restart 'install-and-reload-bundle condition)))
+(defun reload-context-config (&optional condition)
+  "Invoke the RELOAD-CONTEXT-CONFIG restart or return NIL if the restart does
+not exist."
+  (let ((restart (find-restart 'reload-context-config condition)))
     (when restart
       (invoke-restart restart))))
 
-(defun install-system (&optional condition)
-  "Invoke the INSTALL-SYSTEM restart or return NIL if the restart does not
-exist."
-  (let ((restart (find-restart 'install-system condition)))
-    (when restart
-      (invoke-restart restart))))
-
-(defun install-system-without-dependencies (&optional condition)
-  "Invoke the INSTALL-SYSTEM-WITHOUT-DEPENDENCIES restart or return NIL if the
+(defun install-and-reload-context-config (&optional condition)
+  "Invoke the INSTALL-AND-RELOAD-CONTEXT-CONFIG restart or return NIL if the
 restart does not exist."
-  (let ((restart (find-restart 'install-system-without-dependencies condition)))
+  (let ((restart (find-restart 'install-and-reload-context-config condition)))
     (when restart
       (invoke-restart restart))))
 
-(defun reload-bundle (&optional condition)
-  "Invoke the RELOAD-BUNDLE restart or return NIL if the restart does not
-exist."
-  (let ((restart (find-restart 'reload-bundle condition)))
+(defun install-without-dependencies-and-reload-context-config (&optional condition)
+  "Invoke the INSTALL-WITHOUT-DEPENDENCIES-AND-RELOAD-CONTEXT-CONFIG restart or
+return NIL if the restart does not exist."
+  (let ((restart (find-restart 'install-without-dependencies-and-reload-context-config condition)))
     (when restart
       (invoke-restart restart))))
 
@@ -73,107 +70,82 @@ exist."
 ;; * ASDF Search Functions
 
 (defun find-system-without-clpm (system-name)
-  "Call ASDF:FIND-SYSTEM in a dynamic environment with
+  "Call ASDF:SEARCH-FOR-SYSTEM-DEFINITION in a dynamic environment with
 *ASDF-SYSTEM-NOT-FOUND-BEHAVIOR* bound to NIL. Used to prevent infinite
 recursion."
   (let ((*asdf-system-not-found-behavior* nil))
-    (asdf:find-system system-name)))
+    (asdf:search-for-system-definition system-name)))
 
-(defun should-auto-reload-source-registry-p ()
-  (or (and *active-context*
-           (equal *active-context* (context)))
-      (and (inside-bundle-exec-p)
-           (eql (context) :bundle))
-      (and (clpm-exec-context)
-           (equal (context) (clpm-exec-context)))))
+(defun asdf-configure-source-registry (source-registry
+                                       &optional
+                                         (splice (and (not *active-context-ignore-inherited-source-registry*)
+                                                      *active-context-splice-source-registry*)))
+  (when splice
+    (let* ((inherit-configuration-position (position :inherit-configuration source-registry)))
+      (when inherit-configuration-position
+        (setf source-registry (append (butlast source-registry (- (length source-registry)
+                                                                  inherit-configuration-position))
+                                      (rest splice)
+                                      (nthcdr (1+ inherit-configuration-position) source-registry))))))
+  (asdf:clear-source-registry)
+  (asdf:initialize-source-registry source-registry))
 
 (defun clpm-system-definition-search (system-name)
   "A search function for ASDF's *SYSTEM-DEFINITION-SEARCH-FUNCTIONS* list.
+Does nothing if there is no active context.
 
-Given a system name, it tries to find it. If the system cannot be found, it
-either does nothing, signals a condition, and/or installs the system (see:
-*ASDF-SYSTEM-NOT-FOUND-BEHAVIOR*)."
-  (let ((primary-name (asdf:primary-system-name system-name)))
-    ;; Don't handle ASDF or UIOP for the moment...
-    (unless (or (equal "asdf" primary-name)
-                (equal "uiop" primary-name))
-      (flet ((lookup-system ()
-               (context-find-system-asd-pathname system-name))
-             (reload-config (&optional source-registry)
-               (asdf:clear-source-registry)
-               (asdf:initialize-source-registry (or source-registry (context-source-registry)))))
-        (or
-         (unless (inside-bundle-exec-p)
-           ;; The ASDF config is exhaustive when inside a bundle. No need for us
-           ;; to look it up.
-           (lookup-system))
-         (ecase *asdf-system-not-found-behavior*
-           (:install
-            (let ((new-source-registry (install :systems (unless (inside-bundle-exec-p) (list system-name)))))
-              (when new-source-registry
-                (if (should-auto-reload-source-registry-p)
-                    (progn
-                      (reload-config new-source-registry)
-                      (find-system-without-clpm system-name))
-                    (lookup-system)))))
-           (:install-without-deps
-            (let ((new-source-registry (install :systems (unless (inside-bundle-exec-p) (list system-name))
-                                                :no-deps (not (inside-bundle-exec-p)))))
-              (when new-source-registry
-                (if (should-auto-reload-source-registry-p)
-                    (progn
-                      (reload-config new-source-registry)
-                      (find-system-without-clpm system-name))
-                    (lookup-system)))))
-           (:error
-            (restart-case
-                ;; Prevent RESTART-CASE from using WITH-CONDITION-RESTARTS.
-                (signal-missing-system system-name)
-              (install-system ()
-                :report "Attempt to install the system using CLPM"
-                :test (lambda (c) (declare (ignore c)) (not (inside-bundle-exec-p)))
-                (let ((new-source-registry (install :systems (list system-name))))
-                  (when new-source-registry
-                    (if (should-auto-reload-source-registry-p)
-                        (progn
-                          (reload-config new-source-registry)
-                          (find-system-without-clpm system-name))
-                        (lookup-system)))))
-              (install-system-without-dependencies ()
-                :report "Attempt to install the system using CLPM without also installing its dependencies"
-                :test (lambda (c) (declare (ignore c)) (not (inside-bundle-exec-p)))
-                (let ((new-source-registry (install :systems (list system-name) :no-deps t)))
-                  (when new-source-registry
-                    (if (should-auto-reload-source-registry-p)
-                        (progn
-                          (reload-config new-source-registry)
-                          (find-system-without-clpm system-name))
-                        (lookup-system)))))
-              (install-and-reload-bundle ()
-                :report "Install the bundle (reresolving all requiremsnts) and reload configuration from clpmfile.lock"
-                :test (lambda (c) (declare (ignore c)) (inside-bundle-exec-p))
-                (let ((new-source-registry (install)))
-                  (when new-source-registry
-                    (reload-config new-source-registry)
-                    (asdf:find-system system-name))))
-              (reload-bundle ()
-                :report "Clear ASDF configuration and reload from clpmfile.lock."
-                :test (lambda (c) (declare (ignore c)) (inside-bundle-exec-p))
-                (reload-config)
-                (asdf:find-system system-name))))
-           ((nil)
-            nil)))))))
+As this only works with an active context, we can assume that if control gets
+here, ASDF was unable to find the system (as activating a context involves
+configuring the source registry to include every system). That means we don't
+even have to search for the system as all config resides in the source registry.
+
+See *ASDF-SYSTEM-NOT-FOUND-BEHAVIOR* for details on how this function can be
+configured to behave."
+  (let ((primary-name (asdf:primary-system-name system-name))
+        (active-context (active-context)))
+    (when (and active-context
+               ;; Don't handle ASDF or UIOP for the moment. Primary reason is I
+               ;; don't want to deal with ASDF's self upgrades and refusal to
+               ;; downgrade yet.
+               (not (equal "asdf" primary-name))
+               (not (equal "uiop" primary-name)))
+      (flet ((%install (no-deps)
+               (let ((new-source-registry
+                       (install :systems (unless (context-bundle-p active-context) (list system-name))
+                                :no-deps no-deps)))
+                 (when new-source-registry
+                   (asdf-configure-source-registry new-source-registry)
+                   (find-system-without-clpm system-name)))))
+        (ecase *asdf-system-not-found-behavior*
+          (:install (%install nil))
+          (:install-without-deps (%install t))
+          (:error
+           (restart-case
+               ;; Prevent RESTART-CASE from using WITH-CONDITION-RESTARTS,
+               ;; otherwise things can get messed up for defsystem-depends-on
+               (signal-missing-system system-name)
+             (reload-context-config ()
+               :report "Reload the source registry for the context and try again."
+               (asdf-configure-source-registry (context-source-registry :context active-context))
+               (asdf:search-for-system-definition system-name))
+             (install-and-reload-context-config ()
+               :report "Attempt to install the system and try again."
+               (%install nil))
+             (install-without-dependencies-and-reload-context-config ()
+               :report "Attempt to install the system without dependencies and try again."
+               (%install t))))
+          ((nil)
+           nil))))))
 
 (defun asdf-integration-active-p ()
   "Returns non-NIL iff 'CLPM-SYSTEM-DEFINITION-SEARCH is registered with ASDF's
 search functions."
   (member 'clpm-system-definition-search asdf:*system-definition-search-functions*))
 
-(defun activate-asdf-integration (&key force
-                                    (order :last))
+(defun activate-asdf-integration ()
   "Add 'CLPM-SYSTEM-DEFINITION-SEARCH to ASDF's system definition search functions list.
 
-Does nothing if ASDF-INTEGRATION-ACTIVE-P returns T and :FORCE is NIL.
+Does nothing if ASDF-INTEGRATION-ACTIVE-P returns T.
 
 :ORDER can be one of:
 
@@ -182,14 +154,9 @@ Does nothing if ASDF-INTEGRATION-ACTIVE-P returns T and :FORCE is NIL.
 
 + :FIRST :: The CLPM search function is added to the front of ASDF's search
 functions."
-  (when (or force
-            (not (asdf-integration-active-p)))
-    (ecase order
-      (:last
-       (setf asdf:*system-definition-search-functions*
-             (append asdf:*system-definition-search-functions* (list 'clpm-system-definition-search))))
-      (:first
-       (push 'clpm-system-definition-search asdf:*system-definition-search-functions*)))))
+  (unless (asdf-integration-active-p)
+    (setf asdf:*system-definition-search-functions*
+          (append asdf:*system-definition-search-functions* (list 'clpm-system-definition-search)))))
 
 (defun deactivate-asdf-integration ()
   "Removes CLPM-SYSTEM-DEFINITION-SEARCH from ASDF's search functions."
