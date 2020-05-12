@@ -466,6 +466,11 @@
 (defmethod system-file-asd-enough-namestring ((system-file clpi-system-file))
   (clpi:system-file-enough-namestring (clpi-backing-object system-file)))
 
+(defmethod system-file-system-releases ((system-file clpi-system-file))
+  (mapcar (curry #'release-system-release (system-file-release system-file))
+          (mapcar #'clpi:system-release-system-name
+                  (clpi:system-file-system-releases (clpi-backing-object system-file)))))
+
 
 ;; * System release
 
@@ -499,3 +504,8 @@
 (defmethod system-release-system ((system-release clpi-system-release))
   (source-system (system-release-source system-release)
                  (clpi:system-release-system-name (clpi-backing-object system-release))))
+
+(defmethod system-release-system-file ((system-release clpi-system-release))
+  (release-system-file (system-release-release system-release)
+                       (clpi:system-file-enough-namestring
+                        (clpi:system-release-system-file (clpi-backing-object system-release)))))

@@ -10,6 +10,7 @@
           #:clpm/cli/context/output-translations
           #:clpm/cli/context/pathnames
           #:clpm/cli/context/source-registry
-          #:clpm/cli/context/systems))
+          #:clpm/cli/context/systems
+          #:clpm/cli/context/visible-systems))
 
 (in-package #:clpm/cli/context)

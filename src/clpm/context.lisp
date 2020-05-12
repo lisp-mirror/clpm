@@ -32,6 +32,7 @@
            #:context-system-releases
            #:context-to-asdf-source-registry-form
            #:context-to-asdf-source-registry.d-forms
+           #:context-visible-primary-system-names
            #:context-write-asdf-files
            #:copy-context
            #:get-context
@@ -144,6 +145,24 @@ in place with the same name. Return the new requirement if it was modified."
   (let* ((context (get-context context))
          (system-releases (context-system-releases context)))
     (mapcar #'system-release-system system-releases)))
+
+(defun context-visible-primary-system-names (context)
+  (let* ((context (get-context context))
+         (releases (context-releases context))
+         (system-releases (context-system-releases context))
+         (system-files (remove-duplicates (mapcar #'system-release-system-file system-releases)))
+         (system-file-directories (remove-duplicates (mapcar (compose #'uiop:pathname-directory-pathname
+                                                                      #'system-file-absolute-asd-pathname)
+                                                             system-files)
+                                                     :test #'uiop:pathname-equal))
+         (all-system-files (mappend #'release-system-files releases))
+         (visible-system-files (remove-if-not (lambda (sf)
+                                                (member (uiop:pathname-directory-pathname
+                                                         (system-file-absolute-asd-pathname sf))
+                                                        system-file-directories
+                                                        :test #'uiop:pathname-equal))
+                                              all-system-files)))
+    (mapcar #'system-file-primary-system-name visible-system-files)))
 
 (defun context-to-asdf-source-registry.d-forms (context)
   (let* ((context (get-context context))
