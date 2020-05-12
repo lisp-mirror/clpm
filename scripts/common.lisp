@@ -9,7 +9,13 @@
 (in-package #:clpm-scripts)
 
 ;; Load in ASDF.
-(load (merge-pathnames "../ext/asdf.lisp" *load-truename*))
+(let* ((asdf.lisp (merge-pathnames "../ext/asdf.lisp" *load-truename*))
+       (asdf.fasl (compile-file-pathname asdf.lisp)))
+  (when (or (not (probe-file asdf.fasl))
+            (< (file-write-date asdf.fasl)
+               (file-write-date asdf.lisp)))
+    (compile-file asdf.lisp :verbose nil :print nil :progress nil))
+  (load asdf.fasl))
 
 ;; Setup logical pathnames
 (load (merge-pathnames "../logical-pathname.lisp" *load-truename*))
