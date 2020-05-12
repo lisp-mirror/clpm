@@ -12,10 +12,12 @@
           #:clpm/log
           #:clpm/version)
   (:import-from #:adopt)
+  (:import-from #:cl-ppcre)
   (:export #:*commands*
            #:*uis*
            #:define-cli-command
            #:define-cli-command-folder
+           #:define-string
            #:dispatch-command
            #:make-diff-validate-fun))
 
@@ -137,3 +139,9 @@ command line, and a hash table created by Adopt when parsing the options.")
         (return t))
       (print-context-diff diff stream)
       (or yesp (y-or-n-p "Proceed?")))))
+
+(defmacro define-string (name string)
+  `(defparameter ,name ,(format nil
+                                (cl-ppcre:regex-replace-all
+                                 '(:sequence (:register :non-whitespace-char-class) #\Newline (:greedy-repetition 0 nil #\Space) (:register :non-whitespace-char-class)) string "\\1 ~
+ \\2"))))

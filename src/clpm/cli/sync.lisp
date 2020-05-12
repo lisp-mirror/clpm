@@ -6,7 +6,6 @@
 (uiop:define-package #:clpm/cli/sync
     (:use #:cl
           #:clpm/cli/common-args
-          #:clpm/cli/defs
           #:clpm/cli/interface-defs
           #:clpm/config
           #:clpm/log

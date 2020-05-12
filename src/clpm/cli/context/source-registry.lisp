@@ -19,7 +19,7 @@
    :name "clpm context source-registry"
    :summary "Common Lisp Package Manager Context Source-Registry"
    :usage "context source-registry [options] CONTEXT-NAME"
-   :help "Print an ASD source-registry form using the projects installed in a context"
+   :help "Print an ASDF source-registry form using the projects installed in a context"
    :contents (list *group-common*)))
 
 (define-cli-command (("context" "source-registry") *context-source-registry-ui*) (args options)

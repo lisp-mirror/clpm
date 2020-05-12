@@ -8,7 +8,6 @@
           #:clpm/bundle
           #:clpm/cli/bundle/common
           #:clpm/cli/common-args
-          #:clpm/cli/defs
           #:clpm/cli/interface-defs
           #:clpm/context
           #:clpm/log)

@@ -6,7 +6,6 @@
 (uiop:define-package #:clpm/cli/version
     (:use #:cl
           #:clpm/cli/common-args
-          #:clpm/cli/defs
           #:clpm/cli/interface-defs
           #:clpm/log
           #:clpm/version)

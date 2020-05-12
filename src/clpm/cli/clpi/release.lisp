@@ -8,7 +8,6 @@
           #:alexandria
           #:clpm/cli/common-args
           #:clpm/cli/clpi/common
-          #:clpm/cli/defs
           #:clpm/cli/interface-defs
           #:clpm/context
           #:clpm/groveler
