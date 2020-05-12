@@ -38,6 +38,7 @@
 (define-cli-command (("exec") *exec-ui*) (args options)
   (let ((source-registry (context-to-asdf-source-registry-form
                           (config-value :context)
+                          :extra-forms
                           (when (gethash :exec-with-client options)
                             `((:directory ,(uiop:pathname-directory-pathname (client-asd-pathname)))))))
         (output-translations (context-output-translations (config-value :context))))

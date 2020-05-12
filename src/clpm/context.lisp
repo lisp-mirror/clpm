@@ -8,6 +8,7 @@
           #:alexandria
           #:cl-ansi-text
           #:clpm/cache
+          #:clpm/client
           #:clpm/config
           #:clpm/data
           #:clpm/log
@@ -145,11 +146,24 @@ in place with the same name. Return the new requirement if it was modified."
                                                      :test #'uiop:pathname-equal)))
     (mapcar (lambda (x) (list :directory x)) system-file-directories)))
 
-(defun context-to-asdf-source-registry-form (context &optional extra-forms)
+(defun context-to-asdf-source-registry-form (context &key extra-forms
+                                                       ignore-inherited
+                                                       splice-inherited
+                                                       with-client)
   `(:source-registry
-    :ignore-inherited-configuration
     ,@(context-to-asdf-source-registry.d-forms context)
-    ,@extra-forms))
+    ,@(when with-client
+        `((:directory ,(uiop:pathname-directory-pathname (client-asd-pathname)))))
+    ,@extra-forms
+    ,@(cond
+        (ignore-inherited
+         (list :ignore-inherited-configuration))
+        ((and (stringp splice-inherited) (not (equal splice-inherited "")))
+         (rest (asdf/source-registry:parse-source-registry-string splice-inherited)))
+        ((and splice-inherited (listp splice-inherited))
+         (rest splice-inherited))
+        (t
+         (list :inherit-configuration)))))
 
 (defun context-find-system-asd-pathname (context system-name)
   (when-let* ((context (get-context context))

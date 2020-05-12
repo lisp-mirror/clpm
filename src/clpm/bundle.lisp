@@ -161,6 +161,7 @@ the lock file if necessary."
                  (mapcar (compose #'project-name #'release-project) missing-releases)))))
     (context-to-asdf-source-registry-form
      lockfile
+     :extra-forms
      (when include-client-p
        `((:directory ,(uiop:pathname-directory-pathname (client-asd-pathname))))))))
 
