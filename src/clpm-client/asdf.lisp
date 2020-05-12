@@ -79,6 +79,14 @@ recursion."
   (let ((*asdf-system-not-found-behavior* nil))
     (asdf:find-system system-name)))
 
+(defun should-auto-reload-source-registry-p ()
+  (or (and *active-context*
+           (equal *active-context* (context)))
+      (and (inside-bundle-exec-p)
+           (eql (context) :bundle))
+      (and (clpm-exec-context)
+           (equal (context) (clpm-exec-context)))))
+
 (defun clpm-system-definition-search (system-name)
   "A search function for ASDF's *SYSTEM-DEFINITION-SEARCH-FUNCTIONS* list.
 
@@ -91,9 +99,9 @@ either does nothing, signals a condition, and/or installs the system (see:
                 (equal "uiop" primary-name))
       (flet ((lookup-system ()
                (context-find-system-asd-pathname system-name))
-             (reload-config ()
+             (reload-config (&optional source-registry)
                (asdf:clear-source-registry)
-               (asdf:initialize-source-registry (context-source-registry))))
+               (asdf:initialize-source-registry (or source-registry (context-source-registry)))))
         (or
          (unless (inside-bundle-exec-p)
            ;; The ASDF config is exhaustive when inside a bundle. No need for us
@@ -101,20 +109,22 @@ either does nothing, signals a condition, and/or installs the system (see:
            (lookup-system))
          (ecase *asdf-system-not-found-behavior*
            (:install
-            (install :systems (unless (inside-bundle-exec-p) (list system-name)))
-            (if (inside-bundle-exec-p)
-                (progn
-                  (reload-config)
-                  (find-system-without-clpm system-name))
-                (lookup-system)))
+            (let ((new-source-registry (install :systems (unless (inside-bundle-exec-p) (list system-name)))))
+              (when new-source-registry
+                (if (should-auto-reload-source-registry-p)
+                    (progn
+                      (reload-config new-source-registry)
+                      (find-system-without-clpm system-name))
+                    (lookup-system)))))
            (:install-without-deps
-            (install :systems (unless (inside-bundle-exec-p) (list system-name))
-                     :no-deps (not (inside-bundle-exec-p)))
-            (if (inside-bundle-exec-p)
-                (progn
-                  (reload-config)
-                  (find-system-without-clpm system-name))
-                (lookup-system)))
+            (let ((new-source-registry (install :systems (unless (inside-bundle-exec-p) (list system-name))
+                                                :no-deps (not (inside-bundle-exec-p)))))
+              (when new-source-registry
+                (if (should-auto-reload-source-registry-p)
+                    (progn
+                      (reload-config new-source-registry)
+                      (find-system-without-clpm system-name))
+                    (lookup-system)))))
            (:error
             (restart-case
                 ;; Prevent RESTART-CASE from using WITH-CONDITION-RESTARTS.
@@ -122,19 +132,30 @@ either does nothing, signals a condition, and/or installs the system (see:
               (install-system ()
                 :report "Attempt to install the system using CLPM"
                 :test (lambda (c) (declare (ignore c)) (not (inside-bundle-exec-p)))
-                (when (install :systems (list system-name))
-                  (lookup-system)))
+                (let ((new-source-registry (install :systems (list system-name))))
+                  (when new-source-registry
+                    (if (should-auto-reload-source-registry-p)
+                        (progn
+                          (reload-config new-source-registry)
+                          (find-system-without-clpm system-name))
+                        (lookup-system)))))
               (install-system-without-dependencies ()
                 :report "Attempt to install the system using CLPM without also installing its dependencies"
                 :test (lambda (c) (declare (ignore c)) (not (inside-bundle-exec-p)))
-                (when (install :systems (list system-name) :no-deps t)
-                  (lookup-system)))
+                (let ((new-source-registry (install :systems (list system-name) :no-deps t)))
+                  (when new-source-registry
+                    (if (should-auto-reload-source-registry-p)
+                        (progn
+                          (reload-config new-source-registry)
+                          (find-system-without-clpm system-name))
+                        (lookup-system)))))
               (install-and-reload-bundle ()
                 :report "Install the bundle (reresolving all requiremsnts) and reload configuration from clpmfile.lock"
                 :test (lambda (c) (declare (ignore c)) (inside-bundle-exec-p))
-                (when (install)
-                  (reload-config)
-                  (asdf:find-system system-name)))
+                (let ((new-source-registry (install)))
+                  (when new-source-registry
+                    (reload-config new-source-registry)
+                    (asdf:find-system system-name))))
               (reload-bundle ()
                 :report "Clear ASDF configuration and reload from clpmfile.lock."
                 :test (lambda (c) (declare (ignore c)) (inside-bundle-exec-p))

@@ -11,7 +11,8 @@
                   (validate 'context-diff-approved-p)
                   no-deps
                   (context (context)))
-  "Install a set of projects and systems. Returns non-NIL if the install proceeded.
+  "Install a set of projects and systems. Returns a source registry form if the
+install completed.
 
 PROJECTS and SYSTEMS must be lists of dependency specifiers. VERSION, REF, and
 SOURCE must be strings and are used as the default constraints on PROJECTS and
@@ -27,7 +28,7 @@ install should proceed."
         (with-clpm-proc (proc)
           (clpm-proc-print
            proc
-           `(context-asd-pathnames
+           `(context-to-asdf-source-registry-form
              (install :projects ',(ensure-list projects)
                       :systems ',(ensure-list systems)
                       :no-deps-p ,no-deps
@@ -38,8 +39,10 @@ install should proceed."
                       :ref ,ref
                       :source ,source)))
           (setf diff-description (clpm-proc-read proc))
-          (let ((validate-result (funcall validate (make-context-diff-from-description diff-description))))
+          (let ((validate-result (funcall validate (make-context-diff-from-description diff-description)))
+                source-registry)
             (clpm-proc-print proc validate-result)
-            (clpm-proc-read proc)
-            validate-result)))
+            (setf source-registry (clpm-proc-read proc))
+            (when validate-result
+              source-registry))))
       (bundle-install :validate validate :clpmfile (when (pathnamep context) context))))

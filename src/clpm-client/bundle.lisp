@@ -6,7 +6,7 @@
 (in-package #:clpm-client)
 
 (defun bundle-install (&key clpmfile no-resolve (validate 'context-diff-approved-p))
-  "Ensure a bundle is installed.
+  "Ensure a bundle is installed. Returns a source registry form if the install completed.
 
 CLPMFILE must be a pathname pointing a clpmfile or NIL. If NIL, the current
 clpmfile (typically specified in the CLPM_BUNDLE_CLPMFILE environment variable)
@@ -24,14 +24,17 @@ aborted."
        proc
        `(with-bundle-default-pathname-defaults (,@(when (pathnamep clpmfile) (list clpmfile)))
           (with-bundle-local-config (,@(when (pathnamep clpmfile) (list clpmfile)))
-            (bundle-install ,(if (pathnamep clpmfile) clpmfile '(bundle-clpmfile-pathname))
-                            :validate ,(make-diff-validator-fun)
-                            :no-resolve ,no-resolve))))
+            (bundle-source-registry
+             (bundle-install ,(if (pathnamep clpmfile) clpmfile '(bundle-clpmfile-pathname))
+                             :validate ,(make-diff-validator-fun)
+                             :no-resolve ,no-resolve)))))
       (setf diff-description (clpm-proc-read proc))
-      (let ((validate-result (funcall validate (make-context-diff-from-description diff-description))))
+      (let ((validate-result (funcall validate (make-context-diff-from-description diff-description)))
+            source-registry)
         (clpm-proc-print proc validate-result)
-        (clpm-proc-read proc)
-        validate-result))))
+        (setf source-registry (clpm-proc-read proc))
+        (when validate-result
+          source-registry)))))
 
 (defun bundle-update (&key projects systems clpmfile (validate 'context-diff-approved-p))
   "Update a bundle.

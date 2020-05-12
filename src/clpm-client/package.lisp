@@ -12,7 +12,7 @@
            #:*clpm-dribble-output-prefix*
            #:*clpm-error-dribble*
            #:*clpm-executable*
-           #:*context*
+           #:*default-context*
            #:asdf-integration-active-p
            #:activate-asdf-integration
            #:approve-diff
@@ -31,6 +31,7 @@
            #:context-diff-release-diffs
            #:context-source-registry
            #:deactivate-asdf-integration
+           #:enter-context
            #:inside-bundle-exec-p
            #:install
            #:maybe-cleanup-clpm-client

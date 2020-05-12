@@ -102,7 +102,7 @@ the lock file if necessary."
                                     :direction :output
                                     :if-exists :supersede)
               (serialize-context-to-stream lockfile stream)))))
-    changedp))
+    lockfile))
 
 
 (defun bundle-output-translations (clpmfile-designator)

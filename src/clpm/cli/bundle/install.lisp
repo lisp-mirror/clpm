@@ -54,4 +54,5 @@ exist in the lock file.")
   (let* ((clpmfile-pathname (bundle-clpmfile-pathname)))
     (bundle-install clpmfile-pathname
                     :validate (make-diff-validate-fun :yesp (gethash :yes options))
-                    :no-resolve (gethash :bundle-no-resolve options))))
+                    :no-resolve (gethash :bundle-no-resolve options))
+    t))

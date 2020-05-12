@@ -24,6 +24,8 @@
   + =context source-registry= CLI added.
   + =context output-translations= CLI added.
   + =exec= CLI added.
+  + =enter-context= function added to client to allow changing source registry
+    and output translations of the current image.
 
 * v0.2.1 - 2020-04-05
 
