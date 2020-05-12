@@ -61,8 +61,13 @@
     ((:contexts :*)
      :wildcard-types (string)
      :type hash-table)
+    ((:contexts :* :ignore-inherited-source-registry)
+     :type boolean
+     :default nil
+     :documentation
+     "Controls whether the source registry for this context ignores inherited configuration.")
     ((:contexts :* :output-translation)
-     :type (member t nil)
+     :type boolean
      :default t
      :documentation
      "Controls whether output translations are used for this context. NIL corresponds to not configuring the output translations. T (default) configures the output translations to translate everything to a folder in CLPM's cache.")

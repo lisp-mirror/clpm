@@ -36,16 +36,24 @@
                    *option-with-client*)))
 
 (define-cli-command (("exec") *exec-ui*) (args options)
-  (let ((source-registry (context-to-asdf-source-registry-form
-                          (config-value :context)
-                          :extra-forms
-                          (when (gethash :exec-with-client options)
-                            `((:directory ,(uiop:pathname-directory-pathname (client-asd-pathname)))))))
-        (output-translations (context-output-translations (config-value :context))))
+  (let* ((context-name (config-value :context))
+         (with-client (gethash :exec-with-client options))
+         (ignore-inherited (config-value :contexts context-name :ignore-inherited-source-registry))
+         (splice-inherited (uiop:getenvp "CL_SOURCE_REGISTRY"))
+         (source-registry (context-to-asdf-source-registry-form
+                           context-name
+                           :with-client with-client
+                           :ignore-inherited ignore-inherited
+                           :splice-inherited splice-inherited))
+         (output-translations (context-output-translations context-name)))
     (with-standard-io-syntax
       (execvpe (first args) (rest args)
                `(("CL_SOURCE_REGISTRY" . ,(prin1-to-string source-registry))
                  ,@(when output-translations
                      `(("ASDF_OUTPUT_TRANSLATIONS" . ,(prin1-to-string output-translations))))
-                 ("CLPM_EXEC_CONTEXT" . ,(config-value :context)))
+                 ("CLPM_EXEC_CONTEXT" . ,context-name)
+                 ,@(when ignore-inherited
+                     '(("CLPM_EXEC_IGNORE_INHERITED_SOURCE_REGISTRY" . "t")))
+                 ,@(when (and (not ignore-inherited) splice-inherited)
+                     `(("CLPM_EXEC_SPLICE_INHERITED_SOURCE_REGISTRY" . ,splice-inherited))))
                t))))

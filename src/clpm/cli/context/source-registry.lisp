@@ -27,7 +27,7 @@
    :context-source-registry-inherit-env-var
    :long "splice-environment"
    :short #\e
-   :help "Print a source registry form that has the contents of the CL_SOURCE_REGISTRY environment variable cpliced in. No effect if inherited configuration is ignored."
+   :help "Print a source registry form that has the contents of the CL_SOURCE_REGISTRY environment variable spliced in. No effect if inherited configuration is ignored."
    :reduce (constantly t)))
 
 (defparameter *option-context-source-registry-with-client*
