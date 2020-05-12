@@ -21,6 +21,9 @@
   + Client's INSTALL and UPDATE functions made much simpler and more
     featureful.
   + Client's dribble features improved greatly.
+  + =context source-registry= CLI added.
+  + =context output-translations= CLI added.
+  + =exec= CLI added.
 
 * v0.2.1 - 2020-04-05
 
