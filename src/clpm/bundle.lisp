@@ -19,6 +19,7 @@
           #:clpm/source
           #:do-urlencode)
   (:export #:bundle-clpmfile-pathname
+           #:bundle-context
            #:bundle-init
            #:bundle-install
            #:bundle-output-translations
@@ -69,6 +70,11 @@ bound to PN's folder."
 
 (defun load-lockfile (pathname &key installed-only-p)
   (load-anonymous-context-from-pathname pathname :installed-only-p installed-only-p))
+
+(defun bundle-context (clpmfile-designator)
+  (let* ((clpmfile (get-clpmfile clpmfile-designator))
+         (lockfile-pathname (clpmfile-lockfile-pathname clpmfile)))
+    (load-lockfile lockfile-pathname)))
 
 (defun bundle-init (clpmfile-pathname &key (if-exists :error) asds)
   (with-standard-io-syntax

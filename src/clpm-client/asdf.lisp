@@ -90,6 +90,73 @@ recursion."
   (asdf:clear-source-registry)
   (asdf:initialize-source-registry source-registry))
 
+(defun handle-missing-system (system-name active-context)
+  (flet ((%install (no-deps)
+           (let ((new-source-registry
+                   (install :systems (unless (context-bundle-p active-context) (list system-name))
+                            :no-deps no-deps
+                            :update-asdf-config t)))
+             (when new-source-registry
+               (find-system-without-clpm system-name)))))
+    (ecase *asdf-system-not-found-behavior*
+      (:install (%install nil))
+      (:install-without-deps (%install t))
+      (:error
+       (restart-case
+           ;; Prevent RESTART-CASE from using WITH-CONDITION-RESTARTS,
+           ;; otherwise things can get messed up for defsystem-depends-on
+           (signal-missing-system system-name)
+         (reload-context-config ()
+           :report "Reload the source registry for the context and try again."
+           (asdf-configure-source-registry (context-source-registry :context active-context))
+           (unless (context-bundle-p active-context)
+             (setf *active-context-installed-systems* (context-installed-system-names active-context)
+                   *active-context-visible-primary-system-names* (context-visible-primary-system-names active-context)))
+           (asdf:search-for-system-definition system-name))
+         (install-and-reload-context-config ()
+           :report "Attempt to install the system and try again."
+           (%install nil))
+         (install-without-dependencies-and-reload-context-config ()
+           :report "Attempt to install the system without dependencies and try again."
+           (%install t))))
+      ((nil)
+       nil))))
+
+;; TODO: 0.4
+;;
+;; This function will either become moot or need to be drastically reworked. If
+;; global contexts and bundles become more unified, then global contexts will
+;; also have the ability to "install" systems in an "editable" mode (the context
+;; uses the source code in a user editable location on the file system). If this
+;; happens, then it's possible that editable system gained a new requirement and
+;; we wouldn't want to touch the top level user requirements at all if the
+;; system was brought in that way.
+(defun clpm-system-definition-pre-search (system-name)
+  "When used in conjunction with CLPM-SYSTEM-DEFINITION-SEARCH, this creates a
+poor man's :around method for locating systems. This function checks to see if
+it's likely that one of ASDF's built-in search functions would find a system
+that's not installed, but is visible in the the source registry for the active
+context.
+
+This happens because the smallest granularity availble in ASDF's source registry
+is including directories. So, for instance, someone may install CFFI (defined in
+cffi.asd). Then, some time later, they decide they want to run CFFI's tests,
+defined by the system cffi-tests in cffi-tests.asd *in the same directory as
+cffi.asd*. The cffi-tests system will be found by ASDF, but its dependencies,
+such as rt, are not. If this function didn't exist, then
+CLPM-SYSTEM-DEFINITION-SEARCH would prompt the user to install rt and, if the
+user accepts, it will be recorded in the context that rt is a toplevel
+requirement. However, this is incorrect as cffi-tests should be the new toplevel
+requirement."
+  (let ((primary-name (asdf:primary-system-name system-name))
+        (active-context (active-context)))
+    (when (and active-context
+               (not (equal "asdf" primary-name))
+               (not (equal "uiop" primary-name))
+               (not (member system-name *active-context-installed-systems* :test #'equal))
+               (member primary-name *active-context-visible-primary-system-names* :test #'equal))
+      (handle-missing-system system-name active-context))))
+
 (defun clpm-system-definition-search (system-name)
   "A search function for ASDF's *SYSTEM-DEFINITION-SEARCH-FUNCTIONS* list.
 Does nothing if there is no active context.
@@ -109,59 +176,32 @@ configured to behave."
                ;; downgrade yet.
                (not (equal "asdf" primary-name))
                (not (equal "uiop" primary-name)))
-      (flet ((%install (no-deps)
-               (let ((new-source-registry
-                       (install :systems (unless (context-bundle-p active-context) (list system-name))
-                                :no-deps no-deps)))
-                 (when new-source-registry
-                   (asdf-configure-source-registry new-source-registry)
-                   (find-system-without-clpm system-name)))))
-        (ecase *asdf-system-not-found-behavior*
-          (:install (%install nil))
-          (:install-without-deps (%install t))
-          (:error
-           (restart-case
-               ;; Prevent RESTART-CASE from using WITH-CONDITION-RESTARTS,
-               ;; otherwise things can get messed up for defsystem-depends-on
-               (signal-missing-system system-name)
-             (reload-context-config ()
-               :report "Reload the source registry for the context and try again."
-               (asdf-configure-source-registry (context-source-registry :context active-context))
-               (asdf:search-for-system-definition system-name))
-             (install-and-reload-context-config ()
-               :report "Attempt to install the system and try again."
-               (%install nil))
-             (install-without-dependencies-and-reload-context-config ()
-               :report "Attempt to install the system without dependencies and try again."
-               (%install t))))
-          ((nil)
-           nil))))))
+      (handle-missing-system system-name active-context))))
 
 (defun asdf-integration-active-p ()
   "Returns non-NIL iff 'CLPM-SYSTEM-DEFINITION-SEARCH is registered with ASDF's
 search functions."
-  (member 'clpm-system-definition-search asdf:*system-definition-search-functions*))
+  (and
+   (member 'clpm-system-definition-pre-search asdf:*system-definition-search-functions*)
+   (member 'clpm-system-definition-search asdf:*system-definition-search-functions*)))
 
 (defun activate-asdf-integration ()
-  "Add 'CLPM-SYSTEM-DEFINITION-SEARCH to ASDF's system definition search functions list.
+  "Add 'CLPM-SYSTEM-DEFINITION-PRE-SEARCH and 'CLPM-SYSTEM-DEFINITION-SEARCH to
+ASDF's system definition search functions list.
 
-Does nothing if ASDF-INTEGRATION-ACTIVE-P returns T.
-
-:ORDER can be one of:
-
-+ :LAST :: (default) The clpm search function is added to the end of ASDF's
- search functions.
-
-+ :FIRST :: The CLPM search function is added to the front of ASDF's search
-functions."
+Does nothing if ASDF-INTEGRATION-ACTIVE-P returns T."
   (unless (asdf-integration-active-p)
     (setf asdf:*system-definition-search-functions*
-          (append asdf:*system-definition-search-functions* (list 'clpm-system-definition-search)))))
+          (list* 'clpm-system-definition-pre-search
+                 (append asdf:*system-definition-search-functions*
+                         (list 'clpm-system-definition-search))))))
 
 (defun deactivate-asdf-integration ()
   "Removes CLPM-SYSTEM-DEFINITION-SEARCH from ASDF's search functions."
   (setf asdf:*system-definition-search-functions*
-        (remove 'clpm-system-definition-search asdf:*system-definition-search-functions*)))
+        (remove 'clpm-system-definition-search
+                (remove 'clpm-system-definition-pre-search
+                        asdf:*system-definition-search-functions*))))
 
 ;; Unregister CLPM from ASDF on CLPM cleanup.
 (register-clpm-cleanup-hook 'deactivate-asdf-integration)

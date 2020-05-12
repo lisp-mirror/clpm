@@ -11,8 +11,10 @@
           #:clpm/cli/interface-defs
           #:clpm/clpmfile
           #:clpm/config
+          #:clpm/context
           #:clpm/execvpe
           #:clpm/log
+          #:clpm/source
           #:clpm/utils)
   (:import-from #:adopt))
 
@@ -46,6 +48,9 @@
                                                           :include-client-p include-client-p
                                                           :installed-only-p t))
          (output-translations-form (bundle-output-translations clpmfile-pathname))
+         (lockfile (bundle-context clpmfile))
+         (installed-system-names (sort (mapcar #'system-name (context-installed-systems lockfile)) #'string<))
+         (visible-primary-system-names (sort (context-visible-primary-system-names lockfile) #'string<))
          (command args))
     (log:debug "Computed CL_SOURCE_REGISTRY:~%~S" cl-source-registry-form)
     (with-standard-io-syntax
@@ -57,6 +62,8 @@
                        `(("CLPM_BUNDLE_BIN_LIVE_SCRIPT" . ,(uiop:native-namestring *live-script-location*))
                          ("CLPM_BUNDLE_BIN_LISP_IMPLEMENTATION" . ,(lisp-implementation-type)))
                        `(("CLPM_BUNDLE_BIN" . ,(uiop:argv0))))
+                 ("CLPM_BUNDLE_INSTALLED_SYSTEMS" . ,(format nil "~{~A~^ ~}" installed-system-names))
+                 ("CLPM_BUNDLE_VISIBLE_PRIMARY_SYSTEMS" . ,(format nil "~{~A~^ ~}" visible-primary-system-names))
                  ("CLPM_BUNDLE_CLPMFILE" . ,(uiop:native-namestring clpmfile-pathname))
                  ("CLPM_BUNDLE_CLPMFILE_LOCK" . ,(uiop:native-namestring lockfile-pathname)))
                t))

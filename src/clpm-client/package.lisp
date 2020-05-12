@@ -24,6 +24,7 @@
            #:clpm-error
            #:clpm-error-error-output
            #:clpm-error-wrapped-condition
+           #:clpm-system-definition-pre-search
            #:clpm-system-definition-search
            #:clpm-version
            #:context-diff

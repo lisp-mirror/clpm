@@ -11,7 +11,8 @@
           #:clpm/config
           #:clpm/context
           #:clpm/execvpe
-          #:clpm/log)
+          #:clpm/log
+          #:clpm/source)
   (:import-from #:adopt))
 
 (in-package #:clpm/cli/exec)
@@ -45,13 +46,17 @@
                            :with-client with-client
                            :ignore-inherited ignore-inherited
                            :splice-inherited splice-inherited))
-         (output-translations (context-output-translations context-name)))
+         (output-translations (context-output-translations context-name))
+         (installed-system-names (sort (mapcar #'system-name (context-installed-systems context-name)) #'string<))
+         (visible-primary-system-names (sort (context-visible-primary-system-names context-name) #'string<)))
     (with-standard-io-syntax
       (execvpe (first args) (rest args)
                `(("CL_SOURCE_REGISTRY" . ,(prin1-to-string source-registry))
                  ,@(when output-translations
                      `(("ASDF_OUTPUT_TRANSLATIONS" . ,(prin1-to-string output-translations))))
                  ("CLPM_EXEC_CONTEXT" . ,context-name)
+                 ("CLPM_EXEC_INSTALLED_SYSTEMS" . ,(format nil "~{~A~^ ~}" installed-system-names))
+                 ("CLPM_EXEC_VISIBLE_PRIMARY_SYSTEMS" . ,(format nil "~{~A~^ ~}" visible-primary-system-names))
                  ,@(when ignore-inherited
                      '(("CLPM_EXEC_IGNORE_INHERITED_SOURCE_REGISTRY" . "t")))
                  ,@(when (and (not ignore-inherited) splice-inherited)

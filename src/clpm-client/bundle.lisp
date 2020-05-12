@@ -44,7 +44,13 @@ aborted."
         (clpm-proc-print proc validate-result)
         (setf source-registry (clpm-proc-read proc))
         (when validate-result
-          source-registry)))))
+          (clpm-proc-print proc
+                           `(with-bundle-default-pathname-defaults (,clpmfile)
+                              (with-bundle-local-config (,clpmfile)
+                                (let ((bundle-context (bundle-context ,clpmfile)))
+                                  (print (mapcar 'system-name (context-installed-systems bundle-context)))
+                                  (context-visible-primary-system-names bundle-context)))))
+          (values source-registry (clpm-proc-read proc) (clpm-proc-read proc)))))))
 
 (defun bundle-update (&key projects systems clpmfile (validate 'context-diff-approved-p))
   "Update a bundle.

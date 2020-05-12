@@ -24,6 +24,7 @@
         #:clpm/deploy
         #:clpm/install
         #:clpm/man
+        #:clpm/source
         #:clpm/version))
 
 (in-package #:clpm/clpm)
