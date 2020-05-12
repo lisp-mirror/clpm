@@ -16,6 +16,7 @@
            #:asdf-integration-active-p
            #:activate-asdf-integration
            #:approve-diff
+           #:bundle-init
            #:cleanup-clpm-client
            #:clpm-client-version
            #:clpm-error

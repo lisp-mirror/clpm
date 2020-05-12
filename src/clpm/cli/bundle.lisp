@@ -7,6 +7,7 @@
     (:use #:cl
           #:clpm/cli/bundle/common
           #:clpm/cli/bundle/exec
+          #:clpm/cli/bundle/init
           #:clpm/cli/bundle/install
           #:clpm/cli/bundle/source-registry
           #:clpm/cli/bundle/update))

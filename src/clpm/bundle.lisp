@@ -19,6 +19,7 @@
           #:clpm/source
           #:do-urlencode)
   (:export #:bundle-clpmfile-pathname
+           #:bundle-init
            #:bundle-install
            #:bundle-output-translations
            #:bundle-source-registry
@@ -68,6 +69,24 @@ bound to PN's folder."
 
 (defun load-lockfile (pathname &key installed-only-p)
   (load-anonymous-context-from-pathname pathname :installed-only-p installed-only-p))
+
+(defun bundle-init (clpmfile-pathname &key (if-exists :error) asds)
+  (with-standard-io-syntax
+    (let ((*print-case* :downcase))
+      (with-open-file (s clpmfile-pathname :direction :output :if-exists if-exists)
+        (write-string ";;; -*- Mode: common-lisp; -*-" s)
+        (terpri s)
+        (prin1 '(:api-version "0.3") s)
+        (terpri s)
+        (terpri s)
+        (dolist (source (sources))
+          (prin1 `(:source ,@(source-to-form source)) s)
+          (terpri s))
+        (terpri s)
+        (dolist (asd asds)
+          (prin1 `(:asd ,asd) s)
+          (terpri s)))))
+  clpmfile-pathname)
 
 (defun bundle-install (clpmfile-designator &key (validate (constantly t)) no-resolve)
   "Given a clpmfile instance, install all releases from its lock file, creating
