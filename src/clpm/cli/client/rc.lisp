@@ -1,4 +1,4 @@
-;;;; clpm config info
+;;;; clpm client rc
 ;;;;
 ;;;; This software is part of CLPM. See README.org for more information. See
 ;;;; LICENSE for license information.
@@ -37,21 +37,32 @@
 (defun quicklisp-alternative-rc ()
   #?";;; Use CLPM as a quicklisp alternative (missing systems are silently installed
 ;;; on demand).
+
 (require \"asdf\")
+
 #-clpm-client
 (progn
-  (asdf:load-asd #p\"${(client-asd-pathname)}\")
-  (asdf:load-system \"clpm-client\")
-  (setf (symbol-value (uiop:find-symbol* :*clpm-system-not-found-behavior* :clpm-client)) :install-with-deps)
-  (uiop:symbol-call :clpm-client :activate-clpm-asdf-integration))")
+  (when (probe-file #p\"${(client-asd-pathname)}\")
+    (asdf:load-asd #p\"${(client-asd-pathname)}\")
+    (asdf:load-system \"clpm-client\")
+    (setf (symbol-value (uiop:find-symbol* :*asdf-system-not-found-behavior* :clpm-client)) :install)
+    (if (uiop:symbol-call :clpm-client :active-context)
+        (uiop:symbol-call :clpm-client :activate-asdf-integration)
+        (uiop:symbol-call :clpm-client :activate-context \"default\" :activate-asdf-integration t))))")
 
 (defun default-rc ()
-  #?";;; Load clpm-client with default values by calling cl-user::load-clpm-client.
+  #?";;; Use CLPM with default configuration to install systems on demand.
+
 (require \"asdf\")
-(defun load-clpm-client ()
-  (asdf:load-asd #p\"${(client-asd-pathname)}\")
-  (asdf:load-system \"clpm-client\")
-  (uiop:symbol-call :clpm-client :activate-clpm-asdf-integration))")
+
+#-clpm-client
+(progn
+  (when (probe-file #p\"${(client-asd-pathname)}\")
+    (asdf:load-asd #p\"${(client-asd-pathname)}\")
+    (asdf:load-system \"clpm-client\")
+    (if (uiop:symbol-call :clpm-client :active-context)
+        (uiop:symbol-call :clpm-client :activate-asdf-integration)
+        (uiop:symbol-call :clpm-client :activate-context \"default\" :activate-asdf-integration t))))")
 
 (define-cli-command (("client" "rc") *client-rc-ui*) (args options)
   (declare (ignore args))
