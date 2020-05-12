@@ -9,6 +9,7 @@
           #:clpm/cli/context/find
           #:clpm/cli/context/output-translations
           #:clpm/cli/context/pathnames
-          #:clpm/cli/context/source-registry))
+          #:clpm/cli/context/source-registry
+          #:clpm/cli/context/systems))
 
 (in-package #:clpm/cli/context)

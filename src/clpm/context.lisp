@@ -21,6 +21,7 @@
            #:context-diff-has-diff-p
            #:context-diff-to-plist
            #:context-find-system-asd-pathname
+           #:context-installed-systems
            #:context-installed-only-p
            #:context-name
            #:context-output-translations
@@ -138,6 +139,11 @@ in place with the same name. Return the new requirement if it was modified."
          (releases (context-releases context))
          (system-files (flatten (mapcar #'release-system-files releases))))
     (mapcar #'system-file-absolute-asd-pathname system-files)))
+
+(defun context-installed-systems (context)
+  (let* ((context (get-context context))
+         (system-releases (context-system-releases context)))
+    (mapcar #'system-release-system system-releases)))
 
 (defun context-to-asdf-source-registry.d-forms (context)
   (let* ((context (get-context context))
