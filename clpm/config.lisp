@@ -23,8 +23,7 @@
            #:config-add-file-source!
            #:config-table-keys
            #:config-value
-           #:print-config
-           #:with-config-file-source-added)
+           #:print-config)
   (:import-from #:cl-ppcre))
 
 (in-package #:clpm/config)
@@ -76,15 +75,6 @@
                                 (config-type-p x 'config-env-source)
                                 (config-type-p x 'config-cli-source)))
                              *config-sources*)))))
-
-(defun call-with-config-file-source-added (thunk pn)
-  "Call THUNK with PN added to the config sources in the dynamic environment."
-  (let ((*config-sources* *config-sources*))
-    (config-add-file-source! pn)
-    (funcall thunk)))
-
-(defmacro with-config-file-source-added ((pn) &body body)
-  `(call-with-config-file-source-added (lambda () ,@body) ,pn))
 
 (defun clear-global-config ()
   "Clear the *config-sources* variable."

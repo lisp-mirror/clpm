@@ -16,6 +16,7 @@
           #:clpm/log
           #:clpm/repos
           #:clpm/resolve
+          #:clpm/session
           #:clpm/source
           #:do-urlencode)
   (:export #:bundle-clpmfile-pathname
@@ -39,8 +40,12 @@
 (defun call-with-bundle-local-config (thunk pn)
   "Call THUNK in a dynamic environment that has the local config for the
 clpmfile located at PN added to the config."
-  (with-config-file-source-added ((merge-pathnames ".clpm/bundle.conf"
-                                                   (uiop:pathname-directory-pathname pn)))
+  ;; Override because we need to invalidate any config reading that has been
+  ;; cached. Also need to rebind *CONFIG-SOURCES* since we're going to
+  ;; destructively modify it.
+  (with-clpm-session (:override t)
+    (config-add-file-source! (merge-pathnames ".clpm/bundle.conf"
+                                              (uiop:pathname-directory-pathname pn)))
     (funcall thunk)))
 
 (defmacro with-bundle-local-config ((&optional (clpmfile-pn '(bundle-clpmfile-pathname))) &body body)
