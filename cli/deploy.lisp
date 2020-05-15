@@ -17,7 +17,7 @@
 
 (defvar *default-clpm-home* nil)
 
-(deploy:define-resource-directory deploy-src "src/")
+(deploy:define-resource-directory deploy-src "clpm/")
 (deploy:define-resource-directory deploy-cli "cli/")
 (deploy:define-resource-directory deploy-features "features/")
 (deploy:define-resource-directory deploy-client "client/")
@@ -48,7 +48,7 @@
      ;; Fixup the logical pathnames
      (when (uiop:featurep :clpm-logical-pathnames)
        (setf (logical-pathname-translations "clpm")
-             `(("clpm:src;**;*.*.*" ,(merge-pathnames "src/**/*.*" deploy:*data-location*))
+             `(("clpm:clpm;**;*.*.*" ,(merge-pathnames "clpm/**/*.*" deploy:*data-location*))
                ("clpm:cli;**;*.*.*" ,(merge-pathnames "cli/**/*.*" deploy:*data-location*))
                ("clpm:features;**;*.*.*" ,(merge-pathnames "features/**/*.*" deploy:*data-location*)))))
      (setf *clpm-client-asd-pathname* (merge-pathnames "src/clpm-client/clpm-client.asd"

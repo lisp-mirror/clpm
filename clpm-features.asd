@@ -9,7 +9,7 @@
 (in-package :asdf-user)
 
 (defsystem #:clpm-features
-  :version (:read-file-form "src/clpm/version.lisp" :at (2 2))
+  :version (:read-file-form "clpm/version.lisp" :at (2 2))
   :description "Configuring *FEATURES* for CLPM"
   :license "BSD-2-Clause"
   :pathname #+clpm-logical-pathnames #p"clpm:features;" #-clpm-logical-pathnames "features/"

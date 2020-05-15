@@ -10,10 +10,10 @@
 (in-package :asdf-user)
 
 (defsystem #:clpm
-  :version (:read-file-form "src/clpm/version.lisp" :at (2 2))
+  :version (:read-file-form "clpm/version.lisp" :at (2 2))
   :description "A Common Lisp Package Manager"
   :license "BSD-2-Clause"
-  :pathname #+clpm-logical-pathnames #p"clpm:src;clpm;" #-clpm-logical-pathnames "src/clpm/"
+  :pathname #+clpm-logical-pathnames #p"clpm:clpm;" #-clpm-logical-pathnames "clpm/"
   :class :package-inferred-system
   :defsystem-depends-on (#:clpm-features)
   :depends-on (#:clpm/clpm

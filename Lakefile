@@ -48,7 +48,7 @@
   (parse-integer (uiop:run-program '("git" "rev-list" "--count" "HEAD" "--not" "master")
                                    :output '(:string :stripped t))))
 (defun base-version ()
-  (uiop:read-file-form (merge-pathnames "src/clpm/version.lisp" *lakefile-truename*)
+  (uiop:read-file-form (merge-pathnames "clpm/version.lisp" *lakefile-truename*)
                        :at '(3 2)))
 
 (defun clpm-version (&key ignore-dirty-p)
