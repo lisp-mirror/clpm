@@ -61,7 +61,7 @@
    ;; since we're using deploy, is the same as the runtime pathname).
    (let* ((core-pathname sb-ext:*core-pathname*)
           (clpm-home (merge-pathnames (make-pathname :directory '(:relative :up "lib" "clpm"))
-                                      core-pathname)))
+                                      (uiop:pathname-directory-pathname core-pathname))))
      (setf deploy:*data-location* (uiop:truenamize (uiop:ensure-directory-pathname
                                                     (uiop:ensure-absolute-pathname clpm-home))))
      (setf *clpm-client-asd-pathname* (merge-pathnames "client/clpm-client.asd"
