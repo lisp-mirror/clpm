@@ -18,7 +18,7 @@
   :defsystem-depends-on (#:clpm-build #:deploy)
   :entry-point "clpm/cli/entry:main"
   :build-operation "deploy-op"
-  :build-pathname #+win32 "clpm.exe" #-win32 "clpm"
+  :build-pathname "clpm"
   :depends-on (#:clpm/clpm
                (:feature :clpm-curl #:clpm-multi-http-client-impl/curl)
                (:feature :clpm-dexador #:clpm-multi-http-client-impl/dexador)
