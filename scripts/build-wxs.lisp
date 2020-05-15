@@ -64,7 +64,7 @@
 
 (defun build-wxs ()
   (multiple-value-bind (src-dir-tree src-dir-component-names)
-      (directory-tree (merge-pathnames "lib/clpm/src/clpm/" *build-root-pathname*)
+      (directory-tree (merge-pathnames "lib/clpm/src/" *build-root-pathname*)
                       "CLPM_Src" "CLPM_SrcFile" "CLPM_SrcDir")
     `(("Wix" "xmlns" "http://schemas.microsoft.com/wix/2006/wi")
       (("Product" "Id" "*"
@@ -99,58 +99,45 @@
                       "Name" "PFiles")
          (("Directory" "Id" "BaseFolder"
                        "Name" "CLPM")
-          (("Directory" "Id" "VersionFolder"
-                        "Name" "v0.3.0-alpha.4")
-           (("Directory" "Id" "INSTALLDIR")
-            (("Directory" "Id" "BINDIR"
-                          "Name" "bin")
-             (("Component" "Id" "CLPM_SetPATH"
-                           "Guid" "5514D118-8FAD-497C-ACFB-BAC6C0161E69"
-                           "DiskId" "1"
-                           "Win64" "yes")
-              (("CreateFolder"))
-              (("Environment" "Id" "Env_PATH"
-                              "System" "yes"
-                              "Action" "set"
-                              "Name" "PATH"
-                              "Part" "last"
-                              "Value" "[BINDIR]")))
-             (("Component" "Id" "CLPM_Bin"
-                           "Guid" "E7F4D949-DEBC-4FF9-9D60-D455BC11F606"
-                           "DiskId" "1"
-                           "Win64" "yes")
-              (("File" "Name" "clpm.exe"
-                       "Source" "bin/clpm.exe"))))
+          (("Directory" "Id" "INSTALLDIR")
+           (("Directory" "Id" "BINDIR"
+                         "Name" "bin")
+            (("Component" "Id" "CLPM_SetPATH"
+                          "Guid" "5514D118-8FAD-497C-ACFB-BAC6C0161E69"
+                          "DiskId" "1"
+                          "Win64" "yes")
+             (("CreateFolder"))
+             (("Environment" "Id" "Env_PATH"
+                             "System" "yes"
+                             "Action" "set"
+                             "Name" "PATH"
+                             "Part" "last"
+                             "Value" "[BINDIR]")))
+            (("Component" "Id" "CLPM_Bin"
+                          "Guid" "E7F4D949-DEBC-4FF9-9D60-D455BC11F606"
+                          "DiskId" "1"
+                          "Win64" "yes")
+             (("File" "Name" "clpm.exe"
+                      "Source" "bin/clpm.exe"))))
 
-            (("Directory" "Id" "LIBDIR"
-                          "Name" "lib")
-             (("Component" "Id" "CLPM_Libs"
-                           "Guid" "35C91C7A-ED22-40B5-A761-730C57CCF803"
+           (("Directory" "Id" "LIBDIR"
+                         "Name" "lib")
+            (("Component" "Id" "CLPM_Libs"
+                          "Guid" "35C91C7A-ED22-40B5-A761-730C57CCF803"
+                          "DiskId" "1"
+                          "Win64" "yes")
+             (("CreateFolder"))
+             ,@(directory-files (merge-pathnames "lib/clpm/" *build-root-pathname*)))
+            (("Directory" "Id" "ClientDir"
+                          "Name" "client")
+             (("Component" "Id" "CLPM_Client"
+                           "Guid" "6B847710-C813-4E8E-861B-7C0B767F4C36"
                            "DiskId" "1"
                            "Win64" "yes")
-              (("CreateFolder"))
-              ,@(directory-files (merge-pathnames "lib/clpm/" *build-root-pathname*)))
-             (("Component" "Id" "CLPM_SetHOME"
-                           "Guid" "E75E9C41-C6B9-44FE-90B3-8055B22341D0"
-                           "DiskId" "1"
-                           "Win64" "yes")
-              (("CreateFolder"))
-              (("Environment" "Id" "Env_CLPM_HOME"
-                              "System" "yes"
-                              "Action" "set"
-                              "Name" "CLPM_HOME"
-                              "Part" "all"
-                              "Value" "[LIBDIR]")))
-             (("Directory" "Id" "SrcDir"
-                           "Name" "src")
-              (("Directory" "Id" "ClientDir"
-                            "Name" "clpm-client")
-               (("Component" "Id" "CLPM_Client"
-                             "Guid" "6B847710-C813-4E8E-861B-7C0B767F4C36"
-                             "DiskId" "1"
-                             "Win64" "yes")
-                ,@(directory-files (merge-pathnames "lib/clpm/src/clpm-client/" *build-root-pathname*))))
-              ,src-dir-tree)))))))
+              ,@(directory-files (merge-pathnames "lib/clpm/client/" *build-root-pathname*))))
+            (("Directory" "Id" "SrcDir"
+                          "Name" "src")
+             ,src-dir-tree))))))
 
        (("Feature" "Id" "Minimal"
                    "Title" "CLPM Executable"
@@ -159,15 +146,14 @@
         (("ComponentRef" "Id" "CLPM_Bin"))
         (("ComponentRef" "Id" "CLPM_Libs"))
         (("ComponentRef" "Id" "CLPM_Client"))
-        ,@(mapcar (lambda (id) `(("ComponentRef" "Id" ,id))) src-dir-component-names)
+        (("Feature" "Id" "InstallSourceCode"
+                    "Level" "1"
+                    "Title" "Install Source Code")
+         ,@(mapcar (lambda (id) `(("ComponentRef" "Id" ,id))) src-dir-component-names))
         (("Feature" "Id" "SetPath"
                     "Level" "1"
                     "Title" "Set Environment Variable: PATH")
-         (("ComponentRef" "Id" "CLPM_SetPATH")))
-        (("Feature" "Id" "SetHome"
-                    "Level" "1"
-                    "Title" "Set Environment Variable: CLPM_HOME")
-         (("ComponentRef" "Id" "CLPM_SetHOME"))))
+         (("ComponentRef" "Id" "CLPM_SetPATH"))))
        (("WixVariable" "Id" "WixUILicenseRtf"
                        "Value" "License.rtf"))
        (("Property" "Id" "WIXUI_INSTALLDIR"
