@@ -10,12 +10,9 @@
   (:import-from #:puri)
   #+clpm-winhttp
   (:import-from #:winhttp
-                #:winhttp)
-  (:export #:*default-clpm-home*))
+                #:winhttp))
 
 (in-package #:clpm-cli/deploy)
-
-(defvar *default-clpm-home* nil)
 
 (deploy:define-resource-directory deploy-src "clpm/")
 (deploy:define-resource-directory deploy-cli "cli/")
@@ -37,12 +34,11 @@
  (lambda ()
    ;; Silence Deploy
    (setf deploy:*status-output* nil)
-   ;; Compute the data directory for Deploy based on CLPM_HOME
-   (let ((clpm-home (or (uiop:getenv "CLPM_HOME")
-                        *default-clpm-home*)))
-     (unless clpm-home
-       (setf clpm-home (merge-pathnames (make-pathname :directory '(:relative :up "lib" "clpm"))
-                                        (deploy:runtime-directory))))
+   ;; Compute the data directory for Deploy based on the core's pathname (which,
+   ;; since we're using deploy, is the same as the runtime pathname).
+   (let* ((core-pathname sb-ext:*core-pathname*)
+          (clpm-home (merge-pathnames (make-pathname :directory '(:relative :up "lib" "clpm"))
+                                      core-pathname)))
      (setf deploy:*data-location* (uiop:truenamize (uiop:ensure-directory-pathname
                                                     (uiop:ensure-absolute-pathname clpm-home))))
      ;; Fixup the logical pathnames
@@ -51,10 +47,6 @@
              `(("clpm:clpm;**;*.*.*" ,(merge-pathnames "clpm/**/*.*" deploy:*data-location*))
                ("clpm:cli;**;*.*.*" ,(merge-pathnames "cli/**/*.*" deploy:*data-location*))
                ("clpm:features;**;*.*.*" ,(merge-pathnames "features/**/*.*" deploy:*data-location*)))))
-     (setf *clpm-client-asd-pathname* (merge-pathnames "src/clpm-client/clpm-client.asd"
-                                                       deploy:*data-location*))
-     (unless (uiop:probe-file* clpm-home)
-       (format *error-output*
-               "Unable to find CLPM_HOME. Please set CLPM_HOME environment variable.~%")
-       (uiop:quit 1))))
+     (setf *clpm-client-asd-pathname* (merge-pathnames "client/clpm-client.asd"
+                                                       deploy:*data-location*))))
  nil)

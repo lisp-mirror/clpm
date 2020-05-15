@@ -44,9 +44,7 @@ install the dependencies:
    After downloading the tarball and validating the SHA512 sum, unpack it and
    run =sh install.sh=. By default, it is installed to =/usr/local/=, but that
    prefix con be changed using the =INSTALL_ROOT= environment
-   variable. However, if you change the prefix, you will also likely need to
-   set the =CLPM_HOME= environment variable to point to
-   =$INSTALL_ROOT/lib/clpm/=.
+   variable.
 
 ** Windows
 

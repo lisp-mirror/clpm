@@ -19,12 +19,6 @@
 
 (asdf:load-system :clpm-cli)
 
-(when (or (uiop:featurep :linux)
-          (uiop:featurep :darwin))
-  (format uiop:*stderr* "~%~%Performing release build. Setting default CLPM home.~%~%")
-  (setf (symbol-value (uiop:find-symbol* '#:*default-clpm-home* '#:clpm-cli/deploy))
-        "/usr/local/lib/clpm"))
-
 (when (uiop:featurep :windows)
   (uiop:copy-file (merge-pathnames "License.rtf" *root-pathname*)
                   (merge-pathnames "License.rtf" *build-root-pathname*)))
