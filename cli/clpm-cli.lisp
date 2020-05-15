@@ -6,20 +6,9 @@
 (uiop:define-package #:clpm-cli/clpm-cli
     (:nicknames #:clpm-cli)
   (:use #:cl
-        #:clpm-cli/bundle
-        #:clpm-cli/client
-        #:clpm-cli/clpi
-        #:clpm-cli/config
-        #:clpm-cli/context
+        #:clpm-cli/commands
         #:clpm-cli/deploy
         #:clpm-cli/entry
-        #:clpm-cli/exec
-        #:clpm-cli/hack
-        #:clpm-cli/install
-        #:clpm-cli/license-info
-        #:clpm-cli/man
-        #:clpm-cli/sync
-        #:clpm-cli/update
-        #:clpm-cli/version))
+        #:clpm-cli/man))
 
 (in-package #:clpm-cli)
