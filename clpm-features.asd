@@ -12,6 +12,6 @@
   :version (:read-file-form "clpm/version.lisp" :at (2 2))
   :description "Configuring *FEATURES* for CLPM"
   :license "BSD-2-Clause"
-  :pathname #+clpm-logical-pathnames #p"clpm:features;" #-clpm-logical-pathnames "features/"
+  :pathname "features/"
   :class :package-inferred-system
   :depends-on (#:clpm-features/clpm-features))

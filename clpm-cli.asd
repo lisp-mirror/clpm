@@ -12,7 +12,7 @@
   :version (:read-file-form "clpm/version.lisp" :at (2 2))
   :description "Command Line Interface for CLPM"
   :license "BSD-2-Clause"
-  :pathname #+clpm-logical-pathnames #p"clpm:cli;" #-clpm-logical-pathnames "cli/"
+  :pathname "cli/"
   :class :package-inferred-system
   :defsystem-depends-on (#:clpm-features #:deploy)
   :entry-point "clpm-cli/entry:main"

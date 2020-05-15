@@ -41,12 +41,6 @@
                                       core-pathname)))
      (setf deploy:*data-location* (uiop:truenamize (uiop:ensure-directory-pathname
                                                     (uiop:ensure-absolute-pathname clpm-home))))
-     ;; Fixup the logical pathnames
-     (when (uiop:featurep :clpm-logical-pathnames)
-       (setf (logical-pathname-translations "clpm")
-             `(("clpm:clpm;**;*.*.*" ,(merge-pathnames "clpm/**/*.*" deploy:*data-location*))
-               ("clpm:cli;**;*.*.*" ,(merge-pathnames "cli/**/*.*" deploy:*data-location*))
-               ("clpm:features;**;*.*.*" ,(merge-pathnames "features/**/*.*" deploy:*data-location*)))))
      (setf *clpm-client-asd-pathname* (merge-pathnames "client/clpm-client.asd"
                                                        deploy:*data-location*))))
  nil)
