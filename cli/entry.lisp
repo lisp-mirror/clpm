@@ -9,7 +9,8 @@
           #:clpm-cli/common-args
           #:clpm-cli/interface-defs
           #:clpm/config
-          #:clpm/log)
+          #:clpm/log
+          #:clpm/session)
   (:import-from #:adopt)
   (:export #:*common-arguments*
            #:define-cli-entry
@@ -49,14 +50,16 @@ please report a bug and provide the stack trace.~%")
   ;; Print the help if requested.
   (when (gethash :help options)
     (adopt:print-help-and-exit ui))
-  ;; Augment the config with options from the CLI.
-  (config-add-cli-source! options)
-  ;; Set the log level.
-  (set-log-level)
-  ;; Give ourselves a reasonable default, since the spec doesn't *require*
-  ;; this...
-  (let ((*default-pathname-defaults* (uiop:pathname-directory-pathname (uiop:getcwd))))
-    (funcall thunk)))
+  ;; Immediately start a CLPM session.
+  (with-clpm-session ()
+    ;; Augment the config with options from the CLI.
+    (config-add-cli-source! options)
+    ;; Set the log level.
+    (set-log-level)
+    ;; Give ourselves a reasonable default, since the spec doesn't *require*
+    ;; this...
+    (let ((*default-pathname-defaults* (uiop:pathname-directory-pathname (uiop:getcwd))))
+      (funcall thunk))))
 
 
 (defun main ()
