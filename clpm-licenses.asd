@@ -48,6 +48,7 @@
                              (:static-file "ieee-floats")
                              (:static-file "ironclad")
                              (:static-file "iterate")
+                             (:static-file "jsown")
                              (:static-file "lisp-invocation")
                              (:static-file "log4cl")
                              (:static-file "log4cl.NOTICE")
