@@ -11,7 +11,7 @@
 
 (in-package #:clpm/config/cli-source)
 
-(defclass config-cli-source ()
+(defclass config-cli-source (config-source)
   ((bundle-clpmfile)
    (context)
    (local)

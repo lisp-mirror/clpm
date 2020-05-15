@@ -14,7 +14,7 @@
 
 (in-package #:clpm/config/env-source)
 
-(defclass config-env-source ()
+(defclass config-env-source (config-source)
   ()
   (:documentation
    "A configuration source backed by environment variables."))

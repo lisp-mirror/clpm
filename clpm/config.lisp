@@ -14,6 +14,7 @@
           #:clpm/config/file-source
           #:clpm/config/paths
           #:clpm/config/source-defs
+          #:clpm/session
           #:clpm/utils
           #:iterate)
   (:export #:*clpm-config-directories*
@@ -28,41 +29,52 @@
 
 (in-package #:clpm/config)
 
-(defvar *config-sources* nil)
+(defparameter *default-config-sources* (list 'config-env-source
+                                             'config-file-source
+                                             'config-default-source))
 
 
 
-(defun load-global-config ()
-  "Seed *config-sources* with the default config and primary CLPM config
-file (clpm.conf)."
-  (let ((config-file (clpm-config-pathname '("clpm.conf"))))
-    (setf *config-sources*
-          (if config-file
-              (list (make-instance 'config-env-source)
-                    (make-instance 'config-file-source :pathname config-file)
-                    (make-instance 'config-default-source))
-              (list (make-instance 'config-env-source)
-                    (make-instance 'config-default-source)))))
-  *config-sources*)
+(defun initialize-config-sources ()
+  (setf *config-sources* *default-config-sources*))
+(uiop:register-image-restore-hook 'initialize-config-sources)
+
+(defun get-config-source (config-source-specifier)
+  (with-clpm-session (:key `(get-config-source ,config-source-specifier))
+    (when config-source-specifier
+      (etypecase config-source-specifier
+        (config-source
+         config-source-specifier)
+        (list
+         (apply #'make-instance config-source-specifier))
+        (symbol
+         (make-instance config-source-specifier))))))
 
 (defun config-add-cli-source! (ht)
   (push (make-instance 'config-cli-source
                        :arg-ht ht)
         *config-sources*))
 
+(defun config-type-p (obj type)
+  (or (and (typep obj 'config-source)
+           (typep obj type))
+      (and (listp obj)
+           (subtypep (first obj) type))
+      (subtypep obj type)))
+
 (defun config-add-file-source! (pn)
   (when (uiop:probe-file* pn)
     (setf *config-sources*
           (append (remove-if-not (lambda (x)
                                    (or
-                                    (typep x 'config-env-source)
-                                    (typep x 'config-cli-source)))
+                                    (config-type-p x 'config-env-source)
+                                    (config-type-p x 'config-cli-source)))
                                  *config-sources*)
                   (list (make-instance 'config-file-source :pathname pn))
                   (remove-if (lambda (x)
                                (or
-                                (typep x 'config-env-source)
-                                (typep x 'config-cli-source)))
+                                (config-type-p x 'config-env-source)
+                                (config-type-p x 'config-cli-source)))
                              *config-sources*)))))
 
 (defun call-with-config-file-source-added (thunk pn)
@@ -82,33 +94,36 @@ file (clpm.conf)."
 
 
 (defun config-table-keys (&rest path)
-  "Return a list of keys in the table rooted at PATH. This currently does not
-look at environment variables."
-  (let ((defined-children (get-children-of-config-path path)))
-    (if (equal defined-children '(:*))
-        (remove-duplicates (mapcan (rcurry #'config-source-implicit-keys path)
-                                   *config-sources*)
-                           :test #'equal)
-        defined-children)))
+  "Return a list of keys in the table rooted at PATH. This currently does n"
+  (with-clpm-session (:key `(config-table-keys ,@path))
+    (let ((defined-children (get-children-of-config-path path)))
+      (if (equal defined-children '(:*))
+          (remove-duplicates (mapcan (compose (rcurry #'config-source-implicit-keys path)
+                                              #'get-config-source)
+                                     *config-sources*)
+                             :test #'equal)
+          defined-children))))
 
 (defun config-value (&rest path)
   "Get the configuration value located at path. First search environment
 variables, then the config file, then the default config."
-  (let* ((config-info (get-config-entry path))
-         (type (getf (cdr config-info) :type)))
-    (assert config-info)
-    (if (eql type 'hash-table)
-        (let ((keys (apply #'config-table-keys path))
-              (out (make-hash-table :test 'equal)))
-          (dolist (key keys)
-            (setf (gethash key out) (apply #'config-value (append path (list key)))))
-          out)
-        (loop
-          :for config-source :in *config-sources*
-          :for (value exists-p) := (multiple-value-list (config-source-value config-source path))
-          :until exists-p
-          :finally
-             (return value)))))
+  (with-clpm-session (:key `(config-value ,@path))
+    (let* ((config-info (get-config-entry path))
+           (type (getf (cdr config-info) :type)))
+      (assert config-info)
+      (if (eql type 'hash-table)
+          (let ((keys (apply #'config-table-keys path))
+                (out (make-hash-table :test 'equal)))
+            (dolist (key keys)
+              (setf (gethash key out) (apply #'config-value (append path (list key)))))
+            out)
+          (loop
+            :for config-source-specifier :in *config-sources*
+            :for config-source := (get-config-source config-source-specifier)
+            :for (value exists-p) := (multiple-value-list (config-source-value config-source path))
+            :until exists-p
+            :finally
+               (return value))))))
 
 (defun flatten-hts (ht)
   "Given a hash table ~ht~, recursively flatten it into a plist."
@@ -155,4 +170,3 @@ variables, then the config file, then the default config."
   (print-table (config-value) nil stream))
 
 (uiop:register-clear-configuration-hook 'clear-global-config)
-(uiop:register-image-restore-hook 'load-global-config)

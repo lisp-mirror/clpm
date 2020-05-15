@@ -11,7 +11,7 @@
 
 (in-package #:clpm/config/default-source)
 
-(defclass config-default-source ()
+(defclass config-default-source (config-source)
   ()
   (:documentation
    "A config source that simply returns the default values."))

@@ -5,10 +5,16 @@
 
 (uiop:define-package #:clpm/config/source-defs
     (:use #:cl)
-  (:export #:config-source-implicit-keys
+  (:export #:config-source
+           #:config-source-implicit-keys
            #:config-source-value))
 
 (in-package #:clpm/config/source-defs)
+
+(defclass config-source ()
+  ()
+  (:documentation
+   "Parent class for config sources."))
 
 (defgeneric config-source-value (config-source path))
 

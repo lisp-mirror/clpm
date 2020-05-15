@@ -6,27 +6,30 @@
 (uiop:define-package #:clpm/config/file-source
     (:use #:cl
           #:alexandria
+          #:clpm/config/paths
           #:clpm/config/source-defs
           #:clpm/utils)
   (:export #:config-file-source))
 
 (in-package #:clpm/config/file-source)
 
-(defclass config-file-source ()
+(defclass config-file-source (config-source)
   ((root-ht
     :accessor config-file-source-root-ht)
    (pathname
     :reader config-file-source-pathname
-    :initarg :pathname))
+    :initarg :pathname
+    :initform (clpm-config-pathname '("clpm.conf"))))
   (:documentation
    "A configuration source backed by a file."))
 
-(defmethod initialize-instance :after ((config-source config-file-source) &rest initargs &key pathname)
+(defmethod initialize-instance :after ((config-source config-file-source) &rest initargs)
   (declare (ignore initargs))
-  (assert pathname)
-  (with-open-file (s pathname)
-    (setf (config-file-source-root-ht config-source)
-          (load-config-from-stream s))))
+  (if (probe-file (config-file-source-pathname config-source))
+      (with-open-file (s (config-file-source-pathname config-source))
+        (setf (config-file-source-root-ht config-source)
+              (load-config-from-stream s)))
+      (setf (config-file-source-root-ht config-source) (make-hash-table :test 'equal))))
 
 (defgeneric parse-config-value (value))
 
