@@ -59,7 +59,7 @@ install the dependencies:
    CLPM can be customized by placing a file named
    =customize-target-features.lisp-expr= in the root of the repo with a single
    =lambda= form in it that takes a list of features and returns a modified
-   feature list. See [[file:src/clpm-build/features.lisp]] for a brief description
+   feature list. See [[file:features/clpm-features.lisp]] for a brief description
    of the available features.
 
    For example, to disable Dexador support, use the following form:

@@ -15,7 +15,7 @@
   :license "BSD-2-Clause"
   :pathname #+clpm-logical-pathnames #p"clpm:src;clpm;" #-clpm-logical-pathnames "src/clpm/"
   :class :package-inferred-system
-  :defsystem-depends-on (#:clpm-build)
+  :defsystem-depends-on (#:clpm-features)
   :depends-on (#:clpm/clpm
                (:feature :clpm-curl #:clpm-multi-http-client-impl/curl)
                (:feature :clpm-dexador #:clpm-multi-http-client-impl/dexador)

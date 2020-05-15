@@ -14,7 +14,7 @@
   :license "BSD-2-Clause"
   :pathname #+clpm-logical-pathnames #p"clpm:cli;" #-clpm-logical-pathnames "cli/"
   :class :package-inferred-system
-  :defsystem-depends-on (#:deploy)
+  :defsystem-depends-on (#:clpm-features #:deploy)
   :entry-point "clpm-cli/entry:main"
   :build-operation "deploy-op"
   :build-pathname "clpm"

@@ -1,4 +1,4 @@
-;;;; CLPM-Build System Definition
+;;;; CLPM-Features System Definition
 ;;;;
 ;;;; This software is part of CLPM. See README.org for more information. See
 ;;;; LICENSE for license information.
@@ -6,13 +6,12 @@
 #-:asdf3.2
 (error "Requires ASDF >=3.2")
 
-;; Not necessary, but easier to have when using SLIME.
 (in-package :asdf-user)
 
-(defsystem #:clpm-build
+(defsystem #:clpm-features
   :version (:read-file-form "src/clpm/version.lisp" :at (2 2))
-  :description "A Common Lisp Package Manager"
+  :description "Configuring *FEATURES* for CLPM"
   :license "BSD-2-Clause"
-  :pathname #+clpm-logical-pathnames #p"clpm:src;clpm-build;" #-clpm-logical-pathnames "src/clpm-build/"
+  :pathname #+clpm-logical-pathnames #p"clpm:features;" #-clpm-logical-pathnames "features/"
   :class :package-inferred-system
-  :depends-on (#:clpm-build/clpm-build))
+  :depends-on (#:clpm-features/clpm-features))

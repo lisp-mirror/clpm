@@ -6,6 +6,7 @@
 (let ((clpm-root (uiop:pathname-directory-pathname (uiop:ensure-absolute-pathname *load-pathname*))))
   (setf (logical-pathname-translations "clpm")
         `(("clpm:src;**;*.*.*" ,(merge-pathnames "src/**/*.*" clpm-root))
-          ("clpm:cli;**;*.*.*" ,(merge-pathnames "cli/**/*.*" clpm-root)))))
+          ("clpm:cli;**;*.*.*" ,(merge-pathnames "cli/**/*.*" clpm-root))
+          ("clpm:features;**;*.*.*" ,(merge-pathnames "features/**/*.*" clpm-root)))))
 
 (pushnew :clpm-logical-pathnames *features*)

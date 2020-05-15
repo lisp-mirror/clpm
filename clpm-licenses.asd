@@ -4,7 +4,7 @@
   :description "System containing the licenses for CLPM and its dependencies."
   :license "BSD-2-Clause"
   :serial t
-  :depends-on (#:clpm-build)
+  :depends-on (#:clpm-features)
   :components ((:module "licenses"
                 :components ((:static-file "adopt")
                              (:static-file "alexandria")

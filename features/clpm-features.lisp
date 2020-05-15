@@ -3,11 +3,12 @@
 ;;;; This software is part of CLPM. See README.org for more information. See
 ;;;; LICENSE for license information.
 
-(uiop:define-package #:clpm-build/features
-    (:use #:cl)
+(uiop:define-package #:clpm-features/clpm-features
+    (:nicknames #:clpm-features)
+  (:use #:cl)
   (:import-from #:trivial-features))
 
-(in-package #:clpm-build/features)
+(in-package #:clpm-features)
 
 (defparameter *clpm-feature-documentation*
   `((:clpm . "Required feature. Denotes that CLPM is present.")
@@ -93,7 +94,7 @@
 (defun load-features-from-file ()
   (let ((pn (merge-pathnames (make-pathname :name "customize-target-features"
                                             :type "lisp-expr")
-                             (asdf:system-source-file "clpm-build")))
+                             (asdf:system-source-file "clpm-features")))
         (clpm-features (default-features)))
     (when (probe-file pn)
       (let* ((form (uiop:read-file-form pn))
