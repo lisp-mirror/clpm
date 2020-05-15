@@ -13,6 +13,7 @@
 (defparameter *clpm-feature-documentation*
   `((:clpm . "Required feature. Denotes that CLPM is present.")
     (:clpm-curl . "Build support for using the curl executable to download files.")
+    (:clpm-deploy-source-code . "Bundle source code in the resource directory when deploying.")
     (:clpm-dexador . "Build support for using the Dexador library to download files.")
     (:clpm-drakma . "Build support for using the Drakma library to download files.")
     (:clpm-firejail . "EXPERIMENTAL: Build support for using firejail to sandbox grovelers.")

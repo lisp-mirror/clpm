@@ -14,10 +14,33 @@
 
 (in-package #:clpm-cli/deploy)
 
-(deploy:define-resource-directory deploy-src "clpm/")
-(deploy:define-resource-directory deploy-cli "cli/")
-(deploy:define-resource-directory deploy-features "features/")
-(deploy:define-resource-directory deploy-client "client/")
+(defun copy-directory-tree-ignoring-fasls-and-.git (source target)
+  (cond
+    ((uiop:directory-pathname-p source)
+     (let* ((directory-name (car (last (pathname-directory source))))
+            (new-target (merge-pathnames (make-pathname :directory (list :relative directory-name))
+                                         target)))
+       (unless (equal directory-name ".git")
+         (dolist (new-source (uiop:directory* (merge-pathnames uiop:*wild-file* source)))
+           (copy-directory-tree-ignoring-fasls-and-.git new-source new-target)))))
+    ((not (equal (pathname-type source) "fasl"))
+     (ensure-directories-exist target)
+     (uiop:copy-file source (merge-pathnames (make-pathname :name (pathname-name source)
+                                                            :type (pathname-type source))
+                                             target)))))
+
+(deploy:define-hook (:deploy deploy-source-code) (system directory)
+  (when (uiop:featurep :clpm-deploy-source-code)
+    (dolist (dir '("cli/" "features/" "clpm/" "ext/" "licenses/"
+                   "clpm-cli.asd" "clpm-features.asd" "clpm.asd"))
+      (copy-directory-tree-ignoring-fasls-and-.git
+       (merge-pathnames dir (asdf:system-source-directory system))
+       (merge-pathnames "src/" directory)))))
+
+(deploy:define-hook (:deploy deploy-client) (system directory)
+  (copy-directory-tree-ignoring-fasls-and-.git
+   (merge-pathnames "client/" (asdf:system-source-directory system))
+   directory))
 
 ;; Don't deploy the WinHttp dll
 #+clpm-winhttp
