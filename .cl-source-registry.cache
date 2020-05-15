@@ -1,8 +1,8 @@
 (:source-registry-cache
  "clpm-cli.asd"
  "clpm-features.asd"
- "clpm-licenses.asd"
  "clpm.asd"
+ "client/clpm-client.asd"
  "ext/adopt/adopt.asd"
  "ext/alexandria/alexandria-tests.asd"
  "ext/alexandria/alexandria.asd"
@@ -118,5 +118,4 @@
  "ext/uuid/uuid.asd"
  "ext/winhttp/winhttp.asd"
  "ext/xsubseq/xsubseq-test.asd"
- "ext/xsubseq/xsubseq.asd"
- "src/clpm-client/clpm-client.asd")
+ "ext/xsubseq/xsubseq.asd")

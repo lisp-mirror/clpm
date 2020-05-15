@@ -20,6 +20,7 @@
 (deploy:define-resource-directory deploy-src "src/")
 (deploy:define-resource-directory deploy-cli "cli/")
 (deploy:define-resource-directory deploy-features "features/")
+(deploy:define-resource-directory deploy-client "client/")
 
 ;; Don't deploy the WinHttp dll
 #+clpm-winhttp

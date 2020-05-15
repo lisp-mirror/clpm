@@ -11,7 +11,7 @@
 (in-package #:clpm/client)
 
 (defvar *clpm-client-asd-pathname*
-  (asdf:system-relative-pathname :clpm "src/clpm-client/clpm-client.asd"))
+  (asdf:system-relative-pathname :clpm "client/clpm-client.asd"))
 
 (defun client-asd-pathname ()
   "Return the pathname to the client .asd file."
