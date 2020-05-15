@@ -28,7 +28,7 @@
                            (terpri stderr))
                          (format stderr "~&Error while compiling CLPM: ~S~%" e)
                          (uiop:print-condition-backtrace e :stream stderr))))
-             (asdf:load-system :clpm)))))
+             (asdf:load-system :clpm-cli)))))
   (load-clpm))
 
 ;; Record the pathname to this script.
@@ -37,8 +37,8 @@
 (when (equal (uiop:getenv "CLPM_LIVE_PRIVATE_REPL") "true")
   (sb-impl::toplevel-repl nil))
 
-(let ((clpm-sys (asdf:find-system :clpm)))
+(let ((clpm-cli-sys (asdf:find-system :clpm-cli)))
   (handler-bind ((error (lambda (c)
                           (uiop:print-condition-backtrace c))))
-    (let ((result (uiop:call-function (asdf::component-entry-point clpm-sys))))
+    (let ((result (uiop:call-function (asdf::component-entry-point clpm-cli-sys))))
       (uiop:quit (if result 0 1)))))

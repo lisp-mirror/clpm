@@ -1,5 +1,6 @@
 (:source-registry-cache
  "clpm-build.asd"
+ "clpm-cli.asd"
  "clpm-licenses.asd"
  "clpm.asd"
  "ext/adopt/adopt.asd"
