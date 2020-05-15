@@ -10,6 +10,7 @@
         #:clpm/context
         #:clpm/install
         #:clpm/source
-        #:clpm/version))
+        #:clpm/version)
+  (:export #:install))
 
 (in-package #:clpm/clpm)

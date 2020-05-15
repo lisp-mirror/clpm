@@ -12,6 +12,7 @@
           #:clpm/log
           #:clpm/resolve
           #:clpm/requirement
+          #:clpm/session
           #:clpm/source
           #:clpm/version-strings)
   (:export #:install
@@ -93,15 +94,16 @@ SYSTEMS if such constraints cannot be extracted from the specifiers themselves.
 
 VALIDATE must be a function of one argument (a diff) and returns non-NIL if the
 install should proceed."
-  (let ((reqs (append (mapcar (rcurry #'make-requirement
-                                      :project
-                                      :version version :source source :ref ref :no-deps-p no-deps-p)
-                              projects)
-                      (mapcar (rcurry #'make-requirement
-                                      :system
-                                      :version version :source source :ref ref :no-deps-p no-deps-p)
-                              systems))))
-    (install-requirements reqs :context context :validate validate :save-context-p save-context-p)))
+  (with-clpm-session ()
+    (let ((reqs (append (mapcar (rcurry #'make-requirement
+                                        :project
+                                        :version version :source source :ref ref :no-deps-p no-deps-p)
+                                projects)
+                        (mapcar (rcurry #'make-requirement
+                                        :system
+                                        :version version :source source :ref ref :no-deps-p no-deps-p)
+                                systems))))
+      (install-requirements reqs :context context :validate validate :save-context-p save-context-p))))
 
 (defun install-requirements (reqs &key
                                     context
