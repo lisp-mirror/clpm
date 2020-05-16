@@ -9,6 +9,7 @@
           #:clpm-cli/common-args
           #:clpm/config
           #:clpm/context
+          #:clpm/context-diff
           #:clpm/log
           #:clpm/version)
   (:import-from #:adopt)
@@ -135,9 +136,9 @@ command line, and a hash table created by Adopt when parsing the options.")
 (defun make-diff-validate-fun (&key yesp (stream *standard-output*))
   (lambda (diff)
     (block nil
-      (unless (context-diff-has-diff-p diff)
+      (when (context-diff-empty-p diff)
         (return t))
-      (print-context-diff diff stream)
+      (print-context-diff-to-stream diff stream :use-color-p (interactive-stream-p stream))
       (or yesp (y-or-n-p "Proceed?")))))
 
 (defmacro define-string (name string)

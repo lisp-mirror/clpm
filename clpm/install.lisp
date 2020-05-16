@@ -8,6 +8,7 @@
           #:alexandria
           #:anaphora
           #:clpm/context
+          #:clpm/context-diff
           #:clpm/install/defs
           #:clpm/log
           #:clpm/resolve
@@ -115,7 +116,7 @@ install should proceed."
     (dolist (r reqs)
       (context-add-requirement! new-context r))
     (setf new-context (resolve-requirements new-context :update-projects update-projects))
-    (let ((result (funcall validate (context-diff orig-context new-context))))
+    (let ((result (funcall validate (make-context-diff orig-context new-context))))
       (if result
           (progn
             (mapc #'install-release (context-releases new-context))

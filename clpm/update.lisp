@@ -7,6 +7,7 @@
     (:use #:cl
           #:alexandria
           #:clpm/context
+          #:clpm/context-diff
           #:clpm/install/defs
           #:clpm/log
           #:clpm/resolve
@@ -33,7 +34,7 @@
 
     (log:info "Updating ~:[all~;~:*~{~A~^, ~}~] projects." update-projects)
     (let* ((new-context (resolve-requirements context :update-projects (or update-projects t)))
-           (diff (context-diff orig-context new-context)))
+           (diff (make-context-diff orig-context new-context)))
       (when (funcall validate diff)
         (mapc #'install-release (context-releases new-context))
         (context-write-asdf-files new-context)

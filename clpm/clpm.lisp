@@ -8,6 +8,7 @@
   (:use #:cl
         #:clpm/bundle
         #:clpm/context
+        #:clpm/context-diff
         #:clpm/install
         #:clpm/source
         #:clpm/version)
