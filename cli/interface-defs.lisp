@@ -135,11 +135,10 @@ command line, and a hash table created by Adopt when parsing the options.")
 
 (defun make-diff-validate-fun (&key yesp (stream *standard-output*))
   (lambda (diff)
-    (block nil
-      (when (context-diff-empty-p diff)
-        (return t))
-      (print-context-diff-to-stream diff stream :use-color-p (interactive-stream-p stream))
-      (or yesp (y-or-n-p "Proceed?")))))
+    (or (context-diff-empty-p diff)
+        (progn
+          (print-context-diff-to-stream diff stream :use-color-p (interactive-stream-p stream))
+          (or yesp (y-or-n-p "Proceed?"))))))
 
 (defmacro define-string (name string)
   `(defparameter ,name ,(format nil
