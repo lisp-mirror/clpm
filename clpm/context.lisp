@@ -20,7 +20,6 @@
            #:context-find-system-asd-pathname
            #:context-installed-systems
            #:context-installed-only-p
-           #:context-name
            #:context-output-translations
            #:context-releases
            #:context-requirements
@@ -44,16 +43,18 @@
 
 (defclass context ()
   ((name
-    :initform nil
     :initarg :name
-    :accessor context-name)
+    :accessor context-name
+    :documentation
+    "The name of the context. Either a string (if this is a global context) or a
+pathname (if this is an anonymous context).")
    (installed-only-p
     :initarg :installed-only-p
     :initform nil
-    :reader context-installed-only-p)
-   (pathname
-    :initarg :pathname
-    :accessor context-pathname)
+    :reader context-installed-only-p
+    :documentation
+    "Hack (hopefully temporary) to indicate that sources should be instantiated
+to read only from their local data.")
    (requirements
     :initform nil
     :initarg :requirements
@@ -73,7 +74,14 @@
    (system-releases
     :initform nil
     :initarg :system-releases
-    :accessor context-system-releases)))
+    :accessor context-system-releases))
+  (:documentation
+   "Represents a snapshot of a context. Includes sources, the releases installed
+in the context, the requirements that gave rise to those releases, etc. Contexts
+can be named, global contexts, or anonymous."))
+
+(defun context-anonymous-p (context)
+  (pathnamep (context-name context)))
 
 (defun copy-context (context)
   (make-instance 'context
@@ -209,7 +217,7 @@ in place with the same name. Return the new requirement if it was modified."
     (system-release-absolute-asd-pathname system-release)))
 
 (defun context-write-asdf-files (context)
-  (assert (context-name context))
+  (assert (not (context-anonymous-p context)))
   (let* ((name (context-name context))
          (source-registry-files (config-value :contexts name :source-registry-files))
          (source-registry.d-files (config-value :contexts name :source-registry.d-files))
@@ -358,12 +366,9 @@ in place with the same name. Return the new requirement if it was modified."
     (let ((f (read stream nil)))
       (unless (equal f '(:api-version "0.3"))
         (error "Unknown context API version")))
-    (let ((out (apply #'make-instance
-                      'context
-                      :sources sources
-                      :installed-only-p installed-only-p
-                      (when pathname
-                        (list :pathname pathname)))))
+    (let ((out (make-instance 'context
+                              :sources sources
+                              :installed-only-p installed-only-p)))
       ;; The next forms are either tags or lists. The tags denote sections.
       (loop
         :with section := nil
@@ -382,7 +387,7 @@ in place with the same name. Return the new requirement if it was modified."
 ;; * Serializing
 
 (defun save-global-context (context)
-  (assert (context-name context))
+  (assert (not (context-anonymous-p context)))
   (assert (context-reverse-dependencies context))
   (let ((pn (global-context-pathname (context-name context))))
     (ensure-directories-exist pn)

@@ -64,7 +64,8 @@ bound to PN's folder."
 (defun create-empty-lockfile (clpmfile)
   (make-instance 'context
                  :sources (clpmfile-sources clpmfile)
-                 :requirements (clpmfile-all-requirements clpmfile)))
+                 :requirements (clpmfile-all-requirements clpmfile)
+                 :name (clpmfile-lockfile-pathname clpmfile)))
 
 (defun make-vcs-override-fun (clpmfile-pathname)
   (let ((clpmfile-directory (uiop:pathname-directory-pathname clpmfile-pathname)))
