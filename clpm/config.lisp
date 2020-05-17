@@ -34,9 +34,9 @@
 
 
 
-(defun initialize-config-sources ()
-  (setf *config-sources* *default-config-sources*))
-(uiop:register-image-restore-hook 'initialize-config-sources)
+(defmethod slot-unbound (class (session clpm-session) (slot-name (eql 'config-sources)))
+  "Initialize the config sources of the session with *DEFAULT-CONFIG-SOURCES*."
+  (setf (config-sources session) (copy-list *default-config-sources*)))
 
 (defun get-config-source (config-source-specifier)
   (with-clpm-session (:key `(get-config-source ,config-source-specifier))
@@ -52,7 +52,7 @@
 (defun config-add-cli-source! (ht)
   (push (make-instance 'config-cli-source
                        :arg-ht ht)
-        *config-sources*))
+        (config-sources)))
 
 (defun config-type-p (obj type)
   (or (and (typep obj 'config-source)
@@ -63,22 +63,18 @@
 
 (defun config-add-file-source! (pn)
   (when (uiop:probe-file* pn)
-    (setf *config-sources*
+    (setf (config-sources)
           (append (remove-if-not (lambda (x)
                                    (or
                                     (config-type-p x 'config-env-source)
                                     (config-type-p x 'config-cli-source)))
-                                 *config-sources*)
+                                 (config-sources))
                   (list (make-instance 'config-file-source :pathname pn))
                   (remove-if (lambda (x)
                                (or
                                 (config-type-p x 'config-env-source)
                                 (config-type-p x 'config-cli-source)))
-                             *config-sources*)))))
-
-(defun clear-global-config ()
-  "Clear the *config-sources* variable."
-  (setf *config-sources* nil))
+                             (config-sources))))))
 
 
 
@@ -90,7 +86,7 @@
       (if (equal defined-children '(:*))
           (remove-duplicates (mapcan (compose (rcurry #'config-source-implicit-keys path)
                                               #'get-config-source)
-                                     *config-sources*)
+                                     (config-sources))
                              :test #'equal)
           defined-children))))
 
@@ -108,7 +104,7 @@ variables, then the config file, then the default config."
               (setf (gethash key out) (apply #'config-value (append path (list key)))))
             out)
           (loop
-            :for config-source-specifier :in *config-sources*
+            :for config-source-specifier :in (config-sources)
             :for config-source := (get-config-source config-source-specifier)
             :for (value exists-p) := (multiple-value-list (config-source-value config-source path))
             :until exists-p
@@ -158,5 +154,3 @@ variables, then the config file, then the default config."
   "Print the configuration to ~stream~."
   (format stream "(version \"0.2\")~%~%")
   (print-table (config-value) nil stream))
-
-(uiop:register-clear-configuration-hook 'clear-global-config)

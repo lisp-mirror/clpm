@@ -5,39 +5,55 @@
 
 (uiop:define-package #:clpm/session
     (:use #:cl)
-  (:export #:*config-sources*
+  (:export #:clpm-session
+           #:config-sources
            #:with-clpm-session))
 
 (in-package #:clpm/session)
 
-(defvar *session-cache* nil
-  "Bound to a hash-table when inside a CLPM session. Used to cache function
-return values.")
+(defclass clpm-session ()
+  ((cache
+    :initarg :cache
+    :initform (make-hash-table :test 'equal)
+    :reader clpm-session-cache
+    :documentation
+    "A hash table used to cache results of function calls.")
+   (config-sources
+    :initarg :config-sources
+    :accessor clpm-session-config-sources)))
 
-(defvar *config-sources* nil
-  "Bound to a list of config source specifiers inside a CLPM session.")
+(defvar *session* nil
+  "Bound to a CLPM-SESSION object when inside a CLPM session.")
+
+(defun config-sources (&optional (session *session*))
+  (clpm-session-config-sources session))
+
+(defun (setf config-sources) (new-value &optional (session *session*))
+  (setf (clpm-session-config-sources session) new-value))
 
 (defun call-with-clpm-session (thunk &key override key)
   "Starts a new CLPM session if one does not currently exist (unless OVERRIDE is
-non-NIL).
+non-NIL). A session consists of a function cache, config sources, and config
+cache.
 
-If KEY is provided and an entry exists in *SESSION-CACHE* with that key, it is
-returned from the cache instead of invoking THUNK. If THUNK is invoked, its
-results are stored in the cache."
+If KEY is provided and an entry exists in the session's cache with that
+key (compared with EQUAL), it is returned from the cache instead of invoking
+THUNK. If THUNK is invoked, its results are stored in the cache."
   (cond
-    ((or override (not *session-cache*))
-     (let* ((*session-cache* (make-hash-table :test 'equal))
-            (*config-sources* *config-sources*))
+    ((or override (not *session*))
+     (let* ((*session* (make-instance 'clpm-session)))
        (funcall thunk)))
-    ((and *session-cache* key)
+    ((and *session* key)
      (multiple-value-bind (cached-values cached-values-exist-p)
-         (gethash key *session-cache*)
+         (gethash key (clpm-session-cache *session*))
        (if cached-values-exist-p
            (values-list cached-values)
            (let ((result (multiple-value-list (funcall thunk))))
-             (setf (gethash key *session-cache*) result)
+             (setf (gethash key (clpm-session-cache *session*)) result)
              (values-list result)))))
     (t (funcall thunk))))
 
 (defmacro with-clpm-session ((&key override key) &body body)
-  `(call-with-clpm-session (lambda () ,@body) :override ,override :key ,key))
+  `(call-with-clpm-session (lambda () ,@body)
+                           :override ,override
+                           :key ,key))
