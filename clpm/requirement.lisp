@@ -5,7 +5,8 @@
 ;;;; LICENSE for license information.
 
 (uiop:define-package #:clpm/requirement
-    (:use #:cl)
+    (:use #:cl
+          #:anaphora)
   (:export #:convert-asd-system-spec-to-req
            #:fs-system-file-requirement
            #:fs-system-requirement
@@ -21,6 +22,7 @@
            #:requirement-systems
            #:requirement-system-files
            #:requirement-tag
+           #:requirement-to-plist
            #:requirement-version-spec
            #:requirement-why
            #:system-requirement
@@ -199,3 +201,44 @@ represents."))
                     :why why))
     (:feature
      (convert-asd-system-spec-to-req (third dep) :why why))))
+
+(defgeneric requirement-to-plist (req))
+
+(defmethod requirement-to-plist ((req versioned-requirement))
+  (append
+   (list :name (requirement-name req))
+   (awhen (requirement-version-spec req)
+     (list :version it))
+   (awhen (requirement-source req)
+     (list :source it))
+   (awhen (requirement-no-deps-p req)
+     (list :no-deps-p it))))
+
+(defmethod requirement-to-plist ((req vcs-project-requirement))
+  (append
+   (list :name (requirement-name req))
+   (awhen (requirement-branch req)
+     (list :branch it))
+   (awhen (requirement-commit req)
+     (list :commit it))
+   (awhen (requirement-tag req)
+     (list :tag it))
+   (awhen (requirement-ref req)
+     (list :ref it))
+   (awhen (requirement-source req)
+     (list :source it))
+   (awhen (requirement-no-deps-p req)
+     (list :no-deps-p it))))
+
+(defmethod requirement-to-plist ((req fs-system-requirement))
+  (append
+   (list :pathname (requirement-pathname req)
+         :name (requirement-name req))
+   (awhen (requirement-no-deps-p req)
+     (list :no-deps-p it))))
+
+(defmethod requirement-to-plist ((req fs-system-file-requirement))
+  (append
+   (list :pathname (requirement-pathname req))
+   (awhen (requirement-no-deps-p req)
+     (list :no-deps-p it))))
