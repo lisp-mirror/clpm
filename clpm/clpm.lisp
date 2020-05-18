@@ -12,6 +12,8 @@
         #:clpm/install
         #:clpm/source
         #:clpm/version)
-  (:export #:install))
+  (:export #:install)
+  ;; From version
+  (:export #:clpm-version))
 
 (in-package #:clpm/clpm)

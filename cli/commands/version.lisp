@@ -6,16 +6,13 @@
 (uiop:define-package #:clpm-cli/commands/version
     (:use #:cl
           #:clpm-cli/common-args
-          #:clpm-cli/interface-defs
-          #:clpm/log
-          #:clpm/version)
+          #:clpm-cli/interface-defs)
   (:import-from #:adopt)
+  (:import-from #:clpm)
   (:import-from #:uiop
                 #:*stdout*))
 
 (in-package #:clpm-cli/commands/version)
-
-(setup-logger)
 
 (define-string *help-text*
   "Display CLPM version information. The output is not guaranteed to remain
@@ -33,7 +30,7 @@ about the build, host, and features.")
 (defun print-version (options)
   (if (plusp (gethash :cli-config-log-level options))
       (progn
-        (format *stdout* "CLPM version ~A~%" (clpm-version))
+        (format *stdout* "CLPM version ~A~%" (clpm:clpm-version))
         (format *stdout* "~A ~A~%" (lisp-implementation-type) (lisp-implementation-version))
         (format *stdout* "ASDF ~A~%" (asdf:asdf-version))
         (format *stdout* "Software Type: ~A~%" (software-type))
@@ -41,7 +38,7 @@ about the build, host, and features.")
         (with-standard-io-syntax
           (let ((*print-pretty* t))
             (format *stdout* "Features:~%~S~%" *features*))))
-      (format *stdout* "~A~%" (clpm-version))))
+      (format *stdout* "~A~%" (clpm:clpm-version))))
 
 
 (define-cli-command (("version") *version-ui*) (args options)
