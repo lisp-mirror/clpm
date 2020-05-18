@@ -72,8 +72,8 @@ bound to PN's folder."
         (when override
           (merge-pathnames override clpmfile-directory))))))
 
-(defun load-lockfile (pathname &key installed-only-p)
-  (load-anonymous-context-from-pathname pathname :installed-only-p installed-only-p))
+(defun load-lockfile (pathname)
+  (load-anonymous-context-from-pathname pathname))
 
 (defun bundle-context (clpmfile-designator)
   (let* ((clpmfile (get-clpmfile clpmfile-designator))
@@ -150,27 +150,27 @@ the lock file if necessary."
        nil))))
 
 (defun bundle-source-registry (clpmfile-designator
-                               &key include-client-p ignore-missing-releases
-                                 installed-only-p)
-  (let* ((*fetch-repo-automatically* nil)
-         (clpmfile (get-clpmfile clpmfile-designator))
-         (lockfile-pathname (clpmfile-lockfile-pathname clpmfile))
-         (*vcs-project-override-fun* (make-vcs-override-fun (clpmfile-pathname clpmfile)))
-         lockfile)
-    (unless (probe-file lockfile-pathname)
-      (error "Lockfile ~A does not exist" lockfile-pathname))
-    (setf lockfile (load-lockfile lockfile-pathname :installed-only-p installed-only-p))
-    (unless ignore-missing-releases
-      (let* ((releases (context-releases lockfile))
-             (missing-releases (remove-if #'release-installed-p releases)))
-        (when missing-releases
-          (error "The following releases are not installed: ~{~S~^, ~}"
-                 (mapcar (compose #'project-name #'release-project) missing-releases)))))
-    (context-to-asdf-source-registry-form
-     lockfile
-     :extra-forms
-     (when include-client-p
-       `((:directory ,(uiop:pathname-directory-pathname (client-asd-pathname))))))))
+                               &key include-client-p ignore-missing-releases)
+  (with-sources-using-installed-only ()
+    (let* ((*fetch-repo-automatically* nil)
+           (clpmfile (get-clpmfile clpmfile-designator))
+           (lockfile-pathname (clpmfile-lockfile-pathname clpmfile))
+           (*vcs-project-override-fun* (make-vcs-override-fun (clpmfile-pathname clpmfile)))
+           lockfile)
+      (unless (probe-file lockfile-pathname)
+        (error "Lockfile ~A does not exist" lockfile-pathname))
+      (setf lockfile (load-lockfile lockfile-pathname))
+      (unless ignore-missing-releases
+        (let* ((releases (context-releases lockfile))
+               (missing-releases (remove-if #'release-installed-p releases)))
+          (when missing-releases
+            (error "The following releases are not installed: ~{~S~^, ~}"
+                   (mapcar (compose #'project-name #'release-project) missing-releases)))))
+      (context-to-asdf-source-registry-form
+       lockfile
+       :extra-forms
+       (when include-client-p
+         `((:directory ,(uiop:pathname-directory-pathname (client-asd-pathname)))))))))
 
 (defun bundle-update (clpmfile-designator &key
                                             update-projects (validate (constantly t))

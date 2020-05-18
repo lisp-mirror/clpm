@@ -20,7 +20,6 @@
            #:context-asd-pathnames
            #:context-find-system-asd-pathname
            #:context-installed-systems
-           #:context-installed-only-p
            #:context-output-translations
            #:context-releases
            #:context-requirements
@@ -49,13 +48,6 @@
     :documentation
     "The name of the context. Either a string (if this is a global context) or a
 pathname (if this is an anonymous context).")
-   (installed-only-p
-    :initarg :installed-only-p
-    :initform nil
-    :reader context-installed-only-p
-    :documentation
-    "Hack (hopefully temporary) to indicate that sources should be instantiated
-to read only from their local data.")
    (requirements
     :initform nil
     :initarg :requirements
@@ -263,9 +255,9 @@ in place with the same name. Return the new requirement if it was modified."
 
 ;; * Deserializing
 
-(defun load-anonymous-context-from-pathname (pn &key installed-only-p)
+(defun load-anonymous-context-from-pathname (pn)
   (with-open-file (s pn)
-    (load-context-from-stream s :installed-only-p installed-only-p)))
+    (load-context-from-stream s)))
 
 (defun context-downselect-sources (name sources)
   (let ((allowed-source-names (config-value :contexts name :sources)))
@@ -350,24 +342,22 @@ in place with the same name. Return the new requirement if it was modified."
 (defmethod process-form (context (section (eql :reverse-dependencies)) form))
 
 (defmethod process-form (context (section (eql :sources)) form)
-  (let ((source (load-source-from-form form :installed-only-p (context-installed-only-p context))))
+  (let ((source (load-source-from-form form)))
     (when (typep source 'fs-source)
       (push (project-release (source-project source :all) :newest)
             (context-releases context)))
     (unless (or (source-can-lazy-sync-p source)
-                (config-value :local)
-                (context-installed-only-p context))
+                (config-value :local))
       (sync-source source))
     (setf (context-sources context) (append (context-sources context) (list source)))))
 
-(defun load-context-from-stream (stream &key installed-only-p)
+(defun load-context-from-stream (stream)
   (uiop:with-safe-io-syntax ()
     ;; The first form in the stream must be an API declaration.
     (let ((f (read stream nil)))
       (unless (equal f '(:api-version "0.3"))
         (error "Unknown context API version")))
-    (let ((out (make-instance 'context
-                              :installed-only-p installed-only-p)))
+    (let ((out (make-instance 'context)))
       ;; The next forms are either tags or lists. The tags denote sections.
       (loop
         :with section := nil

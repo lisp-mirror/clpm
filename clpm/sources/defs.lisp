@@ -117,7 +117,11 @@
 (defclass clpm-source ()
   ((synced-p
     :initform nil
-    :accessor source-synced-p))
+    :accessor source-synced-p)
+   (installed-only-p
+    :initform nil
+    :initarg :installed-only-p
+    :accessor source-installed-only-p))
   (:documentation "Base class for any CLPM source. A source contains projects
 and systems."))
 
@@ -185,7 +189,9 @@ initargs and a :type as a keyword."))
   (:documentation "Synchronize the local source metadata with the upstream
 metadata. Returns T if the local data has changed, NIL otherwise.")
   (:method :around (source)
-    (multiple-value-prog1 (unless (source-synced-p source) (call-next-method))
+    (multiple-value-prog1 (unless (or (source-installed-only-p source)
+                                      (source-synced-p source))
+                            (call-next-method))
       (setf (source-synced-p source) t))))
 
 

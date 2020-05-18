@@ -18,7 +18,8 @@
                 #:read-file-form
                 #:with-safe-io-syntax)
   (:export #:load-global-sources
-           #:load-source-from-form))
+           #:load-source-from-form
+           #:with-sources-using-installed-only))
 
 (in-package #:clpm/sources/config)
 
@@ -35,7 +36,18 @@
     (:vcs
      'vcs-source)))
 
-(defun load-source-from-form (f &key installed-only-p)
+(defvar *sources-use-installed-only-p* nil)
+
+(defun call-with-sources-using-installed-only (thunk)
+  (let ((*sources-use-installed-only-p* t))
+    (funcall thunk)))
+
+(defmacro with-sources-using-installed-only (() &body body)
+  "Execute BODY in a context where sources are configured to have only installed
+information visible."
+  `(call-with-sources-using-installed-only (lambda () ,@body)))
+
+(defun load-source-from-form (f)
   (destructuring-bind (name &rest args &key type &allow-other-keys)
       f
     (assert (or (eql type :file-system)
@@ -45,7 +57,7 @@
     (apply #'make-source
            (resolve-type type)
            :name name
-           :installed-only-p installed-only-p
+           :installed-only-p *sources-use-installed-only-p*
            (remove-from-plist args :type))))
 
 (defun load-global-sources ()

@@ -41,12 +41,11 @@
 
 (define-cli-command (("bundle" "exec") *bundle-exec-ui*) (args options)
   (let* ((clpmfile-pathname (bundle-clpmfile-pathname))
-         (clpmfile (get-clpmfile clpmfile-pathname :installed-only-p t))
+         (clpmfile (get-clpmfile clpmfile-pathname))
          (lockfile-pathname (clpmfile-lockfile-pathname clpmfile))
          (include-client-p (gethash :bundle-exec-with-client options))
          (cl-source-registry-form (bundle-source-registry clpmfile-pathname
-                                                          :include-client-p include-client-p
-                                                          :installed-only-p t))
+                                                          :include-client-p include-client-p))
          (output-translations-form (bundle-output-translations clpmfile-pathname))
          (lockfile (bundle-context clpmfile))
          (installed-system-names (sort (mapcar #'system-name (context-installed-systems lockfile)) #'string<))
