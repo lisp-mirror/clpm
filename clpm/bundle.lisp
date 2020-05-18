@@ -127,10 +127,7 @@ the lock file if necessary."
                                                              (setf changedp it)))
                                                :update-projects (config-table-keys :bundle :local)))
           (when changedp
-            (with-open-file (stream lockfile-pathname
-                                    :direction :output
-                                    :if-exists :supersede)
-              (serialize-context-to-stream lockfile stream)))))
+            (save-context lockfile))))
     lockfile))
 
 
@@ -209,7 +206,4 @@ the lock file if necessary."
                                                        (setf changedp it)))
                                          :update-projects (or update-projects t)))
     (when changedp
-      (with-open-file (stream lockfile-pathname
-                              :direction :output
-                              :if-exists :supersede)
-        (serialize-context-to-stream lockfile stream)))))
+      (save-context lockfile))))

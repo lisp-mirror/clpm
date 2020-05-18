@@ -122,6 +122,6 @@ install should proceed."
             (mapc #'install-release (context-releases new-context))
             (when save-context-p
               (context-write-asdf-files new-context)
-              (save-global-context new-context))
+              (save-context new-context))
             new-context)
           orig-context))))
