@@ -81,7 +81,7 @@
                 :version-spec version-spec
                 common-args))))))
 
-(defun install (&key projects systems
+(defun install (&key projects systems asds
                   version ref source
                   no-deps-p
                   (validate (constantly t))
@@ -93,6 +93,9 @@ PROJECTS and SYSTEMS must be lists of dependency specifiers. VERSION, REF, and
 SOURCE must be strings and are used as the default constraints on PROJECTS and
 SYSTEMS if such constraints cannot be extracted from the specifiers themselves.
 
+ASDs must be a list of pathnames to .asd files. All systems in each .asd file
+will be installed.
+
 VALIDATE must be a function of one argument (a diff) and returns non-NIL if the
 install should proceed."
   (with-clpm-session ()
@@ -103,7 +106,13 @@ install should proceed."
                         (mapcar (rcurry #'make-requirement
                                         :system
                                         :version version :source source :ref ref :no-deps-p no-deps-p)
-                                systems))))
+                                systems)
+                        (mapcar (lambda (x)
+                                  (make-instance 'fs-system-file-requirement
+                                                 :name x
+                                                 :why t
+                                                 :no-deps-p no-deps-p))
+                                asds))))
       (install-requirements reqs :context context :validate validate :save-context-p save-context-p))))
 
 (defun install-requirements (reqs &key

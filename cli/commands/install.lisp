@@ -65,6 +65,14 @@ with version constraint).
    :help "The name of the source to install from"
    :reduce #'adopt:last))
 
+(defparameter *option-install-asd*
+  (adopt:make-option
+   :install-asds
+   :long "asd"
+   :parameter "ASD-PATH"
+   :help "Install an .asd file into the context"
+   :reduce (adopt:flip #'cons)))
+
 (defparameter *option-install-project*
   (adopt:make-option
    :install-projects
@@ -102,6 +110,7 @@ with version constraint).
                    *option-install-version*
                    *option-install-source*
                    *option-install-project*
+                   *option-install-asd*
                    *option-install-no-deps*
                    *option-yes*
                    *option-local*
@@ -112,6 +121,7 @@ with version constraint).
   (let* ((version-string (gethash :install-version options))
          (system-specifiers args)
          (project-specifiers (gethash :install-projects options))
+         (asd-files (gethash :install-asds options))
          (source-name (gethash :install-source options))
          (no-deps-p (gethash :install-no-deps options))
          (context-name (config-value :context))
@@ -119,6 +129,7 @@ with version constraint).
          (ref (gethash :install-ref options)))
     (install :projects project-specifiers
              :systems system-specifiers
+             :asds (mapcar #'merge-pathnames asd-files)
              :version version-string
              :source source-name
              :context context-name

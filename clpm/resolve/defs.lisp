@@ -6,15 +6,11 @@
 (uiop:define-package #:clpm/resolve/defs
     (:use #:cl
           #:clpm/log)
-  (:export #:*sources*
-           #:provided-system-p))
+  (:export #:provided-system-p))
 
 (in-package #:clpm/resolve/defs)
 
 (setup-logger)
-
-(defvar *sources* nil
-  "The sources that can be used during resolution.")
 
 (defparameter *sb-contribs*
   '("sb-aclrepl" "sb-bsd-sockets" "sb-capstone" "sb-cltl2" "sb-concurrency" "sb-cover"

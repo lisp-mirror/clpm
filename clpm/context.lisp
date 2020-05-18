@@ -143,6 +143,10 @@ can be named, global contexts, or anonymous."))
 in place with the same name. Return the new requirement if it was modified."
   (let ((existing-req (context-find-requirement context (requirement-type-keyword req)
                                                 (requirement-name req))))
+    (when (typep req 'fs-system-file-requirement)
+      (fs-source-register-asd (context-fs-source context) (requirement-name req)))
+    (when (typep req 'fs-system-requirement)
+      (fs-source-register-asd (context-fs-source context) (requirement-pathname req)))
     (if existing-req
         (progn
           (log:debug "Replacing requirement ~A with ~A" existing-req req)
@@ -320,38 +324,38 @@ in place with the same name. Return the new requirement if it was modified."
 
 (defmethod process-form (context (section (eql :requirements)) form)
   (destructuring-bind (type &key name version source branch tag commit ref pathname no-deps-p) form
-    (push (cond
-            ((eql type :asd-system)
-             (make-instance 'fs-system-requirement
-                            :name name
-                            :pathname pathname
-                            :no-deps-p no-deps-p
-                            :why t))
-            ((eql type :asd-file)
-             (make-instance 'fs-system-file-requirement
-                            :name pathname
-                            :no-deps-p no-deps-p
-                            :why t))
-            ((or branch tag commit ref)
-             (make-instance 'vcs-project-requirement
-                            :name name
-                            :source (get-source source)
-                            :commit commit
-                            :branch branch
-                            :tag tag
-                            :ref ref
-                            :no-deps-p no-deps-p
-                            :why t))
-            (t
-             (make-instance (ecase type
-                              (:system 'system-requirement)
-                              (:project 'project-requirement))
-                            :name name
-                            :source (get-source source)
-                            :version-spec version
-                            :no-deps-p no-deps-p
-                            :why t)))
-          (context-requirements context))))
+    (context-add-requirement! context
+                              (cond
+                                ((eql type :asd-system)
+                                 (make-instance 'fs-system-requirement
+                                                :name name
+                                                :pathname pathname
+                                                :no-deps-p no-deps-p
+                                                :why t))
+                                ((eql type :asd-file)
+                                 (make-instance 'fs-system-file-requirement
+                                                :name name
+                                                :no-deps-p no-deps-p
+                                                :why t))
+                                ((or branch tag commit ref)
+                                 (make-instance 'vcs-project-requirement
+                                                :name name
+                                                :source (get-source source)
+                                                :commit commit
+                                                :branch branch
+                                                :tag tag
+                                                :ref ref
+                                                :no-deps-p no-deps-p
+                                                :why t))
+                                (t
+                                 (make-instance (ecase type
+                                                  (:system 'system-requirement)
+                                                  (:project 'project-requirement))
+                                                :name name
+                                                :source (get-source source)
+                                                :version-spec version
+                                                :no-deps-p no-deps-p
+                                                :why t))))))
 
 (defmethod process-form (context (section (eql :releases)) form)
   (destructuring-bind (name &key version source systems) form
@@ -457,12 +461,11 @@ in place with the same name. Return the new requirement if it was modified."
       (format stream ":releases~%")
       (dolist (release (sort (copy-list (context-releases context)) #'string<
                              :key (compose #'project-name #'release-project)))
-        (unless (typep release 'fs-release)
-          (format stream "~S~%"
-                  (context-release-to-form release (remove-if-not (lambda (x)
-                                                                    (eql x release))
-                                                                  (context-system-releases context)
-                                                                  :key #'system-release-release)))))
+        (format stream "~S~%"
+                (context-release-to-form release (remove-if-not (lambda (x)
+                                                                  (eql x release))
+                                                                (context-system-releases context)
+                                                                :key #'system-release-release))))
       (terpri stream)
       (terpri stream)
 

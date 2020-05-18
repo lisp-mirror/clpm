@@ -27,13 +27,13 @@
 
 (defun find-project-source (project-name)
   (loop
-    :for source :in *sources*
+    :for source :in (sources)
     :when (source-project source project-name nil)
       :do (return source)))
 
 (defun find-system-source (system-name)
   (loop
-    :for source :in *sources*
+    :for source :in (sources)
     :when (source-system source system-name nil)
       :do (return source)))
 
@@ -52,19 +52,19 @@ to searching."
           (error "Unable to find a source for requirement ~S" req)))))
 
 (defmethod find-requirement-source ((req project-requirement) &optional errorp)
-  "Find the first source in *SOURCES* that provides the project. ERRORP is
+  "Find the first source in (SOURCES) that provides the project. ERRORP is
 handled by an :AROUND method."
   (declare (ignore errorp))
   (find-project-source (requirement-name req)))
 
 (defmethod find-requirement-source ((req system-requirement) &optional errorp)
-  "Find the first source in *SOURCES* that provides the system. ERRORP is andled
+  "Find the first source in (SOURCES) that provides the system. ERRORP is andled
 by an :AROUND method."
   (declare (ignore errorp))
   (find-system-source (requirement-name req)))
 
 (defmethod find-requirement-source ((req vcs-project-requirement) &optional errorp)
-  "Find the first source in *SOURCES* that provides the project. ERRORP is
+  "Find the first source in (SOURCES) that provides the project. ERRORP is
 handled by an :AROUND method."
   (declare (ignore errorp))
   (find-project-source (requirement-name req)))
@@ -83,7 +83,7 @@ satisfied. Returns one of :SAT, :UNSAT, or :UNKNOWN."))
       ((not system-release)
        :unknown)
       ((not (eql (system-release-source system-release)
-                 (requirement-source req)))
+                 (get-source :implicit-file)))
        :unsat)
       (t
        :sat))))
@@ -150,7 +150,7 @@ a plist. This plist can contain :system-releases or :system-files."))
 (defmethod resolve-requirement ((req fs-system-requirement) node)
   ;; Make a release from the file system.
   (let* ((system-name (requirement-name req))
-         (fs-source (requirement-source req))
+         (fs-source (get-source :implicit-file))
          (system (source-system fs-source system-name))
          (releases (system-releases system))
          (release (first releases))
@@ -164,7 +164,7 @@ a plist. This plist can contain :system-releases or :system-files."))
 (defmethod resolve-requirement ((req fs-system-file-requirement) node)
   ;; Make a release from the file system.
   (let* ((asd-pathname (requirement-name req))
-         (fs-source (requirement-source req))
+         (fs-source (get-source :implicit-file))
          (release (source-project-release fs-source (namestring asd-pathname) :newest)))
     (list (list release
                 :system-files (list (cons (release-system-file release asd-pathname) t))))))

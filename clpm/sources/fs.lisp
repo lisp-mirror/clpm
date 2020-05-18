@@ -74,7 +74,7 @@ source using FS-SOURCE-REGISTER-ASD."))
   t)
 
 (defmethod source-project ((source fs-source) project-name &optional (error t))
-  (or (gethash project-name (fs-source-projects-by-namestring source))
+  (or (gethash (namestring project-name) (fs-source-projects-by-namestring source))
       (when error
         (error 'source-missing-project
                :source source
@@ -112,7 +112,8 @@ can be relative or absolute."
          (namestring-ht (fs-source-system-files-by-namestring fs-source))
          (namestring (namestring asd-pathname))
          (project-ht (fs-source-projects-by-namestring fs-source))
-         (project (make-instance 'fs-project :name namestring :source fs-source)))
+         (project (or (gethash namestring project-ht)
+                      (make-instance 'fs-project :name namestring :source fs-source))))
     (setf (gethash namestring project-ht) project)
     (aprog1 (ensure-gethash (pathname-name namestring) primary-name-ht
                             (make-instance 'fs-system-file
@@ -127,7 +128,7 @@ can be relative or absolute."
   (let* ((system-files (hash-table-keys (fs-source-projects-by-namestring source))))
     `(,(source-name source)
       :type :file-system
-      :system-files ,(mapcar #'system-file-asd-enough-namestring system-files))))
+      :system-files ,system-files)))
 
 (defmethod sync-source ((source fs-source))
   nil)
@@ -189,7 +190,7 @@ of this created upon instantiation."))
   "Look at the fs-source to get the system file."
   (let* ((source (release-source release))
          (ht (fs-source-system-files-by-namestring source)))
-    (gethash system-file-namestring ht)))
+    (gethash (namestring system-file-namestring) ht)))
 
 (defmethod release-system-files ((release fs-release))
   "Projects (and releases) correspond to a single system file."

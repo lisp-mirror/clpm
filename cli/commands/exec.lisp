@@ -38,17 +38,18 @@
 
 (define-cli-command (("exec") *exec-ui*) (args options)
   (let* ((context-name (config-value :context))
+         (context (get-context context-name))
          (with-client (gethash :exec-with-client options))
          (ignore-inherited (config-value :contexts context-name :ignore-inherited-source-registry))
          (splice-inherited (uiop:getenvp "CL_SOURCE_REGISTRY"))
          (source-registry (context-to-asdf-source-registry-form
-                           context-name
+                           context
                            :with-client with-client
                            :ignore-inherited ignore-inherited
                            :splice-inherited splice-inherited))
-         (output-translations (context-output-translations context-name))
-         (installed-system-names (sort (mapcar #'system-name (context-installed-systems context-name)) #'string<))
-         (visible-primary-system-names (sort (context-visible-primary-system-names context-name) #'string<)))
+         (output-translations (context-output-translations context))
+         (installed-system-names (sort (mapcar #'system-name (context-installed-systems context)) #'string<))
+         (visible-primary-system-names (sort (context-visible-primary-system-names context) #'string<)))
     (with-standard-io-syntax
       (execvpe (first args) (rest args)
                `(("CL_SOURCE_REGISTRY" . ,(prin1-to-string source-registry))

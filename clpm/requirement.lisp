@@ -232,13 +232,13 @@ represents."))
 
 (defmethod requirement-to-plist ((req fs-system-requirement))
   (append
-   (list :pathname (requirement-pathname req)
+   (list :pathname (namestring (requirement-pathname req))
          :name (requirement-name req))
    (awhen (requirement-no-deps-p req)
      (list :no-deps-p it))))
 
 (defmethod requirement-to-plist ((req fs-system-file-requirement))
   (append
-   (list :pathname (requirement-pathname req))
+   (list :name (namestring (requirement-name req)))
    (awhen (requirement-no-deps-p req)
      (list :no-deps-p it))))

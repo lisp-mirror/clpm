@@ -100,19 +100,19 @@
   "Given a context, return a new context that has the same requirements but the
 set of installed releases is updated to be the minimum set that satisfies all
 the requirements."
-  (let* ((*sources* (context-sources context))
-         (*releases-sort-function* (unless (eql update-projects t)
-                                     (make-result-sorter context update-projects)))
-         (reqs (rewrite-vcs-reqs (context-requirements context) context update-projects))
-         (out-context (copy-context context))
-         (root-node (make-instance 'node
-                                   :unresolved-reqs reqs
-                                   :groveler (make-groveler)))
-         (final-node (perform-search root-node)))
-    (setf (context-releases out-context)
-          (mapcar #'car (node-activated-releases final-node)))
-    (setf (context-reverse-dependencies out-context)
-          (sort (copy-alist (node-activated-releases final-node))
-                #'string< :key (compose #'project-name #'release-project #'car)))
-    (setf (context-system-releases out-context) (node-activated-system-releases final-node))
-    out-context))
+  (with-sources ((context-sources context))
+    (let* ((*releases-sort-function* (unless (eql update-projects t)
+                                       (make-result-sorter context update-projects)))
+           (reqs (rewrite-vcs-reqs (context-requirements context) context update-projects))
+           (out-context (copy-context context))
+           (root-node (make-instance 'node
+                                     :unresolved-reqs reqs
+                                     :groveler (make-groveler)))
+           (final-node (perform-search root-node)))
+      (setf (context-releases out-context)
+            (mapcar #'car (node-activated-releases final-node)))
+      (setf (context-reverse-dependencies out-context)
+            (sort (copy-alist (node-activated-releases final-node))
+                  #'string< :key (compose #'project-name #'release-project #'car)))
+      (setf (context-system-releases out-context) (node-activated-system-releases final-node))
+      out-context)))
