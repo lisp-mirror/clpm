@@ -63,7 +63,7 @@ source."
       (error "The argument to :ASD must be a string"))
     (unless (probe-file (merge-pathnames asd-file))
       (error "The argument to :ASD must exist"))
-    (let ((fs-source (context-vcs-source clpmfile)))
+    (let ((fs-source (context-fs-source clpmfile)))
       ;; Register the system with the fs-source
       (fs-source-register-asd fs-source asd-file)
       (if systems
