@@ -6,17 +6,11 @@
 (uiop:define-package #:clpm-cli/commands/sync
     (:use #:cl
           #:clpm-cli/common-args
-          #:clpm-cli/interface-defs
-          #:clpm/config
-          #:clpm/log
-          #:clpm/source)
+          #:clpm-cli/interface-defs)
   (:import-from #:adopt)
-  (:import-from #:uiop
-                #:*stdout*))
+  (:import-from #:clpm))
 
 (in-package #:clpm-cli/commands/sync)
-
-(setup-logger)
 
 (define-string *help-text*
   "Sync all sources.")
@@ -32,13 +26,5 @@
 
 (define-cli-command (("sync") *sync-ui*) (args options)
   (declare (ignore options))
-  (let ((sources (sources)))
-    (when args
-      (setf sources
-            (remove-if-not (lambda (source)
-                             (member (source-name source) args
-                                     :test #'equal))
-                           sources)))
-    (log:info "Syncing ~{~A~^, ~}" (mapcar #'source-name sources))
-    (mapc #'sync-source sources))
+  (clpm:sync :sources args)
   t)
