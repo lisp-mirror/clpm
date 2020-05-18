@@ -33,12 +33,6 @@
   ((name
     :initarg :name
     :accessor source-name)
-   (root-pathname
-    :initarg :root-pathname
-    :initform #p""
-    :accessor fs-source-root-pathname
-    :documentation "The root directory of this source. If relative, it is
-resolved with respect to *DEFAULT-PATHNAME-DEFAULTS*.")
    (project
     :accessor fs-source-project
     :documentation "The single project in this source.")
@@ -63,8 +57,8 @@ system files, system files must be registered with the source using
 FS-SOURCE-REGISTER-ASD."))
 
 (defmethod make-source ((type (eql 'fs-source)) &rest initargs
-                        &key system-files name root-pathname)
-  (with-clpm-session (:key `(make-source ,type ,name ,root-pathname))
+                        &key system-files name)
+  (with-clpm-session (:key `(make-source ,type ,name))
     (aprog1 (apply #'make-instance
                    type
                    initargs)
@@ -78,7 +72,6 @@ FS-SOURCE-REGISTER-ASD."))
                                        &allow-other-keys)
   "Construct the singleton project and release."
   (declare (ignore initargs))
-  (assert (uiop:directory-pathname-p (fs-source-root-pathname source)))
   (let* ((project (make-instance 'fs-project
                                  :name :all
                                  :source source))
@@ -135,8 +128,6 @@ file with the same primary name and construct a new system for it."
 (defun fs-source-register-asd (fs-source asd-pathname)
   "Given a pathname to an asd file, register it with the source. asd-pathname
 can be relative (to the source's root dir) or absolute."
-  (unless (uiop:relative-pathname-p asd-pathname)
-    (setf asd-pathname (enough-namestring asd-pathname (merge-pathnames (fs-source-root-pathname fs-source)))))
   (let* ((primary-name-ht (fs-source-system-files-by-primary-name fs-source))
          (namestring-ht (fs-source-system-files-by-namestring fs-source))
          (namestring (namestring asd-pathname)))
@@ -154,19 +145,12 @@ can be relative (to the source's root dir) or absolute."
          (system-files (release-system-files release)))
     `(,(source-name source)
       :type :file-system
-      ,@(unless (uiop:pathname-equal (fs-source-root-pathname source)
-                                     (uiop:make-pathname* :directory '(:relative)))
-          `(:root-pathname ,(namestring (fs-source-root-pathname source))))
-            :system-files ,(mapcar #'system-file-asd-enough-namestring system-files))))
+      :system-files ,(mapcar #'system-file-asd-enough-namestring system-files))))
 
 (defun fs-source-from-form (form)
-  (destructuring-bind (type &key root-pathname system-files) form
+  (destructuring-bind (type &key system-files) form
     (assert (eql type :file-system))
-    (aprog1 (make-instance 'fs-source
-                           :root-pathname (if root-pathname
-                                              (pathname root-pathname)
-                                              (uiop:pathname-directory-pathname
-                                               (uiop:make-pathname* :directory '(:relative)))))
+    (aprog1 (make-instance 'fs-source)
       (dolist (system-file system-files)
         (fs-source-register-asd it system-file)))))
 
@@ -272,8 +256,7 @@ release."
 
 (defmethod system-file-absolute-asd-pathname ((system-file fs-system-file))
   "Merge the enough pathname with the source's root dir."
-  (merge-pathnames (system-file-asd-enough-namestring system-file)
-                   (merge-pathnames (fs-source-root-pathname (system-file-source system-file)))))
+  (merge-pathnames (system-file-asd-enough-namestring system-file)))
 
 (defmethod system-file-system-releases ((system-file fs-system-file))
   "Grovel over the system file if necessary to determine every system it

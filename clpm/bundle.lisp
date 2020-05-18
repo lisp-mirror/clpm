@@ -60,10 +60,7 @@ bound to PN's folder."
   `(call-with-bundle-default-pathname-defaults (lambda () ,@body) ,clpmfile-pn))
 
 (defun create-empty-lockfile (clpmfile)
-  (make-instance 'context
-                 :sources (clpmfile-sources clpmfile)
-                 :requirements (clpmfile-all-requirements clpmfile)
-                 :name (clpmfile-lockfile-pathname clpmfile)))
+  (copy-context clpmfile))
 
 (defun make-vcs-override-fun (clpmfile-pathname)
   (let ((clpmfile-directory (uiop:pathname-directory-pathname clpmfile-pathname)))
@@ -108,7 +105,7 @@ the lock file if necessary."
          (lockfile nil)
          (changedp nil))
     (unless (config-value :local)
-      (dolist (s (clpmfile-sources clpmfile))
+      (dolist (s (context-sources clpmfile))
         (unless (source-can-lazy-sync-p s)
           (sync-source s))))
     (if (probe-file lockfile-pathname)
@@ -120,7 +117,7 @@ the lock file if necessary."
           ;; Nuke the lockfile's requirements so that we pick up deletions from the
           ;; clpmfile.
           (setf (context-requirements lockfile) nil)
-          (setf lockfile (install-requirements (clpmfile-all-requirements clpmfile)
+          (setf lockfile (install-requirements (context-requirements clpmfile)
                                                :context lockfile
                                                :validate (lambda (diff)
                                                            (aprog1 (funcall validate diff)
@@ -188,7 +185,7 @@ the lock file if necessary."
     ;; Load the existing lockfile
     (setf lockfile (load-lockfile lockfile-pathname))
     (unless (config-value :local)
-      (dolist (s (clpmfile-sources clpmfile))
+      (dolist (s (context-sources clpmfile))
         (unless (source-can-lazy-sync-p s)
           (sync-source s))))
     ;; Map all update systems to their projects.
@@ -199,7 +196,7 @@ the lock file if necessary."
                   (release (system-release-release system-release))
                   (project-name (project-name (release-project release))))
         (pushnew project-name update-projects :test #'equal)))
-    (setf lockfile (install-requirements (clpmfile-all-requirements clpmfile)
+    (setf lockfile (install-requirements (context-requirements clpmfile)
                                          :context lockfile
                                          :validate (lambda (diff)
                                                      (aprog1 (funcall validate diff)

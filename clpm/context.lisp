@@ -17,9 +17,12 @@
           #:clpm/source)
   (:export #:context
            #:context-add-requirement!
+           #:context-anonymous-p
            #:context-asd-pathnames
            #:context-find-system-asd-pathname
+           #:context-fs-source
            #:context-installed-systems
+           #:context-name
            #:context-output-translations
            #:context-releases
            #:context-requirements
@@ -28,6 +31,8 @@
            #:context-system-releases
            #:context-to-asdf-source-registry-form
            #:context-to-asdf-source-registry.d-forms
+           #:context-user-sources
+           #:context-vcs-source
            #:context-visible-primary-system-names
            #:context-write-asdf-files
            #:copy-context
@@ -52,10 +57,18 @@ pathname (if this is an anonymous context).")
     :initform nil
     :initarg :requirements
     :accessor context-requirements)
-   (sources
+   (fs-source
+    :accessor context-fs-source
+    :documentation
+    "The implicit filesystem source rooted for this context.")
+   (vcs-source
+    :accessor context-vcs-source
+    :documentation
+    "A VCS source to where raw vcs requirements can be homed.")
+   (user-sources
     :initform nil
-    :initarg :sources
-    :accessor context-sources)
+    :initarg :user-sources
+    :accessor context-user-sources)
    (releases
     :initform nil
     :initarg :releases
@@ -73,6 +86,13 @@ pathname (if this is an anonymous context).")
 in the context, the requirements that gave rise to those releases, etc. Contexts
 can be named, global contexts, or anonymous."))
 
+(defmethod initialize-instance :after ((context context) &key &allow-other-keys)
+  (setf (context-fs-source context)
+        (make-source 'fs-source
+                     :name :implicit-file))
+  (setf (context-vcs-source context)
+        (make-source 'vcs-source :name :implicit-vcs)))
+
 (defun context-anonymous-p (context)
   (pathnamep (context-name context)))
 
@@ -82,7 +102,7 @@ can be named, global contexts, or anonymous."))
                  :releases (copy-list (context-releases context))
                  :requirements (copy-list (context-requirements context))
                  :reverse-dependencies (copy-alist (context-reverse-dependencies context))
-                 :sources (copy-list (context-sources context))
+                 :user-sources (copy-list (context-user-sources context))
                  :system-releases (copy-list (context-system-releases context))))
 
 (defun global-context-pathname (name)
@@ -98,6 +118,11 @@ can be named, global contexts, or anonymous."))
      (load-global-context (config-value :context) nil))
     (t
      (error "Unable to translate ~S to a context object" context-designator))))
+
+(defun context-sources (context)
+  (list* (context-fs-source context)
+         (context-vcs-source context)
+         (context-user-sources context)))
 
 
 ;; * Adding requirements
@@ -257,7 +282,7 @@ in place with the same name. Return the new requirement if it was modified."
 
 (defun load-anonymous-context-from-pathname (pn)
   (with-open-file (s pn)
-    (load-context-from-stream s)))
+    (load-context-from-stream s pn)))
 
 (defun context-downselect-sources (name sources)
   (let ((allowed-source-names (config-value :contexts name :sources)))
@@ -273,12 +298,11 @@ in place with the same name. Return the new requirement if it was modified."
     (with-open-file (s pn
                        :if-does-not-exist (if error :error nil))
       (if s
-          (aprog1 (load-context-from-stream s)
-            (setf (context-name it) name)
-            (setf (context-sources it) (context-downselect-sources name (sources))))
+          (aprog1 (load-context-from-stream s name)
+            (setf (context-user-sources it) (context-downselect-sources name (sources))))
           (make-instance 'context
                          :name name
-                         :sources (context-downselect-sources name (sources)))))))
+                         :user-sources (context-downselect-sources name (sources)))))))
 
 (defgeneric check-section-valid (prev-section current-section)
   (:method (prev-section current-section)
@@ -349,15 +373,16 @@ in place with the same name. Return the new requirement if it was modified."
     (unless (or (source-can-lazy-sync-p source)
                 (config-value :local))
       (sync-source source))
-    (setf (context-sources context) (append (context-sources context) (list source)))))
+    (setf (context-user-sources context) (append (context-user-sources context) (list source)))))
 
-(defun load-context-from-stream (stream)
+(defun load-context-from-stream (stream name)
   (uiop:with-safe-io-syntax ()
     ;; The first form in the stream must be an API declaration.
     (let ((f (read stream nil)))
       (unless (equal f '(:api-version "0.3"))
         (error "Unknown context API version")))
-    (let ((out (make-instance 'context)))
+    (let ((out (make-instance 'context
+                              :name name)))
       ;; The next forms are either tags or lists. The tags denote sections.
       (loop
         :with section := nil
