@@ -367,9 +367,6 @@ in place with the same name. Return the new requirement if it was modified."
 
 (defmethod process-form (context (section (eql :sources)) form)
   (let ((source (load-source-from-form form)))
-    (when (typep source 'fs-source)
-      (push (project-release (source-project source :all) :newest)
-            (context-releases context)))
     (unless (or (source-can-lazy-sync-p source)
                 (config-value :local))
       (sync-source source))

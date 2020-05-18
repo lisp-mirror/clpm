@@ -15,14 +15,8 @@
           #:clpm/sources/defs
           #:clpm/sources/dotted-versioned-project)
   (:export #:fs-source
-           #:fs-source-from-form
            #:fs-source-register-asd
-           #:fs-source-system-release-class
-           #:fs-project
-           #:fs-release
-           #:fs-system
-           #:fs-system-file
-           #:fs-system-release))
+           #:fs-release))
 
 (in-package #:clpm/sources/fs)
 
@@ -33,9 +27,10 @@
   ((name
     :initarg :name
     :accessor source-name)
-   (project
-    :accessor fs-source-project
-    :documentation "The single project in this source.")
+   (projects-by-namestring
+    :initform (make-hash-table :test 'equal)
+    :accessor fs-source-projects-by-namestring
+    :documentation "Maps system namestring to project instances.")
    (system-files-by-primary-name
     :initform (make-hash-table :test 'equalp)
     :accessor fs-source-system-files-by-primary-name
@@ -51,10 +46,10 @@ objects.")
     :accessor fs-source-systems-by-name
     :documentation "A hash table that maps system names to fs-system objects."))
   (:documentation
-   "A source that contains systems located on the file system. Contains one
-project (:ALL) and one release (:NEWEST). Does not do any autodiscovery of
-system files, system files must be registered with the source using
-FS-SOURCE-REGISTER-ASD."))
+   "A source that contains systems located on the file system. Contains a
+project for every .asd file and each project has one reelase (:NEWEST). Does not
+do any autodiscovery of system files, system files must be registered with the
+source using FS-SOURCE-REGISTER-ASD."))
 
 (defmethod make-source ((type (eql 'fs-source)) &rest initargs
                         &key system-files name)
@@ -72,33 +67,18 @@ FS-SOURCE-REGISTER-ASD."))
                                        &allow-other-keys)
   "Construct the singleton project and release."
   (declare (ignore initargs))
-  (let* ((project (make-instance 'fs-project
-                                 :name :all
-                                 :source source))
-         (release (make-instance 'fs-release
-                                 :version :newest
-                                 :project project
-                                 :source source)))
-    (setf (fs-project-release project) release)
-    (setf (fs-source-project source) project)
-    (dolist (system-file system-files)
-      (fs-source-register-asd source system-file))))
+  (dolist (system-file system-files)
+    (fs-source-register-asd source system-file)))
 
 (defmethod source-can-lazy-sync-p ((source fs-source))
   t)
 
 (defmethod source-project ((source fs-source) project-name &optional (error t))
-  "If the project name is :ALL, return the singleton project. Otherwise return
-nil or error."
-  (cond
-    ((eql :all project-name)
-     (fs-source-project source))
-    (error
-     (error 'source-missing-project
-            :source source
-            :project-name project-name))
-    (t
-     nil)))
+  (or (gethash project-name (fs-source-projects-by-namestring source))
+      (when error
+        (error 'source-missing-project
+               :source source
+               :project-name project-name))))
 
 (defmethod source-system ((source fs-source) system-name &optional (error t))
   "If this system already exists, return it. Otherwise see if we have an asd
@@ -106,8 +86,8 @@ file with the same primary name and construct a new system for it."
   (unless (gethash system-name (fs-source-systems-by-name source))
     ;; We haven't seen this particular system before. See if we have a system
     ;; file that could plausibly contain it.
-    (when (gethash (asdf:primary-system-name system-name)
-                   (fs-source-system-files-by-primary-name source))
+    (when-let ((system-file (gethash (asdf:primary-system-name system-name)
+                                     (fs-source-system-files-by-primary-name source))))
       ;; We do. Construct a new system object for it.
       (let* ((system (make-instance 'fs-system
                                     :name system-name
@@ -115,7 +95,7 @@ file with the same primary name and construct a new system for it."
              (system-release (make-instance 'fs-system-release
                                             :source source
                                             :system system
-                                            :release (fs-project-release (fs-source-project source)))))
+                                            :release (system-file-release system-file))))
         (setf (fs-system-system-release system) system-release)
         (setf (gethash system-name (fs-source-systems-by-name source))
               system))))
@@ -127,32 +107,27 @@ file with the same primary name and construct a new system for it."
 
 (defun fs-source-register-asd (fs-source asd-pathname)
   "Given a pathname to an asd file, register it with the source. asd-pathname
-can be relative (to the source's root dir) or absolute."
+can be relative or absolute."
   (let* ((primary-name-ht (fs-source-system-files-by-primary-name fs-source))
          (namestring-ht (fs-source-system-files-by-namestring fs-source))
-         (namestring (namestring asd-pathname)))
+         (namestring (namestring asd-pathname))
+         (project-ht (fs-source-projects-by-namestring fs-source))
+         (project (make-instance 'fs-project :name namestring :source fs-source)))
+    (setf (gethash namestring project-ht) project)
     (aprog1 (ensure-gethash (pathname-name namestring) primary-name-ht
                             (make-instance 'fs-system-file
                                            :source fs-source
-                                           :release (fs-project-release (fs-source-project fs-source))
+                                           :project project
+                                           :release (project-release project :newest)
                                            :enough-namestring namestring))
 
       (setf (gethash namestring namestring-ht) it))))
 
 (defmethod source-to-form ((source fs-source))
-  (let* ((project (source-project source :all))
-         (release (project-release project :newest))
-         (system-files (release-system-files release)))
+  (let* ((system-files (hash-table-keys (fs-source-projects-by-namestring source))))
     `(,(source-name source)
       :type :file-system
       :system-files ,(mapcar #'system-file-asd-enough-namestring system-files))))
-
-(defun fs-source-from-form (form)
-  (destructuring-bind (type &key system-files) form
-    (assert (eql type :file-system))
-    (aprog1 (make-instance 'fs-source)
-      (dolist (system-file system-files)
-        (fs-source-register-asd it system-file)))))
 
 (defmethod sync-source ((source fs-source))
   nil)
@@ -168,10 +143,16 @@ can be relative (to the source's root dir) or absolute."
     :initarg :name
     :reader project-name)
    (release
-    :initarg :release
     :accessor fs-project-release))
   (:documentation "A project on the filesystem. Contains a singleton
 release (that is constructed by the source.)"))
+
+(defmethod initialize-instance :after ((project fs-project) &key name source)
+  (declare (ignore name))
+  (setf (fs-project-release project) (make-instance 'fs-release
+                                                    :version :newest
+                                                    :project project
+                                                    :source source)))
 
 (defmethod project-release ((project fs-project) version-string &optional (error t))
   "If the version is :newest, return our singleton release, otherwise nil."
@@ -211,10 +192,12 @@ of this created upon instantiation."))
     (gethash system-file-namestring ht)))
 
 (defmethod release-system-files ((release fs-release))
-  "Look at the source and get all its system files."
+  "Projects (and releases) correspond to a single system file."
   (let* ((source (release-source release))
-         (ht (fs-source-system-files-by-namestring source)))
-    (hash-table-values ht)))
+         (ht (fs-source-system-files-by-namestring source))
+         (project (release-project release))
+         (namestring (project-name project)))
+    (list (gethash namestring ht))))
 
 (defmethod release-system-release ((release fs-release) system-name &optional (error t))
   "Get the system object from the source and look up its singleton system
@@ -234,7 +217,7 @@ release."
 (defmethod release-installed-p ((release fs-release))
   (every (lambda (x)
            (probe-file (system-file-absolute-asd-pathname x)))
-         (hash-table-values (fs-source-system-files-by-namestring (release-source release)))))
+         (release-system-files release)))
 
 
 ;; * System files
@@ -243,6 +226,9 @@ release."
   ((source
     :initarg :source
     :reader system-file-source)
+   (project
+    :initarg :project
+    :reader fs-system-file-project)
    (release
     :initarg :release
     :reader system-file-release)
@@ -304,7 +290,8 @@ contains."
   (list (fs-system-system-release system)))
 
 (defmethod system-releases ((system fs-system))
-  (list (fs-project-release (fs-source-project (system-source system)))))
+  (list (system-file-release (gethash (asdf:primary-system-name (system-name system))
+                                      (fs-source-system-files-by-primary-name (system-source system))))))
 
 
 ;; * System release

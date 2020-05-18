@@ -165,7 +165,7 @@ a plist. This plist can contain :system-releases or :system-files."))
   ;; Make a release from the file system.
   (let* ((asd-pathname (requirement-name req))
          (fs-source (requirement-source req))
-         (release (source-project-release fs-source :all :newest)))
+         (release (source-project-release fs-source (namestring asd-pathname) :newest)))
     (list (list release
                 :system-files (list (cons (release-system-file release asd-pathname) t))))))
 
