@@ -7,6 +7,7 @@
     (:use #:cl
           #:clpm/cache
           #:clpm/config
+          #:clpm/session
           #:clpm/sources/config
           #:clpm/sources/defs
           #:clpm/sources/fs
@@ -21,15 +22,15 @@
 
 (in-package #:clpm/source)
 
-(defvar *sources*)
+(defmethod slot-unbound (class (session clpm-session) (slot-name (eql 'global-sources)))
+  (setf (global-sources session) (load-global-sources)))
+
+(defvar *visible-sources*)
 
 (defun sources ()
-  (unless (boundp '*sources*)
-    (setf *sources* (load-sources)))
-  *sources*)
-
-(defun clear-sources ()
-  (makunbound '*sources*))
+  (if (boundp '*visible-sources*)
+      *visible-sources*
+      (global-sources)))
 
 (defun get-source (source-designator &optional (errorp t))
   (cond
@@ -44,10 +45,8 @@
        source))))
 
 (defun call-with-sources (sources thunk)
-  (let ((*sources* sources))
+  (let ((*visible-sources* sources))
     (funcall thunk)))
 
 (defmacro with-sources ((sources) &body body)
   `(call-with-sources ,sources (lambda () ,@body)))
-
-(uiop:register-clear-configuration-hook 'clear-sources)

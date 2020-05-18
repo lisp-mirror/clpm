@@ -7,6 +7,7 @@
     (:use #:cl)
   (:export #:clpm-session
            #:config-sources
+           #:global-sources
            #:with-clpm-session))
 
 (in-package #:clpm/session)
@@ -20,7 +21,10 @@
     "A hash table used to cache results of function calls.")
    (config-sources
     :initarg :config-sources
-    :accessor clpm-session-config-sources)))
+    :accessor clpm-session-config-sources)
+   (global-sources
+    :initarg :sources
+    :accessor clpm-session-global-sources)))
 
 (defvar *session* nil
   "Bound to a CLPM-SESSION object when inside a CLPM session.")
@@ -30,6 +34,12 @@
 
 (defun (setf config-sources) (new-value &optional (session *session*))
   (setf (clpm-session-config-sources session) new-value))
+
+(defun global-sources (&optional (session *session*))
+  (clpm-session-global-sources session))
+
+(defun (setf global-sources) (new-value &optional (session *session*))
+  (setf (clpm-session-global-sources session) new-value))
 
 (defun call-with-clpm-session (thunk &key override key)
   "Starts a new CLPM session if one does not currently exist (unless OVERRIDE is

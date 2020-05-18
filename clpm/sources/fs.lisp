@@ -11,6 +11,7 @@
           #:clpm/groveler
           #:clpm/install/defs
           #:clpm/requirement
+          #:clpm/session
           #:clpm/sources/defs
           #:clpm/sources/dotted-versioned-project)
   (:export #:fs-source
@@ -63,12 +64,12 @@ FS-SOURCE-REGISTER-ASD."))
 
 (defmethod make-source ((type (eql 'fs-source)) &rest initargs
                         &key system-files name root-pathname)
-  (aprog1 (ensure-gethash (list type name root-pathname) *source-cache*
-                          (apply #'make-instance
-                                 type
-                                 initargs))
-    (dolist (system-file system-files)
-      (fs-source-register-asd it system-file))))
+  (with-clpm-session (:key `(make-source ,type ,name ,root-pathname))
+    (aprog1 (apply #'make-instance
+                   type
+                   initargs)
+      (dolist (system-file system-files)
+        (fs-source-register-asd it system-file)))))
 
 (defmethod initialize-instance :after ((source fs-source)
                                        &rest initargs

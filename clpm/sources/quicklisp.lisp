@@ -11,6 +11,7 @@
           #:clpm/cache
           #:clpm/data
           #:clpm/http-client
+          #:clpm/session
           #:clpm/sources/clpi
           #:clpm/sources/defs
           #:clpm/sources/ql-clpi
@@ -31,10 +32,10 @@
 
 (defmethod make-source ((type (eql 'ql-source)) &rest initargs &key url name &allow-other-keys)
   (let ((url-string (if (stringp url) url (uri-to-string url))))
-    (ensure-gethash (list type name url-string) *source-cache*
-                    (apply #'make-instance
-                           type
-                           initargs))))
+    (with-clpm-session (:key `(make-source ,type ,name ,url-string))
+      (apply #'make-instance
+             type
+             initargs))))
 
 (defmethod source-cache-directory ((source ql-source))
   "Compute the cache location for this source, based on its canonical url."

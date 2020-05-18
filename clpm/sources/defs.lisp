@@ -11,8 +11,7 @@
           #:clpm/data
           #:puri
           #:split-sequence)
-  (:export #:*source-cache*
-           #:clpm-project
+  (:export #:clpm-project
            #:clpm-release
            #:clpm-source
            #:clpm-system
@@ -121,17 +120,6 @@
     :accessor source-synced-p))
   (:documentation "Base class for any CLPM source. A source contains projects
 and systems."))
-
-(defvar *source-cache*)
-
-(defun init-source-cache ()
-  (unless (boundp '*source-cache*)
-    (setf *source-cache* (make-hash-table :test 'equal))))
-(uiop:register-image-restore-hook 'init-source-cache)
-
-(defun clear-source-cache ()
-  (makunbound '*source-cache*))
-(uiop:register-clear-configuration-hook 'clear-source-cache)
 
 (defgeneric make-source (type &key &allow-other-keys)
   (:documentation "Get a source of TYPE. This may return a new instance or an

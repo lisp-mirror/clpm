@@ -17,8 +17,8 @@
   (:import-from #:uiop
                 #:read-file-form
                 #:with-safe-io-syntax)
-  (:export #:load-source-from-form
-           #:load-sources))
+  (:export #:load-global-sources
+           #:load-source-from-form))
 
 (in-package #:clpm/sources/config)
 
@@ -48,7 +48,7 @@
            :installed-only-p installed-only-p
            (remove-from-plist args :type))))
 
-(defun load-sources ()
+(defun load-global-sources ()
   (let ((pn (clpm-config-pathname '("sources.conf"))))
     (when pn
       (uiop:with-safe-io-syntax ()

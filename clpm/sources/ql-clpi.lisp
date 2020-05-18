@@ -7,6 +7,7 @@
 (uiop:define-package #:clpm/sources/ql-clpi
     (:use #:cl
           #:alexandria
+          #:clpm/session
           #:clpm/sources/clpi
           #:clpm/sources/defs
           #:clpm/utils
@@ -34,10 +35,10 @@
                         &key url name
                         &allow-other-keys)
   (let ((url-string (if (stringp url) url (uri-to-string url))))
-    (ensure-gethash (list type name url-string) *source-cache*
-                    (apply #'make-instance
-                           type
-                           initargs))))
+    (with-clpm-session (:key `(make-source ,type ,name ,url-string))
+      (apply #'make-instance
+             type
+             initargs))))
 
 (defmethod source-type-keyword ((source ql-clpi-source))
   :ql-clpi)

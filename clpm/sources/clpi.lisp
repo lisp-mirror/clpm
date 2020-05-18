@@ -15,6 +15,7 @@
           #:clpm/install/defs
           #:clpm/repos
           #:clpm/requirement
+          #:clpm/session
           #:clpm/sources/defs
           #:clpm/sources/tarball-release
           #:clpm/sources/vcs
@@ -90,10 +91,10 @@
 (defmethod make-source ((type (eql 'clpi-dual-source)) &rest initargs
                         &key url name &allow-other-keys)
   (let ((url-string (if (stringp url) url (uri-to-string url))))
-    (ensure-gethash (list type name url-string) *source-cache*
-                    (apply #'make-instance
-                           type
-                           initargs))))
+    (with-clpm-session (:key `(make-source ,type ,name ,url-string))
+      (apply #'make-instance
+             type
+             initargs))))
 
 (defmethod initialize-instance :after ((source clpi-source) &rest initargs
                                        &key url installed-only-p)
