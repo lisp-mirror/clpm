@@ -7,12 +7,18 @@
     (:nicknames #:clpm)
   (:use #:cl
         #:clpm/bundle
+        #:clpm/config
         #:clpm/context
         #:clpm/context-diff
         #:clpm/install
         #:clpm/source
+        #:clpm/update
         #:clpm/version)
   (:export #:install)
+  ;; From config
+  (:export #:config-value)
+  ;; From update
+  (:export #:update)
   ;; From version
   (:export #:clpm-version))
 
