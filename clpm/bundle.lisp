@@ -60,7 +60,8 @@ bound to PN's folder."
   `(call-with-bundle-default-pathname-defaults (lambda () ,@body) ,clpmfile-pn))
 
 (defun create-empty-lockfile (clpmfile)
-  (copy-context clpmfile))
+  (aprog1 (copy-context clpmfile)
+    (setf (context-name it) (clpmfile-lockfile-pathname clpmfile))))
 
 (defun make-vcs-override-fun (clpmfile-pathname)
   (let ((clpmfile-directory (uiop:pathname-directory-pathname clpmfile-pathname)))
