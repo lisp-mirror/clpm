@@ -6,6 +6,7 @@
 (uiop:define-package #:clpm/context
     (:use #:cl
           #:alexandria
+          #:anaphora
           #:cl-ansi-text
           #:clpm/cache
           #:clpm/client
@@ -274,16 +275,15 @@ in place with the same name. Return the new requirement if it was modified."
                        sources))))
 
 (defun load-global-context (name &optional (error t))
-  ;; Currently, global contexts are tricky because they write their sources to
-  ;; file, but we want to use the sources defined in the user's config. For now,
-  ;; just pass an override into load-context-from-stream.
+  ;; Global contexts can have their sources downselected by the user config. We
+  ;; accomplish this by setting the sources for the context after it has loaded.
   (let ((pn (global-context-pathname name)))
     (with-open-file (s pn
                        :if-does-not-exist (if error :error nil))
       (if s
-          (let ((out (load-context-from-stream s :sources (context-downselect-sources name (sources)))))
-            (setf (context-name out) name)
-            out)
+          (aprog1 (load-context-from-stream s)
+            (setf (context-name it) name)
+            (setf (context-sources it) (context-downselect-sources name (sources))))
           (make-instance 'context
                          :name name
                          :sources (context-downselect-sources name (sources)))))))
@@ -360,15 +360,13 @@ in place with the same name. Return the new requirement if it was modified."
       (sync-source source))
     (setf (context-sources context) (append (context-sources context) (list source)))))
 
-(defun load-context-from-stream (stream &key (sources nil sources-provided-p)
-                                          installed-only-p)
+(defun load-context-from-stream (stream &key installed-only-p)
   (uiop:with-safe-io-syntax ()
     ;; The first form in the stream must be an API declaration.
     (let ((f (read stream nil)))
       (unless (equal f '(:api-version "0.3"))
         (error "Unknown context API version")))
     (let ((out (make-instance 'context
-                              :sources sources
                               :installed-only-p installed-only-p)))
       ;; The next forms are either tags or lists. The tags denote sections.
       (loop
@@ -379,9 +377,8 @@ in place with the same name. Return the new requirement if it was modified."
           :do (check-section-valid section form)
               (setf section form)
         :else
-          :do (unless (and (eql section :sources) sources-provided-p)
-                (with-sources ((context-sources out))
-                  (process-form out section form))))
+          :do (with-sources ((context-sources out))
+                (process-form out section form)))
       out)))
 
 
