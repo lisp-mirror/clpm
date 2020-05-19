@@ -40,11 +40,10 @@
 (defun call-with-bundle-local-config (thunk pn)
   "Call THUNK in a dynamic environment that has the local config for the
 clpmfile located at PN added to the config."
-  ;; We need to override the session since we're adding a new config source.
-  (with-clpm-session (:override t)
-    (config-add-file-source! (merge-pathnames ".clpm/bundle.conf"
-                                              (uiop:pathname-directory-pathname pn)))
-    (funcall thunk)))
+  (with-clpm-session ()
+    (with-config-source (:pathname (merge-pathnames ".clpm/bundle.conf"
+                                                    (uiop:pathname-directory-pathname pn)))
+      (funcall thunk))))
 
 (defmacro with-bundle-local-config ((&optional (clpmfile-pn '(bundle-clpmfile-pathname))) &body body)
   `(call-with-bundle-local-config (lambda () ,@body) ,clpmfile-pn))

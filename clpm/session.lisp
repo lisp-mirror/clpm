@@ -19,21 +19,12 @@
     :reader clpm-session-cache
     :documentation
     "A hash table used to cache results of function calls.")
-   (config-sources
-    :initarg :config-sources
-    :accessor clpm-session-config-sources)
    (global-sources
     :initarg :sources
     :accessor clpm-session-global-sources)))
 
 (defvar *session* nil
   "Bound to a CLPM-SESSION object when inside a CLPM session.")
-
-(defun config-sources (&optional (session *session*))
-  (clpm-session-config-sources session))
-
-(defun (setf config-sources) (new-value &optional (session *session*))
-  (setf (clpm-session-config-sources session) new-value))
 
 (defun global-sources (&optional (session *session*))
   (clpm-session-global-sources session))

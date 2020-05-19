@@ -53,13 +53,13 @@ please report a bug and provide the stack trace.~%")
   ;; Immediately start a CLPM session.
   (with-clpm-session ()
     ;; Augment the config with options from the CLI.
-    (config-add-cli-source! options)
-    ;; Set the log level.
-    (set-log-level)
-    ;; Give ourselves a reasonable default, since the spec doesn't *require*
-    ;; this...
-    (let ((*default-pathname-defaults* (uiop:pathname-directory-pathname (uiop:getcwd))))
-      (funcall thunk))))
+    (with-config-source (:options-ht options)
+      ;; Set the log level.
+      (set-log-level)
+      ;; Give ourselves a reasonable default, since the spec doesn't *require*
+      ;; this...
+      (let ((*default-pathname-defaults* (uiop:pathname-directory-pathname (uiop:getcwd))))
+        (funcall thunk)))))
 
 
 (defun main ()

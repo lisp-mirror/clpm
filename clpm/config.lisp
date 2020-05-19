@@ -19,24 +19,19 @@
           #:iterate)
   (:export #:*clpm-config-directories*
            #:clpm-config-pathname
-           #:config-add-cli-source!
-           #:config-add-file-source!
            #:config-table-keys
            #:config-value
-           #:print-config)
+           #:print-config
+           #:with-config-source)
   (:import-from #:cl-ppcre))
 
 (in-package #:clpm/config)
 
-(defparameter *default-config-sources* (list 'config-env-source
-                                             'config-file-source
-                                             'config-default-source))
+(defvar *config-sources* (list 'config-env-source
+                               'config-file-source
+                               'config-default-source))
 
 
-
-(defmethod slot-unbound (class (session clpm-session) (slot-name (eql 'config-sources)))
-  "Initialize the config sources of the session with *DEFAULT-CONFIG-SOURCES*."
-  (setf (config-sources session) (copy-list *default-config-sources*)))
 
 (defun get-config-source (config-source-specifier)
   (with-clpm-session (:key `(get-config-source ,config-source-specifier))
@@ -49,11 +44,6 @@
         (symbol
          (make-instance config-source-specifier))))))
 
-(defun config-add-cli-source! (ht)
-  (push (make-instance 'config-cli-source
-                       :arg-ht ht)
-        (config-sources)))
-
 (defun config-type-p (obj type)
   (or (and (typep obj 'config-source)
            (typep obj type))
@@ -61,39 +51,65 @@
            (subtypep (first obj) type))
       (subtypep obj type)))
 
-(defun config-add-file-source! (pn)
-  (when (uiop:probe-file* pn)
-    (setf (config-sources)
-          (append (remove-if-not (lambda (x)
-                                   (or
-                                    (config-type-p x 'config-env-source)
-                                    (config-type-p x 'config-cli-source)))
-                                 (config-sources))
-                  (list (make-instance 'config-file-source :pathname pn))
-                  (remove-if (lambda (x)
-                               (or
-                                (config-type-p x 'config-env-source)
-                                (config-type-p x 'config-cli-source)))
-                             (config-sources))))))
+(defun config-source-type (config-source)
+  (etypecase config-source
+    (config-source
+     (type-of config-source))
+    (symbol
+     config-source)
+    (list
+     (first config-source))))
+
+(defun add-config-source (config-sources config-source)
+  (ecase (config-source-type config-source)
+    (config-cli-source
+     ;; CLI sources go first.
+     (list* config-source config-sources))
+    (config-file-source
+     ;; File sources go after CLI and env sources.
+     (flet ((env-or-cli-source-p (x)
+              (or (config-type-p x 'config-env-source)
+                  (config-type-p x 'config-cli-source))))
+       (append (remove-if-not #'env-or-cli-source-p config-sources)
+               (list config-source)
+               (remove-if #'env-or-cli-source-p config-sources))))))
+
+(defun call-with-config-source (thunk &key config-source pathname options-ht)
+  "If CONFIG-SOURCE is already on *CONFIG-SOURCES*, just call THUNK, otherwise,
+rebind *CONFIG-SOURCES* with CONFIG-SOURCE placed in the appropriate position
+and then call THUNK."
+  (assert (xor config-source pathname options-ht))
+  (when pathname
+    (setf config-source (list 'config-file-source :pathname pathname)))
+  (when options-ht
+    (setf config-source (list 'config-cli-source :arg-ht options-ht)))
+  (if (member config-source *config-sources* :test #'equal)
+      (funcall thunk)
+      (let ((*config-sources* (add-config-source *config-sources* config-source)))
+        (funcall thunk))))
+
+(defmacro with-config-source ((&key config-source pathname options-ht) &body body)
+  `(call-with-config-source (lambda () ,@body) :config-source ,config-source
+                                               :pathname ,pathname
+                                               :options-ht ,options-ht))
 
 
 
-
 (defun config-table-keys (&rest path)
   "Return a list of keys in the table rooted at PATH. This currently does n"
-  (with-clpm-session (:key `(config-table-keys ,@path))
+  (with-clpm-session (:key `(config-table-keys ,*config-sources* ,@path))
     (let ((defined-children (get-children-of-config-path path)))
       (if (equal defined-children '(:*))
           (remove-duplicates (mapcan (compose (rcurry #'config-source-implicit-keys path)
                                               #'get-config-source)
-                                     (config-sources))
+                                     *config-sources*)
                              :test #'equal)
           defined-children))))
 
 (defun config-value (&rest path)
   "Get the configuration value located at path. First search environment
 variables, then the config file, then the default config."
-  (with-clpm-session (:key `(config-value ,@path))
+  (with-clpm-session (:key `(config-value ,*config-sources* ,@path))
     (let* ((config-info (get-config-entry path))
            (type (getf (cdr config-info) :type)))
       (assert config-info)
@@ -104,7 +120,7 @@ variables, then the config file, then the default config."
               (setf (gethash key out) (apply #'config-value (append path (list key)))))
             out)
           (loop
-            :for config-source-specifier :in (config-sources)
+            :for config-source-specifier :in *config-sources*
             :for config-source := (get-config-source config-source-specifier)
             :for (value exists-p) := (multiple-value-list (config-source-value config-source path))
             :until exists-p
