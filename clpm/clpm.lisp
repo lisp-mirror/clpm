@@ -20,7 +20,8 @@
         #:clpm/version)
   ;; From bundle
   (:export #:bundle-exec
-           #:bundle-init)
+           #:bundle-init
+           #:bundle-install)
   ;; From client
   (:export #:client-asd-pathname)
   ;; From config

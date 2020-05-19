@@ -5,18 +5,13 @@
 
 (uiop:define-package #:clpm-cli/commands/bundle/install
     (:use #:cl
-          #:alexandria
-          #:clpm/bundle
           #:clpm-cli/commands/bundle/common
           #:clpm-cli/common-args
-          #:clpm-cli/interface-defs
-          #:clpm/context
-          #:clpm/log)
-  (:import-from #:adopt))
+          #:clpm-cli/interface-defs)
+  (:import-from #:adopt)
+  (:import-from #:clpm))
 
 (in-package #:clpm-cli/commands/bundle/install)
-
-(setup-logger)
 
 (define-string *help-string*
   "Install a bundle described in a clpmfile.
@@ -42,17 +37,8 @@ exist in the lock file.")
                    *option-yes*
                    *option-no-resolve*)))
 
-(defun sexp-interaction-y-or-n-p ()
-  (uiop:with-safe-io-syntax ()
-    (prin1 :proceedp *standard-output*)
-    (terpri *standard-output*)
-    (finish-output *standard-output*)
-    (read *standard-input*)))
-
 (define-cli-command (("bundle" "install") *bundle-install-ui*) (args options)
   (declare (ignore args))
-  (let* ((clpmfile-pathname (bundle-clpmfile-pathname)))
-    (bundle-install clpmfile-pathname
-                    :validate (make-diff-validate-fun :yesp (gethash :yes options))
-                    :no-resolve (gethash :bundle-no-resolve options))
-    t))
+  (clpm:bundle-install :validate (make-diff-validate-fun :yesp (gethash :yes options))
+                       :no-resolve (gethash :bundle-no-resolve options))
+  t)

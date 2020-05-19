@@ -109,56 +109,38 @@ bound to PN's folder."
           (terpri s)))))
   (clpmfile-pathname clpmfile))
 
-(defun bundle-install (clpmfile-designator &key (validate (constantly t)) no-resolve)
+(defun bundle-install (&key clpmfile (validate (constantly t)) no-resolve)
   "Given a clpmfile instance, install all releases from its lock file, creating
 the lock file if necessary."
-  (let* ((*fetch-repo-automatically* (not (config-value :local)))
-         (clpmfile (get-clpmfile clpmfile-designator))
-         (lockfile-pathname (clpmfile-lockfile-pathname clpmfile))
-         (*vcs-project-override-fun* (make-vcs-override-fun (clpmfile-pathname clpmfile)))
-         (lockfile nil)
-         (changedp nil))
-    (unless (config-value :local)
-      (dolist (s (context-sources clpmfile))
-        (unless (source-can-lazy-sync-p s)
-          (sync-source s))))
-    (if (probe-file lockfile-pathname)
-        (setf lockfile (load-lockfile lockfile-pathname))
-        (setf lockfile (create-empty-lockfile clpmfile)))
-    (if no-resolve
-        (mapc #'install-release (context-releases lockfile))
-        (progn
-          ;; Nuke the lockfile's requirements so that we pick up deletions from the
-          ;; clpmfile.
-          (setf (context-requirements lockfile) nil)
-          (setf lockfile (install-requirements (context-requirements clpmfile)
-                                               :context lockfile
-                                               :validate (lambda (diff)
-                                                           (aprog1 (funcall validate diff)
-                                                             (setf changedp it)))
-                                               :update-projects (config-table-keys :bundle :local)))
-          (when changedp
-            (save-context lockfile))))
-    lockfile))
+  (with-bundle-session (clpmfile)
+    (let* ((*fetch-repo-automatically* (not (config-value :local)))
+           (clpmfile (get-clpmfile clpmfile))
+           (lockfile-pathname (clpmfile-lockfile-pathname clpmfile))
+           (lockfile nil)
+           (changedp nil))
+      (unless (config-value :local)
+        (dolist (s (context-sources clpmfile))
+          (unless (source-can-lazy-sync-p s)
+            (sync-source s))))
+      (if (probe-file lockfile-pathname)
+          (setf lockfile (load-lockfile lockfile-pathname))
+          (setf lockfile (create-empty-lockfile clpmfile)))
+      (if no-resolve
+          (mapc #'install-release (context-releases lockfile))
+          (progn
+            ;; Nuke the lockfile's requirements so that we pick up deletions from the
+            ;; clpmfile.
+            (setf (context-requirements lockfile) nil)
+            (setf lockfile (install-requirements (context-requirements clpmfile)
+                                                 :context lockfile
+                                                 :validate (lambda (diff)
+                                                             (aprog1 (funcall validate diff)
+                                                               (setf changedp it)))
+                                                 :update-projects (config-table-keys :bundle :local)))
+            (when changedp
+              (save-context lockfile))))
+      lockfile)))
 
-
-(defun bundle-output-translations (clpmfile-designator)
-  (let ((clpmfile-pathname (clpmfile-pathname (get-clpmfile clpmfile-designator))))
-    (case (config-value :bundle :output-translation)
-      ((t)
-       `(:output-translations
-         :ignore-inherited-configuration
-         (t (:root ,@(rest (pathname-directory (clpm-cache-pathname '("bundle" "fasl-cache")
-                                                                    :ensure-directory t)))
-                   ,(urlencode (format nil "~{~A~^/~}" (rest (pathname-directory clpmfile-pathname))))
-                   :implementation :**/ :*.*.*))))
-      (:local
-       `(:output-translations
-         :ignore-inherited-configuration
-         (t (,(uiop:pathname-directory-pathname clpmfile-pathname) ".clpm" "fasl-cache"
-             :implementation :**/ :*.*.*))))
-      (t
-       nil))))
 
 (defun bundle-source-registry (clpmfile-designator
                                &key include-client-p ignore-missing-releases)
@@ -195,7 +177,7 @@ the lock file if necessary."
     (unless (probe-file lockfile-pathname)
       ;; There is no lock file currently. Just fall back to BUNDLE-INSTALL.
       (return-from bundle-update
-        (bundle-install clpmfile :validate validate)))
+        (bundle-install :clpmfile clpmfile :validate validate)))
     ;; Load the existing lockfile
     (setf lockfile (load-lockfile lockfile-pathname))
     (unless (config-value :local)
