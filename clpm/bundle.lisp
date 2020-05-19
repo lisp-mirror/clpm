@@ -142,28 +142,26 @@ the lock file if necessary."
       lockfile)))
 
 
-(defun bundle-source-registry (clpmfile-designator
-                               &key include-client-p ignore-missing-releases)
-  (with-sources-using-installed-only ()
-    (let* ((*fetch-repo-automatically* nil)
-           (clpmfile (get-clpmfile clpmfile-designator))
-           (lockfile-pathname (clpmfile-lockfile-pathname clpmfile))
-           (*vcs-project-override-fun* (make-vcs-override-fun (clpmfile-pathname clpmfile)))
-           lockfile)
-      (unless (probe-file lockfile-pathname)
-        (error "Lockfile ~A does not exist" lockfile-pathname))
-      (setf lockfile (load-lockfile lockfile-pathname))
-      (unless ignore-missing-releases
-        (let* ((releases (context-releases lockfile))
-               (missing-releases (remove-if #'release-installed-p releases)))
-          (when missing-releases
-            (error "The following releases are not installed: ~{~S~^, ~}"
-                   (mapcar (compose #'project-name #'release-project) missing-releases)))))
-      (context-to-asdf-source-registry-form
-       lockfile
-       :extra-forms
-       (when include-client-p
-         `((:directory ,(uiop:pathname-directory-pathname (client-asd-pathname)))))))))
+(defun bundle-source-registry (&key clpmfile with-client-p ignore-missing-releases)
+  (with-bundle-session (clpmfile)
+    (with-sources-using-installed-only ()
+      (let* ((*fetch-repo-automatically* nil)
+             (lockfile-pathname (clpmfile-lockfile-pathname clpmfile))
+             (*vcs-project-override-fun* (make-vcs-override-fun (clpmfile-pathname clpmfile)))
+             lockfile)
+        (unless (probe-file lockfile-pathname)
+          (error "Lockfile ~A does not exist" lockfile-pathname))
+        (setf lockfile (load-lockfile lockfile-pathname))
+        (unless ignore-missing-releases
+          (let* ((releases (context-releases lockfile))
+                 (missing-releases (remove-if #'release-installed-p releases)))
+            (when missing-releases
+              (error "The following releases are not installed: ~{~S~^, ~}"
+                     (mapcar (compose #'project-name #'release-project) missing-releases)))))
+        (context-to-asdf-source-registry-form
+         lockfile
+         :with-client with-client-p
+         :ignore-inherited t)))))
 
 (defun bundle-update (clpmfile-designator &key
                                             update-projects (validate (constantly t))
@@ -219,7 +217,8 @@ If WITH-CLIENT-P is non-NIL, the clpm-client system is available."
              (lockfile-pathname (clpmfile-lockfile-pathname clpmfile))
              (lockfile (load-lockfile lockfile-pathname))
              (cl-source-registry-form (context-to-asdf-source-registry-form lockfile
-                                                                            :with-client with-client-p))
+                                                                            :with-client with-client-p
+                                                                            :ignore-inherited t))
              (output-translations (context-output-translations lockfile))
              (installed-system-names (sort (mapcar #'system-name (context-installed-systems lockfile)) #'string<))
              (visible-primary-system-names (sort (context-visible-primary-system-names lockfile) #'string<)))

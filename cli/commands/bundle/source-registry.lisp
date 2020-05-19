@@ -5,17 +5,13 @@
 
 (uiop:define-package #:clpm-cli/commands/bundle/source-registry
     (:use #:cl
-          #:clpm/bundle
           #:clpm-cli/commands/bundle/common
           #:clpm-cli/common-args
-          #:clpm-cli/interface-defs
-          #:clpm/clpmfile
-          #:clpm/log)
-  (:import-from #:adopt))
+          #:clpm-cli/interface-defs)
+  (:import-from #:adopt)
+  (:import-from #:clpm))
 
 (in-package #:clpm-cli/commands/bundle/source-registry)
-
-(setup-logger)
 
 (defparameter *option-with-client*
   (adopt:make-option
@@ -36,8 +32,9 @@
 
 (define-cli-command (("bundle" "source-registry") *bundle-source-registry-ui*) (args options)
   (declare (ignore args))
-  (let* ((clpmfile-pathname (bundle-clpmfile-pathname))
-         (include-client-p (gethash :bundle-exec-with-client options))
-         (cl-source-registry-form (bundle-source-registry clpmfile-pathname :include-client-p include-client-p)))
-    (format t "~S~%" cl-source-registry-form)
-    t))
+  (with-standard-io-syntax
+    (let ((*print-case* :downcase)
+          (source-registry-form
+            (clpm:bundle-source-registry :with-client-p (gethash :bundle-exec-with-client options))))
+      (format t "~S~%" source-registry-form)))
+  t)
