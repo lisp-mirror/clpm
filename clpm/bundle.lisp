@@ -20,16 +20,13 @@
           #:clpm/session
           #:clpm/source
           #:do-urlencode)
-  (:export #:bundle-clpmfile-pathname
-           #:bundle-context
-           #:bundle-exec
+  (:export #:bundle-exec
            #:bundle-init
            #:bundle-install
            #:bundle-output-translations
            #:bundle-source-registry
            #:bundle-update
-           #:with-bundle-default-pathname-defaults
-           #:with-bundle-local-config))
+           #:with-bundle-session))
 
 (in-package #:clpm/bundle)
 
@@ -47,31 +44,6 @@
 (defmacro with-bundle-session ((clpmfile) &body body)
   `(call-with-bundle-session (lambda () ,@body) :clpmfile ,clpmfile))
 
-(defun bundle-clpmfile-pathname ()
-  (merge-pathnames (config-value :bundle :clpmfile)
-                   (uiop:getcwd)))
-
-(defun call-with-bundle-local-config (thunk pn)
-  "Call THUNK in a dynamic environment that has the local config for the
-clpmfile located at PN added to the config."
-  (with-clpm-session ()
-    (with-config-source (:pathname (merge-pathnames ".clpm/bundle.conf"
-                                                    (uiop:pathname-directory-pathname pn)))
-      (funcall thunk))))
-
-(defmacro with-bundle-local-config ((&optional (clpmfile-pn '(bundle-clpmfile-pathname))) &body body)
-  `(call-with-bundle-local-config (lambda () ,@body) ,clpmfile-pn))
-
-(defun call-with-bundle-default-pathname-defaults (thunk pn)
-  "Call THUNK in a dynamic environment that has *DEFAULT-PATHNAME-DEFAULTS*
-bound to PN's folder."
-  (let ((*default-pathname-defaults* (uiop:pathname-directory-pathname pn)))
-    (funcall thunk)))
-
-(defmacro with-bundle-default-pathname-defaults ((&optional (clpmfile-pn '(bundle-clpmfile-pathname)))
-                                                 &body body)
-  `(call-with-bundle-default-pathname-defaults (lambda () ,@body) ,clpmfile-pn))
-
 (defun create-empty-lockfile (clpmfile)
   (aprog1 (copy-context clpmfile)
     (setf (context-name it) (clpmfile-lockfile-pathname clpmfile))))
@@ -85,11 +57,6 @@ bound to PN's folder."
 
 (defun load-lockfile (pathname)
   (load-anonymous-context-from-pathname pathname))
-
-(defun bundle-context (clpmfile-designator)
-  (let* ((clpmfile (get-clpmfile clpmfile-designator))
-         (lockfile-pathname (clpmfile-lockfile-pathname clpmfile)))
-    (load-lockfile lockfile-pathname)))
 
 (defun bundle-init (&key clpmfile (if-exists :error) asds)
   (with-standard-io-syntax
@@ -230,6 +197,6 @@ If WITH-CLIENT-P is non-NIL, the clpm-client system is available."
                          `(("ASDF_OUTPUT_TRANSLATIONS" . ,(format nil "~S" output-translations))))
                      ("CLPM_EXEC_INSTALLED_SYSTEMS" . ,(format nil "~S" installed-system-names))
                      ("CLPM_EXEC_VISIBLE_PRIMARY_SYSTEMS" . ,(format nil "~S" visible-primary-system-names))
-                     ("CLPM_BUNDLE_CLPMFILE" . ,(uiop:native-namestring clpmfile-pathname))
-                     ("CLPM_BUNLDE_CLPMFILE_LOCK" . ,(uiop:native-namestring lockfile-pathname)))
+                     ("CLPM_EXEC_BUNDLE_CLPMFILE" . ,(uiop:native-namestring clpmfile-pathname))
+                     ("CLPM_EXEC_IGNORE_INHERITED_SOURCE_REGISTRY" . "t"))
                    t))))))

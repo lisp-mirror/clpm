@@ -50,8 +50,4 @@
    :contents (list *group-common*
                    *group-bundle*)))
 
-(define-cli-command-folder (("bundle") *default-ui*) (thunk ui args options)
-  (declare (ignore ui args options))
-  (with-bundle-default-pathname-defaults ()
-    (with-bundle-local-config ()
-      (funcall thunk))))
+(define-cli-command-folder (("bundle") *default-ui*))

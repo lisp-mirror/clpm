@@ -53,6 +53,9 @@
 (defmethod get-clpmfile ((clpmfile-designator string))
   (get-clpmfile (pathname clpmfile-designator)))
 
+(defmethod get-clpmfile ((clpmfile-designator (eql nil)))
+  (get-clpmfile (clpmfile-pathname nil)))
+
 
 ;; * Deserializing
 
