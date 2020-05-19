@@ -10,6 +10,7 @@
         #:clpm/config
         #:clpm/context
         #:clpm/context-diff
+        #:clpm/exec
         #:clpm/install
         #:clpm/source
         #:clpm/sync
@@ -17,12 +18,10 @@
         #:clpm/version)
   ;; From config
   (:export #:config-value)
+  ;; From exec
+  (:export #:exec)
   ;; From install
   (:export #:install)
-  ;; From source
-  (:export #:source-name
-           #:sources
-           #:sync-source)
   ;; From sync
   (:export #:sync)
   ;; From update

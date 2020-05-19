@@ -6,18 +6,11 @@
 (uiop:define-package #:clpm-cli/commands/exec
     (:use #:cl
           #:clpm-cli/common-args
-          #:clpm-cli/interface-defs
-          #:clpm/client
-          #:clpm/config
-          #:clpm/context
-          #:clpm/execvpe
-          #:clpm/log
-          #:clpm/source)
-  (:import-from #:adopt))
+          #:clpm-cli/interface-defs)
+  (:import-from #:adopt)
+  (:import-from #:clpm))
 
 (in-package #:clpm-cli/commands/exec)
-
-(setup-logger)
 
 (defparameter *option-with-client*
   (adopt:make-option
@@ -37,29 +30,4 @@
                    *option-with-client*)))
 
 (define-cli-command (("exec") *exec-ui*) (args options)
-  (let* ((context-name (config-value :context))
-         (context (get-context context-name))
-         (with-client (gethash :exec-with-client options))
-         (ignore-inherited (config-value :contexts context-name :ignore-inherited-source-registry))
-         (splice-inherited (uiop:getenvp "CL_SOURCE_REGISTRY"))
-         (source-registry (context-to-asdf-source-registry-form
-                           context
-                           :with-client with-client
-                           :ignore-inherited ignore-inherited
-                           :splice-inherited splice-inherited))
-         (output-translations (context-output-translations context))
-         (installed-system-names (sort (mapcar #'system-name (context-installed-systems context)) #'string<))
-         (visible-primary-system-names (sort (context-visible-primary-system-names context) #'string<)))
-    (with-standard-io-syntax
-      (execvpe (first args) (rest args)
-               `(("CL_SOURCE_REGISTRY" . ,(prin1-to-string source-registry))
-                 ,@(when output-translations
-                     `(("ASDF_OUTPUT_TRANSLATIONS" . ,(prin1-to-string output-translations))))
-                 ("CLPM_EXEC_CONTEXT" . ,context-name)
-                 ("CLPM_EXEC_INSTALLED_SYSTEMS" . ,(format nil "~{~A~^ ~}" installed-system-names))
-                 ("CLPM_EXEC_VISIBLE_PRIMARY_SYSTEMS" . ,(format nil "~{~A~^ ~}" visible-primary-system-names))
-                 ,@(when ignore-inherited
-                     '(("CLPM_EXEC_IGNORE_INHERITED_SOURCE_REGISTRY" . "t")))
-                 ,@(when (and (not ignore-inherited) splice-inherited)
-                     `(("CLPM_EXEC_SPLICE_INHERITED_SOURCE_REGISTRY" . ,splice-inherited))))
-               t))))
+  (clpm:exec (first args) (rest args) :with-client-p (gethash :exec-with-client options)))
