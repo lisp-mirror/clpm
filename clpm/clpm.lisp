@@ -13,6 +13,7 @@
         #:clpm/context-queries
         #:clpm/exec
         #:clpm/install
+        #:clpm/session
         #:clpm/source
         #:clpm/sync
         #:clpm/update
@@ -30,6 +31,8 @@
   (:export #:exec)
   ;; From install
   (:export #:install)
+  ;; From session
+  (:export #:with-clpm-session)
   ;; From sync
   (:export #:sync)
   ;; From update
