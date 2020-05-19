@@ -15,9 +15,10 @@
         #:clpm/sync
         #:clpm/update
         #:clpm/version)
-  (:export #:install)
   ;; From config
   (:export #:config-value)
+  ;; From install
+  (:export #:install)
   ;; From source
   (:export #:source-name
            #:sources

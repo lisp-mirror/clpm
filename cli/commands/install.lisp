@@ -6,16 +6,11 @@
 (uiop:define-package #:clpm-cli/commands/install
     (:use #:cl
           #:clpm-cli/common-args
-          #:clpm-cli/interface-defs
-          #:clpm/config
-          #:clpm/context
-          #:clpm/install
-          #:clpm/log)
-  (:import-from #:adopt))
+          #:clpm-cli/interface-defs)
+  (:import-from #:adopt)
+  (:import-from #:clpm))
 
 (in-package #:clpm-cli/commands/install)
-
-(setup-logger)
 
 (adopt:define-string *help-text*
   "Install systems or projects into a context.")
@@ -124,17 +119,15 @@ with version constraint).
          (asd-files (gethash :install-asds options))
          (source-name (gethash :install-source options))
          (no-deps-p (gethash :install-no-deps options))
-         (context-name (config-value :context))
          (yes-p (gethash :yes options))
          (ref (gethash :install-ref options)))
-    (install :projects project-specifiers
-             :systems system-specifiers
-             :asds (mapcar #'merge-pathnames asd-files)
-             :version version-string
-             :source source-name
-             :context context-name
-             :no-deps-p no-deps-p
-             :ref ref
-             :validate (make-diff-validate-fun :yesp yes-p)
-             :save-context-p t)
+    (clpm:install :projects project-specifiers
+                  :systems system-specifiers
+                  :asds (mapcar #'merge-pathnames asd-files)
+                  :version version-string
+                  :source source-name
+                  :no-deps-p no-deps-p
+                  :ref ref
+                  :validate (make-diff-validate-fun :yesp yes-p)
+                  :save-context-p t)
     t))

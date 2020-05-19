@@ -99,7 +99,8 @@ will be installed.
 VALIDATE must be a function of one argument (a diff) and returns non-NIL if the
 install should proceed."
   (with-clpm-session ()
-    (let ((reqs (append (mapcar (rcurry #'make-requirement
+    (let ((context (get-context context))
+          (reqs (append (mapcar (rcurry #'make-requirement
                                         :project
                                         :version version :source source :ref ref :no-deps-p no-deps-p)
                                 projects)
