@@ -15,6 +15,7 @@
           #:clpm-cli/commands/hack
           #:clpm-cli/commands/install
           #:clpm-cli/commands/license-info
+          #:clpm-cli/commands/output-translations
           #:clpm-cli/commands/sync
           #:clpm-cli/commands/update
           #:clpm-cli/commands/version))

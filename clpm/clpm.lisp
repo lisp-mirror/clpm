@@ -22,7 +22,8 @@
   ;; From config
   (:export #:config-value)
   ;; From context-queries
-  (:export #:find-system-asd-pathname)
+  (:export #:find-system-asd-pathname
+           #:output-translations)
   ;; From exec
   (:export #:exec)
   ;; From install

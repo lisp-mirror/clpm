@@ -7,10 +7,15 @@
     (:use #:cl
           #:clpm/context
           #:clpm/session)
-  (:export #:find-system-asd-pathname))
+  (:export #:find-system-asd-pathname
+           #:output-translations))
 
 (in-package #:clpm/context-queries)
 
 (defun find-system-asd-pathname (system-name &key context)
   (with-clpm-session ()
     (context-find-system-asd-pathname (get-context context) system-name)))
+
+(defun output-translations (&key context)
+  (with-clpm-session ()
+    (context-output-translations (get-context context))))
