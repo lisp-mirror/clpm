@@ -5,6 +5,7 @@
 
 (uiop:define-package #:clpm-cli/commands
     (:use #:cl
+          #:clpm-cli/commands/asd-pathnames
           #:clpm-cli/commands/bundle
           #:clpm-cli/commands/client
           #:clpm-cli/commands/clpi
