@@ -19,7 +19,8 @@
         #:clpm/update
         #:clpm/version)
   ;; From bundle
-  (:export #:bundle-exec)
+  (:export #:bundle-exec
+           #:bundle-init)
   ;; From client
   (:export #:client-asd-pathname)
   ;; From config

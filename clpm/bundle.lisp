@@ -91,10 +91,10 @@ bound to PN's folder."
          (lockfile-pathname (clpmfile-lockfile-pathname clpmfile)))
     (load-lockfile lockfile-pathname)))
 
-(defun bundle-init (clpmfile-pathname &key (if-exists :error) asds)
+(defun bundle-init (&key clpmfile (if-exists :error) asds)
   (with-standard-io-syntax
     (let ((*print-case* :downcase))
-      (with-open-file (s clpmfile-pathname :direction :output :if-exists if-exists)
+      (with-open-file (s (clpmfile-pathname clpmfile) :direction :output :if-exists if-exists)
         (write-string ";;; -*- Mode: common-lisp; -*-" s)
         (terpri s)
         (prin1 '(:api-version "0.3") s)
@@ -107,7 +107,7 @@ bound to PN's folder."
         (dolist (asd asds)
           (prin1 `(:asd ,asd) s)
           (terpri s)))))
-  clpmfile-pathname)
+  (clpmfile-pathname clpmfile))
 
 (defun bundle-install (clpmfile-designator &key (validate (constantly t)) no-resolve)
   "Given a clpmfile instance, install all releases from its lock file, creating

@@ -5,16 +5,13 @@
 
 (uiop:define-package #:clpm-cli/commands/bundle/init
     (:use #:cl
-          #:clpm/bundle
           #:clpm-cli/commands/bundle/common
           #:clpm-cli/common-args
-          #:clpm-cli/interface-defs
-          #:clpm/log)
-  (:import-from #:adopt))
+          #:clpm-cli/interface-defs)
+  (:import-from #:adopt)
+  (:import-from #:clpm))
 
 (in-package #:clpm-cli/commands/bundle/init)
-
-(setup-logger)
 
 (defparameter *option-bundle-init-asd*
   (adopt:make-option
@@ -37,7 +34,6 @@
 
 (define-cli-command (("bundle" "init") *bundle-init-ui*) (args options)
   (declare (ignore args))
-  (let* ((clpmfile-pathname (bundle-clpmfile-pathname))
-         (asds (gethash :bundle-init-asds options)))
-    (bundle-init clpmfile-pathname :asds asds)
+  (let ((asds (gethash :bundle-init-asds options)))
+    (clpm:bundle-init :asds asds)
     t))
