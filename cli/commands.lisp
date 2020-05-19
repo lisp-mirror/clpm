@@ -11,6 +11,7 @@
           #:clpm-cli/commands/config
           #:clpm-cli/commands/context
           #:clpm-cli/commands/exec
+          #:clpm-cli/commands/find
           #:clpm-cli/commands/hack
           #:clpm-cli/commands/install
           #:clpm-cli/commands/license-info

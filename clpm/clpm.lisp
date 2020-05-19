@@ -9,8 +9,8 @@
         #:clpm/bundle
         #:clpm/client
         #:clpm/config
-        #:clpm/context
         #:clpm/context-diff
+        #:clpm/context-queries
         #:clpm/exec
         #:clpm/install
         #:clpm/source
@@ -21,6 +21,8 @@
   (:export #:client-asd-pathname)
   ;; From config
   (:export #:config-value)
+  ;; From context-queries
+  (:export #:find-system-asd-pathname)
   ;; From exec
   (:export #:exec)
   ;; From install
