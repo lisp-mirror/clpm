@@ -9,7 +9,8 @@
           #:clpm/session)
   (:export #:asd-pathnames
            #:find-system-asd-pathname
-           #:output-translations))
+           #:output-translations
+           #:source-registry))
 
 (in-package #:clpm/context-queries)
 
@@ -24,3 +25,13 @@
 (defun output-translations (&key context)
   (with-clpm-session ()
     (context-output-translations (get-context context))))
+
+(defun source-registry (&key context with-client-p
+                          ignore-inherited-source-registry
+                          splice-inherited)
+  (with-clpm-session ()
+    (context-to-asdf-source-registry-form
+     (get-context context)
+     :with-client with-client-p
+     :ignore-inherited ignore-inherited-source-registry
+     :splice-inherited splice-inherited)))
