@@ -10,7 +10,6 @@
           #:clpm-cli/commands/client
           #:clpm-cli/commands/clpi
           #:clpm-cli/commands/config
-          #:clpm-cli/commands/context
           #:clpm-cli/commands/exec
           #:clpm-cli/commands/find
           #:clpm-cli/commands/hack
