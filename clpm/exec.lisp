@@ -45,8 +45,8 @@ If WITH-CLIENT-P is non-NIL, the clpm-client system is available."
                    ,@(when output-translations
                        `(("ASDF_OUTPUT_TRANSLATIONS" . ,(format nil "~S" output-translations))))
                    ("CLPM_EXEC_CONTEXT" . ,context-name)
-                   ("CLPM_EXEC_INSTALLED_SYSTEMS" . ,(format nil "~{~A~^ ~}" installed-system-names))
-                   ("CLPM_EXEC_VISIBLE_PRIMARY_SYSTEMS" . ,(format nil "~{~A~^ ~}" visible-primary-system-names))
+                   ("CLPM_EXEC_INSTALLED_SYSTEMS" . ,(format nil "~S" installed-system-names))
+                   ("CLPM_EXEC_VISIBLE_PRIMARY_SYSTEMS" . ,(format nil "~S" visible-primary-system-names))
                    ,@(when ignore-inherited-source-registry
                      '(("CLPM_EXEC_IGNORE_INHERITED_SOURCE_REGISTRY" . "t")))
                    ,@(when (and (not ignore-inherited-source-registry) splice-inherited)
