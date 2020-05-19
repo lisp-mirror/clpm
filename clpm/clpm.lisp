@@ -18,6 +18,8 @@
         #:clpm/sync
         #:clpm/update
         #:clpm/version)
+  ;; From bundle
+  (:export #:bundle-exec)
   ;; From client
   (:export #:client-asd-pathname)
   ;; From config

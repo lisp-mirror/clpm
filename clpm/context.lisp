@@ -14,7 +14,8 @@
           #:clpm/data
           #:clpm/log
           #:clpm/requirement
-          #:clpm/source)
+          #:clpm/source
+          #:do-urlencode)
   (:export #:context
            #:context-add-requirement!
            #:context-anonymous-p
@@ -270,16 +271,32 @@ in place with the same name. Return the new requirement if it was modified."
                 (terpri s)))))))))
 
 (defun context-output-translations (context)
-  (assert (not (context-anonymous-p context)))
-  (let* ((context (get-context context))
-         (name (context-name context))
-         (config-value (config-value :contexts name :output-translation)))
-    (when config-value
-      `(:output-translations
-        :ignore-inherited-configuration
-        (t (:root ,@(rest (pathname-directory (clpm-cache-pathname `("contexts" ,name "fasl-cache")
-                                                                   :ensure-directory t)))
-            :implementation :**/ :*.*.*))))))
+  (if (context-anonymous-p context)
+      (let ((pathname (context-name context)))
+        (case (config-value :bundle :output-translation)
+          ((t)
+           `(:output-translations
+             :ignore-inherited-configuration
+             (t (:root ,@(rest (pathname-directory (clpm-cache-pathname '("bundle" "fasl-cache")
+                                                                        :ensure-directory t)))
+                       ,(urlencode (format nil "~{~A~^/~}" (rest (pathname-directory pathname))))
+                       :implementation :** :*.*.*))))
+          (:local
+           `(:output-translations
+             :ignore-inherited-configuration
+             (t (,(uiop:pathname-directory-pathname pathname) ".clpm" "fasl-cache"
+                 :implementation :**/ :*.*.*))))
+          (t
+           nil)))
+      (let* ((context (get-context context))
+             (name (context-name context))
+             (config-value (config-value :contexts name :output-translation)))
+        (when config-value
+          `(:output-translations
+            :ignore-inherited-configuration
+            (t (:root ,@(rest (pathname-directory (clpm-cache-pathname `("contexts" ,name "fasl-cache")
+                                                                       :ensure-directory t)))
+                :implementation :**/ :*.*.*)))))))
 
 
 ;; * Deserializing

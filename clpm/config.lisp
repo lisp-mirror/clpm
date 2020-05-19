@@ -80,7 +80,7 @@ rebind *CONFIG-SOURCES* with CONFIG-SOURCE placed in the appropriate position
 and then call THUNK."
   (assert (xor config-source pathname options-ht))
   (when pathname
-    (setf config-source (list 'config-file-source :pathname pathname)))
+    (setf config-source (list 'config-file-source :pathname (pathname pathname))))
   (when options-ht
     (setf config-source (list 'config-cli-source :arg-ht options-ht)))
   (if (member config-source *config-sources* :test #'equal)

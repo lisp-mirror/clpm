@@ -12,6 +12,7 @@
           #:clpm/clpmfile
           #:clpm/config
           #:clpm/context
+          #:clpm/execvpe
           #:clpm/install
           #:clpm/log
           #:clpm/repos
@@ -21,6 +22,7 @@
           #:do-urlencode)
   (:export #:bundle-clpmfile-pathname
            #:bundle-context
+           #:bundle-exec
            #:bundle-init
            #:bundle-install
            #:bundle-output-translations
@@ -32,6 +34,18 @@
 (in-package #:clpm/bundle)
 
 (setup-logger)
+
+(defun call-with-bundle-session (thunk &key clpmfile)
+  (with-clpm-session ()
+    (with-config-source (:pathname (merge-pathnames ".clpm/bundle.conf"
+                                                    (uiop:pathname-directory-pathname
+                                                     (clpmfile-pathname clpmfile))))
+      (let ((*default-pathname-defaults* (uiop:pathname-directory-pathname (clpmfile-pathname clpmfile)))
+            (*vcs-project-override-fun* (make-vcs-override-fun (clpmfile-pathname clpmfile))))
+        (funcall thunk)))))
+
+(defmacro with-bundle-session ((clpmfile) &body body)
+  `(call-with-bundle-session (lambda () ,@body) :clpmfile ,clpmfile))
 
 (defun bundle-clpmfile-pathname ()
   (merge-pathnames (config-value :bundle :clpmfile)
@@ -204,3 +218,36 @@ the lock file if necessary."
                                          :update-projects (or update-projects t)))
     (when changedp
       (save-context lockfile))))
+
+(defun bundle-exec (command args &key clpmfile
+                                   with-client-p)
+  "exec(3) (or approximate if system doesn't have exec) a COMMAND in bundle's context
+
+COMMAND must be a string naming the command to run.
+
+ARGS must be a list of strings containing the arguments to pass to the command.
+
+If WITH-CLIENT-P is non-NIL, the clpm-client system is available."
+  (unless (stringp command)
+    (error "COMMAND must be a string."))
+  (with-bundle-session (clpmfile)
+    (with-sources-using-installed-only ()
+      (let* ((*fetch-repo-automatically* nil)
+             (clpmfile-pathname (clpmfile-pathname clpmfile))
+             (lockfile-pathname (clpmfile-lockfile-pathname clpmfile))
+             (lockfile (load-lockfile lockfile-pathname))
+             (cl-source-registry-form (context-to-asdf-source-registry-form lockfile
+                                                                            :with-client with-client-p))
+             (output-translations (context-output-translations lockfile))
+             (installed-system-names (sort (mapcar #'system-name (context-installed-systems lockfile)) #'string<))
+             (visible-primary-system-names (sort (context-visible-primary-system-names lockfile) #'string<)))
+        (with-standard-io-syntax
+          (execvpe command args
+                   `(("CL_SOURCE_REGISTRY" . ,(format nil "~S" cl-source-registry-form))
+                     ,@(when output-translations
+                         `(("ASDF_OUTPUT_TRANSLATIONS" . ,(format nil "~S" output-translations))))
+                     ("CLPM_EXEC_INSTALLED_SYSTEMS" . ,(format nil "~S" installed-system-names))
+                     ("CLPM_EXEC_VISIBLE_PRIMARY_SYSTEMS" . ,(format nil "~S" visible-primary-system-names))
+                     ("CLPM_BUNDLE_CLPMFILE" . ,(uiop:native-namestring clpmfile-pathname))
+                     ("CLPM_BUNLDE_CLPMFILE_LOCK" . ,(uiop:native-namestring lockfile-pathname)))
+                   t))))))

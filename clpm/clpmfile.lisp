@@ -21,11 +21,22 @@
 (in-package #:clpm/clpmfile)
 
 
-;; * Class Definitions
 
-(defun clpmfile-pathname (clpmfile)
+(defgeneric clpmfile-pathname (clpmfile))
+
+(defmethod clpmfile-pathname ((clpmfile context))
   (assert (context-anonymous-p clpmfile))
   (context-name clpmfile))
+
+(defmethod clpmfile-pathname ((clpmfile pathname))
+  clpmfile)
+
+(defmethod clpmfile-pathname ((clpmfile string))
+  clpmfile)
+
+(defmethod clpmfile-pathname ((clpmfile (eql nil)))
+  (merge-pathnames (config-value :bundle :clpmfile)
+                   (uiop:getcwd)))
 
 (defun clpmfile-lockfile-pathname (clpmfile)
   (merge-pathnames (make-pathname :type "lock")
