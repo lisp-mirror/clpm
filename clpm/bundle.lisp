@@ -197,6 +197,6 @@ If WITH-CLIENT-P is non-NIL, the clpm-client system is available."
                          `(("ASDF_OUTPUT_TRANSLATIONS" . ,(format nil "~S" output-translations))))
                      ("CLPM_EXEC_INSTALLED_SYSTEMS" . ,(format nil "~S" installed-system-names))
                      ("CLPM_EXEC_VISIBLE_PRIMARY_SYSTEMS" . ,(format nil "~S" visible-primary-system-names))
-                     ("CLPM_EXEC_BUNDLE_CLPMFILE" . ,(uiop:native-namestring clpmfile-pathname))
+                     ("CLPM_EXEC_CLPMFILE" . ,(uiop:native-namestring clpmfile-pathname))
                      ("CLPM_EXEC_IGNORE_INHERITED_SOURCE_REGISTRY" . "t"))
                    t))))))
