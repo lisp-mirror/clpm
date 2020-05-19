@@ -7,6 +7,7 @@
     (:use #:cl
           #:alexandria
           #:clpm/config
+          #:clpm/repos/defs
           #:clpm/sources/clpi
           #:clpm/sources/defs
           #:clpm/sources/fs
@@ -39,7 +40,8 @@
 (defvar *sources-use-installed-only-p* nil)
 
 (defun call-with-sources-using-installed-only (thunk)
-  (let ((*sources-use-installed-only-p* t))
+  (let ((*sources-use-installed-only-p* t)
+        (*fetch-repo-automatically* nil))
     (funcall thunk)))
 
 (defmacro with-sources-using-installed-only (() &body body)

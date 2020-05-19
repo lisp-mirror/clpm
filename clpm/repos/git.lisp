@@ -8,6 +8,7 @@
           #:alexandria
           #:clpm/archives
           #:clpm/cache
+          #:clpm/config
           #:clpm/http-client
           #:clpm/log
           #:clpm/repos/defs
@@ -226,13 +227,14 @@ ref is present locally, fetching or cloning the repo as necessary."
          (when (and (or (eql ref-type :branch)
                         (starts-with-subseq "refs/heads/" ref-name)
                         (not (ref-present-p repo ref)))
+                    (not (config-value :local))
                     *fetch-repo-automatically*)
            (with-retries (:max 10 :sleep 5)
              (fetch-repo! repo))
            ;; Make sure the ref is actually present, raising an error otherwise.
            (unless (ref-present-p repo ref)
              (error "ref ~S is not present" ref))))
-        (*fetch-repo-automatically*
+        ((and (not (config-value :local)) *fetch-repo-automatically*)
          ;; Repo is not present at all, need to clone it.
          (with-retries (:max 10 :sleep 5)
            (clone-repo! repo)
