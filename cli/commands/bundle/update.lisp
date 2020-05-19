@@ -5,17 +5,13 @@
 
 (uiop:define-package #:clpm-cli/commands/bundle/update
     (:use #:cl
-          #:clpm/bundle
           #:clpm-cli/commands/bundle/common
           #:clpm-cli/common-args
-          #:clpm-cli/interface-defs
-          #:clpm/context
-          #:clpm/log)
-  (:import-from #:adopt))
+          #:clpm-cli/interface-defs)
+  (:import-from #:adopt)
+  (:import-from #:clpm))
 
 (in-package #:clpm-cli/commands/bundle/update)
-
-(setup-logger)
 
 (define-string *help-string*
   "Update a bundle described in a clpmfile. Can either update the whole bundle
@@ -44,8 +40,7 @@ preference is to update everything to the latest version possible.")
                    *option-yes*)))
 
 (define-cli-command (("bundle" "update") *bundle-update-ui*) (args options)
-  (let* ((clpmfile-pathname (bundle-clpmfile-pathname))
-         (yesp (gethash :yes options)))
-    (bundle-update clpmfile-pathname :update-systems args
-                                     :validate (make-diff-validate-fun :yesp yesp))
+  (let ((yesp (gethash :yes options)))
+    (clpm:bundle-update :update-systems args
+                        :validate (make-diff-validate-fun :yesp yesp))
     t))

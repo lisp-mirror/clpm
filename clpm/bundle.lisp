@@ -163,41 +163,42 @@ the lock file if necessary."
          :with-client with-client-p
          :ignore-inherited t)))))
 
-(defun bundle-update (clpmfile-designator &key
-                                            update-projects (validate (constantly t))
-                                            update-systems)
-  (let* ((*fetch-repo-automatically* (not (config-value :local)))
-         (clpmfile (get-clpmfile clpmfile-designator))
-         (lockfile-pathname (clpmfile-lockfile-pathname clpmfile))
-         (*vcs-project-override-fun* (make-vcs-override-fun (clpmfile-pathname clpmfile)))
-         (lockfile nil)
-         (changedp nil))
-    (unless (probe-file lockfile-pathname)
-      ;; There is no lock file currently. Just fall back to BUNDLE-INSTALL.
-      (return-from bundle-update
-        (bundle-install :clpmfile clpmfile :validate validate)))
-    ;; Load the existing lockfile
-    (setf lockfile (load-lockfile lockfile-pathname))
-    (unless (config-value :local)
-      (dolist (s (context-sources clpmfile))
-        (unless (source-can-lazy-sync-p s)
-          (sync-source s))))
-    ;; Map all update systems to their projects.
-    (dolist (system update-systems)
-      (when-let* ((system-release (find system (context-system-releases lockfile)
-                                        :key (compose #'system-name #'system-release-system)
-                                        :test #'equal))
-                  (release (system-release-release system-release))
-                  (project-name (project-name (release-project release))))
-        (pushnew project-name update-projects :test #'equal)))
-    (setf lockfile (install-requirements (context-requirements clpmfile)
-                                         :context lockfile
-                                         :validate (lambda (diff)
-                                                     (aprog1 (funcall validate diff)
-                                                       (setf changedp it)))
-                                         :update-projects (or update-projects t)))
-    (when changedp
-      (save-context lockfile))))
+(defun bundle-update (&key clpmfile
+                        update-projects (validate (constantly t))
+                        update-systems)
+  (with-bundle-session (clpmfile)
+    (let* ((*fetch-repo-automatically* (not (config-value :local)))
+           (clpmfile (get-clpmfile clpmfile))
+           (lockfile-pathname (clpmfile-lockfile-pathname clpmfile))
+           (*vcs-project-override-fun* (make-vcs-override-fun (clpmfile-pathname clpmfile)))
+           (lockfile nil)
+           (changedp nil))
+      (unless (probe-file lockfile-pathname)
+        ;; There is no lock file currently. Just fall back to BUNDLE-INSTALL.
+        (return-from bundle-update
+          (bundle-install :clpmfile clpmfile :validate validate)))
+      ;; Load the existing lockfile
+      (setf lockfile (load-lockfile lockfile-pathname))
+      (unless (config-value :local)
+        (dolist (s (context-sources clpmfile))
+          (unless (source-can-lazy-sync-p s)
+            (sync-source s))))
+      ;; Map all update systems to their projects.
+      (dolist (system update-systems)
+        (when-let* ((system-release (find system (context-system-releases lockfile)
+                                          :key (compose #'system-name #'system-release-system)
+                                          :test #'equal))
+                    (release (system-release-release system-release))
+                    (project-name (project-name (release-project release))))
+          (pushnew project-name update-projects :test #'equal)))
+      (setf lockfile (install-requirements (context-requirements clpmfile)
+                                           :context lockfile
+                                           :validate (lambda (diff)
+                                                       (aprog1 (funcall validate diff)
+                                                         (setf changedp it)))
+                                           :update-projects (or update-projects t)))
+      (when changedp
+        (save-context lockfile)))))
 
 (defun bundle-exec (command args &key clpmfile
                                    with-client-p)

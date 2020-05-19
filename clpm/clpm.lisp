@@ -22,7 +22,8 @@
   (:export #:bundle-exec
            #:bundle-init
            #:bundle-install
-           #:bundle-source-registry)
+           #:bundle-source-registry
+           #:bundle-update)
   ;; From client
   (:export #:client-asd-pathname)
   ;; From config
