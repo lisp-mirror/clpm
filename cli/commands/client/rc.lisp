@@ -8,11 +8,11 @@
           #:clpm-cli/common-args
           #:clpm-cli/commands/client/common
           #:clpm-cli/interface-defs
-          #:clpm/client
           #:named-readtables)
   (:import-from #:uiop
                 #:*stdout*)
-  (:import-from #:cl-interpol))
+  (:import-from #:cl-interpol)
+  (:import-from #:clpm))
 
 (in-package #:clpm-cli/commands/client/rc)
 
@@ -42,8 +42,8 @@
 
 #-clpm-client
 (progn
-  (when (probe-file #p\"${(client-asd-pathname)}\")
-    (asdf:load-asd #p\"${(client-asd-pathname)}\")
+  (when (probe-file #p\"${(clpm:client-asd-pathname)}\")
+    (asdf:load-asd #p\"${(clpm:client-asd-pathname)}\")
     (asdf:load-system \"clpm-client\")
     (setf (symbol-value (uiop:find-symbol* :*asdf-system-not-found-behavior* :clpm-client)) :install)
     (if (uiop:symbol-call :clpm-client :active-context)
@@ -57,8 +57,8 @@
 
 #-clpm-client
 (progn
-  (when (probe-file #p\"${(client-asd-pathname)}\")
-    (asdf:load-asd #p\"${(client-asd-pathname)}\")
+  (when (probe-file #p\"${(clpm:client-asd-pathname)}\")
+    (asdf:load-asd #p\"${(clpm:client-asd-pathname)}\")
     (asdf:load-system \"clpm-client\")
     (if (uiop:symbol-call :clpm-client :active-context)
         (uiop:symbol-call :clpm-client :activate-asdf-integration)

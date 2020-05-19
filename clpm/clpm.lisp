@@ -7,6 +7,7 @@
     (:nicknames #:clpm)
   (:use #:cl
         #:clpm/bundle
+        #:clpm/client
         #:clpm/config
         #:clpm/context
         #:clpm/context-diff
@@ -16,6 +17,8 @@
         #:clpm/sync
         #:clpm/update
         #:clpm/version)
+  ;; From client
+  (:export #:client-asd-pathname)
   ;; From config
   (:export #:config-value)
   ;; From exec
