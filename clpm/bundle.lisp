@@ -12,7 +12,7 @@
           #:clpm/clpmfile
           #:clpm/config
           #:clpm/context
-          #:clpm/execvpe
+          #:clpm/exec
           #:clpm/install
           #:clpm/log
           #:clpm/repos
@@ -171,26 +171,5 @@ COMMAND must be a string naming the command to run.
 ARGS must be a list of strings containing the arguments to pass to the command.
 
 If WITH-CLIENT-P is non-NIL, the clpm-client system is available."
-  (unless (stringp command)
-    (error "COMMAND must be a string."))
-  (with-bundle-session (clpmfile)
-    (with-sources-using-installed-only ()
-      (let* ((clpmfile-pathname (clpmfile-pathname clpmfile))
-             (lockfile-pathname (clpmfile-lockfile-pathname clpmfile))
-             (lockfile (load-lockfile lockfile-pathname))
-             (cl-source-registry-form (context-to-asdf-source-registry-form lockfile
-                                                                            :with-client with-client-p
-                                                                            :ignore-inherited t))
-             (output-translations (context-output-translations lockfile))
-             (installed-system-names (sort (mapcar #'system-name (context-installed-systems lockfile)) #'string<))
-             (visible-primary-system-names (sort (context-visible-primary-system-names lockfile) #'string<)))
-        (with-standard-io-syntax
-          (execvpe command args
-                   `(("CL_SOURCE_REGISTRY" . ,(format nil "~S" cl-source-registry-form))
-                     ,@(when output-translations
-                         `(("ASDF_OUTPUT_TRANSLATIONS" . ,(format nil "~S" output-translations))))
-                     ("CLPM_EXEC_INSTALLED_SYSTEMS" . ,(format nil "~S" installed-system-names))
-                     ("CLPM_EXEC_VISIBLE_PRIMARY_SYSTEMS" . ,(format nil "~S" visible-primary-system-names))
-                     ("CLPM_EXEC_CLPMFILE" . ,(uiop:native-namestring clpmfile-pathname))
-                     ("CLPM_EXEC_IGNORE_INHERITED_SOURCE_REGISTRY" . "t"))
-                   t))))))
+  (exec command args :with-client-p with-client-p
+                     :context (clpmfile-pathname clpmfile)))

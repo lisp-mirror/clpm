@@ -38,7 +38,6 @@
            #:context-write-asdf-files
            #:copy-context
            #:load-anonymous-context-from-pathname
-           #:load-global-context
            #:save-context
            #:serialize-context-to-stream
            #:with-context))
@@ -94,8 +93,30 @@ can be named, global contexts, or anonymous."))
   (setf (context-vcs-source context)
         (make-source 'vcs-source :name :implicit-vcs)))
 
-(defun context-anonymous-p (context)
+(defgeneric context-name (context))
+
+(defmethod context-name ((context pathname))
+  context)
+
+(defmethod context-name ((context string))
+  context)
+
+(defmethod context-name ((context (eql nil)))
+  (config-value :context))
+
+(defgeneric context-anonymous-p (context))
+
+(defmethod context-anonymous-p ((context context))
   (pathnamep (context-name context)))
+
+(defmethod context-anonymous-p ((context pathname))
+  t)
+
+(defmethod context-anonymous-p ((context string))
+  nil)
+
+(defmethod context-anonymous-p ((context (eql nil)))
+  nil)
 
 (defun copy-context (context)
   (make-instance 'context
@@ -117,6 +138,9 @@ can be named, global contexts, or anonymous."))
      (load-global-context context-designator nil))
     ((null context-designator)
      (load-global-context (config-value :context) nil))
+    ((pathnamep context-designator)
+     (load-anonymous-context-from-pathname (merge-pathnames (make-pathname :type "lock")
+                                                            context-designator)))
     (t
      (error "Unable to translate ~S to a context object" context-designator))))
 
@@ -133,15 +157,14 @@ can be named, global contexts, or anonymous."))
           (merge-pathnames override root-pathname))))))
 
 (defun call-with-context (thunk context-designator)
-  (let ((context (get-context context-designator)))
-    (if (context-anonymous-p context)
-        (let* ((*default-pathname-defaults* (uiop:pathname-directory-pathname (context-name context)))
-               (*vcs-project-override-fun* (make-vcs-override-fun *default-pathname-defaults*)))
-          (with-config-source (:pathname (merge-pathnames ".clpm/bundle.conf"
-                                                          (uiop:pathname-directory-pathname
-                                                           (context-name context))))
-            (funcall thunk context)))
-        (funcall thunk context))))
+  (if (context-anonymous-p context-designator)
+      (let* ((context-name context-designator)
+             (*default-pathname-defaults* (uiop:pathname-directory-pathname context-name))
+             (*vcs-project-override-fun* (make-vcs-override-fun *default-pathname-defaults*)))
+        (with-config-source (:pathname (merge-pathnames ".clpm/bundle.conf"
+                                                        (uiop:pathname-directory-pathname context-name)))
+          (funcall thunk (get-context context-designator))))
+      (funcall thunk (get-context context-designator))))
 
 (defmacro with-context ((context-var &optional (context-value context-var)) &body body)
   `(call-with-context (lambda (,context-var) ,@body) ,context-value))
@@ -441,7 +464,7 @@ in place with the same name. Return the new requirement if it was modified."
 (defun save-context (context)
   (assert (context-reverse-dependencies context))
   (let ((pn (if (context-anonymous-p context)
-                (context-name context)
+                (merge-pathnames (make-pathname :type "lock") (context-name context))
                 (global-context-pathname (context-name context)))))
     (ensure-directories-exist pn)
     (with-open-file (s pn
