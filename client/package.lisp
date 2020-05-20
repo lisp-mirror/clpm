@@ -12,6 +12,7 @@
            #:*clpm-dribble-output-prefix*
            #:*clpm-error-dribble*
            #:*clpm-executable*
+           #:*context-diff-approval-method*
            #:*default-context*
            #:asdf-integration-active-p
            #:activate-asdf-integration

@@ -120,6 +120,7 @@ recursion."
            (signal-missing-system system-name)
          (install-and-reload-config ()
            :report "Attempt to install the system and try again."
+           :test (lambda (c) (declare (ignore c)) (not (context-bundle-p active-context)))
            (%install nil))
          (reresolve-requirements-and-reload-config ()
            :report "Reresolve requirements and try again."
@@ -133,6 +134,7 @@ recursion."
            (asdf:search-for-system-definition system-name))
          (install-without-dependencies-and-reload-config ()
            :report "Attempt to install the system without dependencies and try again."
+           :test (lambda (c) (declare (ignore c)) (not (context-bundle-p active-context)))
            (%install t))))
       ((nil)
        nil))))
