@@ -99,39 +99,39 @@ will be installed.
 VALIDATE must be a function of one argument (a diff) and returns non-NIL if the
 install should proceed."
   (with-clpm-session ()
-    (let ((context (get-context context))
-          (reqs (append (mapcar (rcurry #'make-requirement
-                                        :project
-                                        :version version :source source :ref ref :no-deps-p no-deps-p)
-                                projects)
-                        (mapcar (rcurry #'make-requirement
-                                        :system
-                                        :version version :source source :ref ref :no-deps-p no-deps-p)
-                                systems)
-                        (mapcar (lambda (x)
-                                  (make-instance 'fs-system-file-requirement
-                                                 :name x
-                                                 :why t
-                                                 :no-deps-p no-deps-p))
-                                asds))))
-      (install-requirements reqs :context context :validate validate :save-context-p save-context-p))))
+    (with-context (context)
+      (let ((reqs (append (mapcar (rcurry #'make-requirement
+                                          :project
+                                          :version version :source source :ref ref :no-deps-p no-deps-p)
+                                  projects)
+                          (mapcar (rcurry #'make-requirement
+                                          :system
+                                          :version version :source source :ref ref :no-deps-p no-deps-p)
+                                  systems)
+                          (mapcar (lambda (x)
+                                    (make-instance 'fs-system-file-requirement
+                                                   :name x
+                                                   :why t
+                                                   :no-deps-p no-deps-p))
+                                  asds))))
+        (install-requirements reqs :context context :validate validate :save-context-p save-context-p)))))
 
 (defun install-requirements (reqs &key
                                     context
                                     (validate (constantly t))
                                     save-context-p
                                     update-projects)
-  (let* ((orig-context (get-context context))
-         (new-context (copy-context orig-context)))
-    (dolist (r reqs)
-      (context-add-requirement! new-context r))
-    (setf new-context (resolve-requirements new-context :update-projects update-projects))
-    (let ((result (funcall validate (make-context-diff orig-context new-context))))
-      (if result
-          (progn
-            (mapc #'install-release (context-releases new-context))
-            (when save-context-p
-              (context-write-asdf-files new-context)
-              (save-context new-context))
-            new-context)
-          orig-context))))
+  (with-context (orig-context context)
+    (with-context (new-context (copy-context orig-context))
+      (dolist (r reqs)
+        (context-add-requirement! new-context r))
+      (setf new-context (resolve-requirements new-context :update-projects update-projects))
+      (let ((result (funcall validate (make-context-diff orig-context new-context))))
+        (if result
+            (progn
+              (mapc #'install-release (context-releases new-context))
+              (when save-context-p
+                (context-write-asdf-files new-context)
+                (save-context new-context))
+              new-context)
+            orig-context)))))

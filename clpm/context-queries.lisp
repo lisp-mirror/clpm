@@ -19,28 +19,36 @@
 
 (defun asd-pathnames (&key context)
   (with-clpm-session ()
-    (context-asd-pathnames (get-context context))))
+    (with-context (context)
+      (context-asd-pathnames context))))
 
 (defun find-system-asd-pathname (system-name &key context)
   (with-clpm-session ()
-    (context-find-system-asd-pathname (get-context context) system-name)))
+    (with-context (context)
+      (context-find-system-asd-pathname context system-name))))
 
 (defun installed-system-names (&key context)
-  (mapcar 'system-name (context-installed-systems (get-context context))))
+  (with-clpm-session ()
+    (with-context (context)
+      (mapcar 'system-name (context-installed-systems context)))))
 
 (defun output-translations (&key context)
   (with-clpm-session ()
-    (context-output-translations (get-context context))))
+    (with-context (context)
+      (context-output-translations context))))
 
 (defun source-registry (&key context with-client-p
                           ignore-inherited-source-registry
                           splice-inherited)
   (with-clpm-session ()
-    (context-to-asdf-source-registry-form
-     (get-context context)
-     :with-client with-client-p
-     :ignore-inherited ignore-inherited-source-registry
-     :splice-inherited splice-inherited)))
+    (with-context (context)
+      (context-to-asdf-source-registry-form
+       context
+       :with-client with-client-p
+       :ignore-inherited ignore-inherited-source-registry
+       :splice-inherited splice-inherited))))
 
 (defun visible-primary-system-names (&key context)
-  (context-visible-primary-system-names (get-context context)))
+  (with-clpm-session ()
+    (with-context (context)
+      (context-visible-primary-system-names context))))

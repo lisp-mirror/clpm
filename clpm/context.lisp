@@ -37,11 +37,11 @@
            #:context-visible-primary-system-names
            #:context-write-asdf-files
            #:copy-context
-           #:get-context
            #:load-anonymous-context-from-pathname
            #:load-global-context
            #:save-context
-           #:serialize-context-to-stream))
+           #:serialize-context-to-stream
+           #:with-context))
 
 (in-package #:clpm/context)
 
@@ -124,6 +124,27 @@ can be named, global contexts, or anonymous."))
   (list* (context-fs-source context)
          (context-vcs-source context)
          (context-user-sources context)))
+
+(defun make-vcs-override-fun (root-pathname)
+  (let ((root-pathname (uiop:pathname-directory-pathname root-pathname)))
+    (lambda (project-name)
+      (let ((override (config-value :bundle :local project-name)))
+        (when override
+          (merge-pathnames override root-pathname))))))
+
+(defun call-with-context (thunk context-designator)
+  (let ((context (get-context context-designator)))
+    (if (context-anonymous-p context)
+        (let* ((*default-pathname-defaults* (uiop:pathname-directory-pathname (context-name context)))
+               (*vcs-project-override-fun* (make-vcs-override-fun *default-pathname-defaults*)))
+          (with-config-source (:pathname (merge-pathnames ".clpm/bundle.conf"
+                                                          (uiop:pathname-directory-pathname
+                                                           (context-name context))))
+            (funcall thunk context)))
+        (funcall thunk context))))
+
+(defmacro with-context ((context-var &optional (context-value context-var)) &body body)
+  `(call-with-context (lambda (,context-var) ,@body) ,context-value))
 
 
 ;; * Adding requirements
