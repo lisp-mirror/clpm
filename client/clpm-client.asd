@@ -19,6 +19,7 @@
    (:file "install" :depends-on ("package" "proc"))
    (:file "package")
    (:file "proc" :depends-on ("package"))
+   (:file "sync" :depends-on ("package" "proc"))
    (:file "ui" :depends-on ("package"))
    (:file "update" :depends-on ("package" "proc"))
    (:file "version" :depends-on ("package" "proc"))))

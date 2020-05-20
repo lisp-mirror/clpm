@@ -52,6 +52,7 @@
            #:release-diff-project-name
            #:reload-config
            #:reresolve-requirements-and-reload-config
+           #:sync
            #:update))
 
 (in-package #:clpm-client)
