@@ -41,12 +41,13 @@
                           ignore-inherited-source-registry
                           splice-inherited)
   (with-clpm-session ()
-    (with-context (context)
-      (context-to-asdf-source-registry-form
-       context
-       :with-client with-client-p
-       :ignore-inherited ignore-inherited-source-registry
-       :splice-inherited splice-inherited))))
+    (with-sources-using-installed-only ()
+      (with-context (context)
+        (context-to-asdf-source-registry-form
+         context
+         :with-client with-client-p
+         :ignore-inherited ignore-inherited-source-registry
+         :splice-inherited splice-inherited)))))
 
 (defun visible-primary-system-names (&key context)
   (with-clpm-session ()

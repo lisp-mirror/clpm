@@ -12,6 +12,7 @@
           #:clpm/clpmfile
           #:clpm/config
           #:clpm/context
+          #:clpm/context-queries
           #:clpm/exec
           #:clpm/install
           #:clpm/log
@@ -109,23 +110,8 @@ the lock file if necessary."
 
 
 (defun bundle-source-registry (&key clpmfile with-client-p ignore-missing-releases)
-  (with-bundle-session (clpmfile)
-    (with-sources-using-installed-only ()
-      (let* ((lockfile-pathname (clpmfile-lockfile-pathname clpmfile))
-             lockfile)
-        (unless (probe-file lockfile-pathname)
-          (error "Lockfile ~A does not exist" lockfile-pathname))
-        (setf lockfile (load-lockfile lockfile-pathname))
-        (unless ignore-missing-releases
-          (let* ((releases (context-releases lockfile))
-                 (missing-releases (remove-if #'release-installed-p releases)))
-            (when missing-releases
-              (error "The following releases are not installed: ~{~S~^, ~}"
-                     (mapcar (compose #'project-name #'release-project) missing-releases)))))
-        (context-to-asdf-source-registry-form
-         lockfile
-         :with-client with-client-p
-         :ignore-inherited t)))))
+  (source-registry :with-client-p with-client-p :ignore-inherited-source-registry t
+                   :context (clpmfile-pathname clpmfile)))
 
 (defun bundle-update (&key clpmfile
                         update-projects (validate (constantly t))
