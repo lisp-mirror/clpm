@@ -22,7 +22,7 @@ ignored.")
 (defvar *active-context-editable-primary-system-names* nil
   "List of systems installed in the active context via an editable requirement.")
 
-(defvar *active-context-installed-systems* nil
+(defvar *active-context-installed-primary-system-names* nil
   "List of systems installed in the active context.")
 
 (defvar *active-context-visible-primary-system-names* nil
@@ -35,9 +35,9 @@ variables."
         (env-context (uiop:getenvp "CLPM_EXEC_CONTEXT")))
     (when (or env-clpmfile env-context)
       (setf *active-context* (if env-clpmfile (pathname env-clpmfile) env-context))
-      (uiop:if-let ((installed-systems-string (uiop:getenvp "CLPM_EXEC_INSTALLED_SYSTEMS")))
+      (uiop:if-let ((installed-systems-string (uiop:getenvp "CLPM_EXEC_INSTALLED_PRIMARY_SYSTEMS")))
         (uiop:with-safe-io-syntax ()
-          (setf *active-context-installed-systems* (read-from-string installed-systems-string))))
+          (setf *active-context-installed-primary-system-names* (read-from-string installed-systems-string))))
       (uiop:if-let ((visible-systems-string (uiop:getenvp "CLPM_EXEC_VISIBLE_PRIMARY_SYSTEMS")))
         (uiop:with-safe-io-syntax ()
           (setf *active-context-visible-primary-system-names* (read-from-string visible-systems-string))))
@@ -58,7 +58,7 @@ variables."
         *active-context-ignore-inherited-source-registry* nil
         *active-context-splice-source-registry* nil
         *active-context-visible-primary-system-names* nil
-        *active-context-installed-systems* nil
+        *active-context-installed-primary-system-names* nil
         *active-context-visible-primary-system-names* nil))
 (uiop:register-image-dump-hook 'clear-active-context)
 
@@ -119,6 +119,12 @@ directories containing the files."
     (clpm-proc-print proc `(installed-system-names :context ,context))
     (clpm-proc-read proc)))
 
+(defun context-installed-primary-system-names (&key (context (default-context)))
+  "Return the names of primary systems installed in CONTEXT."
+  (with-clpm-proc (proc)
+    (clpm-proc-print proc `(installed-primary-system-names :context ,context))
+    (clpm-proc-read proc)))
+
 (defun context-visible-primary-system-names (&key (context (default-context)))
   "Return the names of primary systems visible to ASDF in CONTEXT."
   (with-clpm-proc (proc)
@@ -159,7 +165,7 @@ called."
         (old-context (active-context)))
     (setf *active-context* context
           *active-context-ignore-inherited-source-registry* ignore-inherited-source-registry
-          *active-context-installed-systems* nil
+          *active-context-installed-primary-system-names* nil
           *active-context-visible-primary-system-names* nil
           *active-context-editable-primary-system-names* nil)
     (unless old-context
@@ -167,7 +173,7 @@ called."
     (asdf-configure-source-registry source-registry)
     (unless (context-bundle-p context)
       (setf *active-context-editable-primary-system-names* (context-editable-primary-system-names :context context)
-            *active-context-installed-systems* (context-installed-system-names :context context)
+            *active-context-installed-primary-system-names* (context-installed-primary-system-names :context context)
             *active-context-visible-primary-system-names* (context-visible-primary-system-names :context context)))
     (when output-translations
       (asdf:initialize-output-translations output-translations))

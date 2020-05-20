@@ -10,11 +10,7 @@
                  (validate 'context-diff-approved-p)
                  (context (default-context))
                  (update-asdf-config (asdf-integration-active-p)))
-  "Update a set of projects and systems. Returns four values. The first is a
-source registry form, the second is a list of systems installed in the context,
-the third is a list of primary system names visible when that source registry
-form is used, and the fourth is a list of primary system names that are editable
-in the context.
+  "Update a set of projects and systems. Returns the source registry form for the context.
 
 PROJECTS and SYSTEMS must be lists of strings. If none are specified, every
 project in the CONTEXT is eligible for upgrading.
@@ -39,16 +35,16 @@ source registry is updated with the results."
                       :context ,context
                       :validate ,(make-diff-validator-fun)))
         (list (source-registry :context ,context)
-              (installed-system-names :context ,context)
+              (installed-primary-system-names :context ,context)
               (visible-primary-system-names :context ,context)
               (editable-primary-system-names :context ,context))))
     (clpm-proc-print proc
                      (funcall validate (make-context-diff-from-description (clpm-proc-read proc))))
-    (destructuring-bind (source-registry installed-system-names visible-system-names editable-system-names)
+    (destructuring-bind (source-registry installed-primary-system-names visible-system-names editable-system-names)
         (clpm-proc-read proc)
       (when (and update-asdf-config (equal context (active-context)))
         (asdf-configure-source-registry source-registry)
-        (setf *active-context-installed-systems* installed-system-names
+        (setf *active-context-installed-primary-system-names* installed-primary-system-names
               *active-context-visible-primary-system-names* visible-system-names
               *active-context-editable-primary-system-names* editable-system-names))
-      (values source-registry installed-system-names visible-system-names editable-system-names))))
+      source-registry)))

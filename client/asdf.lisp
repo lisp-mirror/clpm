@@ -118,6 +118,9 @@ recursion."
            ;; Prevent RESTART-CASE from using WITH-CONDITION-RESTARTS,
            ;; otherwise things can get messed up for defsystem-depends-on
            (signal-missing-system system-name)
+         (install-and-reload-config ()
+           :report "Attempt to install the system and try again."
+           (%install nil))
          (reresolve-requirements-and-reload-config ()
            :report "Reresolve requirements and try again."
            (%reresolve))
@@ -125,12 +128,9 @@ recursion."
            :report "Reload the source registry for the context and try again."
            (asdf-configure-source-registry (context-source-registry :context active-context))
            (unless (context-bundle-p active-context)
-             (setf *active-context-installed-systems* (context-installed-system-names :context active-context)
+             (setf *active-context-installed-primary-system-names* (context-installed-primary-system-names :context active-context)
                    *active-context-visible-primary-system-names* (context-visible-primary-system-names :context active-context)))
            (asdf:search-for-system-definition system-name))
-         (install-and-reload-config ()
-           :report "Attempt to install the system and try again."
-           (%install nil))
          (install-without-dependencies-and-reload-config ()
            :report "Attempt to install the system without dependencies and try again."
            (%install t))))
@@ -159,7 +159,7 @@ requirement."
     (when (and active-context
                (not (equal "asdf" primary-name))
                (not (equal "uiop" primary-name))
-               (not (member system-name *active-context-installed-systems* :test #'equal))
+               (not (member primary-name *active-context-installed-primary-system-names* :test #'equal))
                (not (member primary-name *active-context-editable-primary-system-names* :test #'equal))
                (member primary-name *active-context-visible-primary-system-names* :test #'equal))
       (handle-missing-system system-name active-context))))
