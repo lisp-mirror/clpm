@@ -158,7 +158,7 @@ can be named, global contexts, or anonymous."))
 
 (defun call-with-context (thunk context-designator)
   (if (context-anonymous-p context-designator)
-      (let* ((context-name context-designator)
+      (let* ((context-name (context-name context-designator))
              (*default-pathname-defaults* (uiop:pathname-directory-pathname context-name))
              (*vcs-project-override-fun* (make-vcs-override-fun *default-pathname-defaults*)))
         (with-config-source (:pathname (merge-pathnames ".clpm/bundle.conf"
@@ -346,8 +346,11 @@ in place with the same name. Return the new requirement if it was modified."
 ;; * Deserializing
 
 (defun load-anonymous-context-from-pathname (pn)
-  (with-open-file (s pn)
-    (load-context-from-stream s pn)))
+  (if (probe-file pn)
+      (with-open-file (s pn)
+        (load-context-from-stream s pn))
+      (make-instance 'context
+                     :name pn)))
 
 (defun context-downselect-sources (name sources)
   (let ((allowed-source-names (config-value :contexts name :sources)))

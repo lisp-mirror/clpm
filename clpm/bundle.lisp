@@ -80,32 +80,25 @@
 (defun bundle-install (&key clpmfile (validate (constantly t)) no-resolve)
   "Given a clpmfile instance, install all releases from its lock file, creating
 the lock file if necessary."
-  (with-bundle-session (clpmfile)
-    (let* ((clpmfile (get-clpmfile clpmfile))
-           (lockfile-pathname (clpmfile-lockfile-pathname clpmfile))
-           (lockfile nil)
-           (changedp nil))
-      (unless (config-value :local)
-        (dolist (s (context-sources clpmfile))
-          (unless (source-can-lazy-sync-p s)
-            (sync-source s))))
-      (if (probe-file lockfile-pathname)
-          (setf lockfile (load-lockfile lockfile-pathname))
-          (setf lockfile (create-empty-lockfile clpmfile)))
-      (if no-resolve
-          (mapc #'install-release (context-releases lockfile))
-          (progn
-            ;; Nuke the lockfile's requirements so that we pick up deletions from the
-            ;; clpmfile.
-            (setf (context-requirements lockfile) nil)
-            (setf lockfile (install-requirements (context-requirements clpmfile)
-                                                 :context lockfile
-                                                 :validate (lambda (diff)
-                                                             (aprog1 (funcall validate diff)
-                                                               (setf changedp it)))
-                                                 :update-projects (config-table-keys :bundle :local)))
-            (when changedp
-              (save-context lockfile))))
+  (with-clpm-session ()
+    (with-context (lockfile (clpmfile-pathname clpmfile))
+      (let ((clpmfile (get-clpmfile clpmfile)))
+        (unless (config-value :local)
+          (dolist (s (context-sources clpmfile))
+            (unless (source-can-lazy-sync-p s)
+              (sync-source s))))
+        (if no-resolve
+            (mapc #'install-release (context-releases lockfile))
+            (progn
+              ;; Nuke the lockfile's requirements so that we pick up deletions
+              ;; from the clpmfile.
+              (setf (context-requirements lockfile) nil)
+              (setf (context-user-sources lockfile) (context-user-sources clpmfile))
+              (setf lockfile (install-requirements (context-requirements clpmfile)
+                                                   :context lockfile
+                                                   :validate validate
+                                                   :update-projects (config-table-keys :bundle :local)
+                                                   :save-context-p t)))))
       lockfile)))
 
 
