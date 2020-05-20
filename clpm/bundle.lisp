@@ -6,9 +6,6 @@
 (uiop:define-package #:clpm/bundle
     (:use #:cl
           #:alexandria
-          #:anaphora
-          #:clpm/cache
-          #:clpm/client
           #:clpm/clpmfile
           #:clpm/config
           #:clpm/context
@@ -16,18 +13,14 @@
           #:clpm/exec
           #:clpm/install
           #:clpm/log
-          #:clpm/repos
-          #:clpm/resolve
           #:clpm/session
-          #:clpm/source
-          #:do-urlencode)
+          #:clpm/source)
   (:export #:bundle-exec
            #:bundle-init
            #:bundle-install
            #:bundle-output-translations
            #:bundle-source-registry
-           #:bundle-update
-           #:with-bundle-session))
+           #:bundle-update))
 
 (in-package #:clpm/bundle)
 
@@ -74,7 +67,6 @@ the lock file if necessary."
                                                    :update-projects (config-table-keys :bundle :local)
                                                    :save-context-p t)))))
       lockfile)))
-
 
 (defun bundle-source-registry (&key clpmfile with-client-p)
   (source-registry :with-client-p with-client-p :ignore-inherited-source-registry t
