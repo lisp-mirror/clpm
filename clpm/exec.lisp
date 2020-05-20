@@ -40,6 +40,8 @@ If WITH-CLIENT-P is non-NIL, the clpm-client system is available."
                                  :splice-inherited splice-inherited))
                (output-translations (context-output-translations context))
                (installed-system-names (sort (mapcar #'system-name (context-installed-systems context)) #'string<))
+               (installed-primary-system-names (remove-duplicates (mapcar #'asdf:primary-system-name installed-system-names)
+                                                                  :test #'equal))
                (visible-primary-system-names (sort (context-visible-primary-system-names context) #'string<))
                (editable-primary-system-names (context-editable-primary-system-names context)))
           (with-standard-io-syntax
@@ -52,6 +54,7 @@ If WITH-CLIENT-P is non-NIL, the clpm-client system is available."
                               `("CLPM_EXEC_CLPMFILE" . ,(uiop:native-namestring context-name))
                               `("CLPM_EXEC_CONTEXT" . ,context-name))
                          ("CLPM_EXEC_EDITABLE_PRIMARY_SYSTEMS" . ,(format nil "~S" editable-primary-system-names))
+                         ("CLPM_EXEC_INSTALLED_PRIMARY_SYSTEMS" . ,(format nil "~S" installed-primary-system-names))
                          ("CLPM_EXEC_INSTALLED_SYSTEMS" . ,(format nil "~S" installed-system-names))
                          ("CLPM_EXEC_VISIBLE_PRIMARY_SYSTEMS" . ,(format nil "~S" visible-primary-system-names))
                          ,@(when ignore-inherited-source-registry

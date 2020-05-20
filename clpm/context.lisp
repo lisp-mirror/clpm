@@ -23,6 +23,7 @@
            #:context-editable-primary-system-names
            #:context-find-system-asd-pathname
            #:context-fs-source
+           #:context-installed-primary-system-names
            #:context-installed-systems
            #:context-name
            #:context-output-translations
@@ -223,26 +224,18 @@ in place with the same name. Return the new requirement if it was modified."
                         :test #'equal)
           #'string<)))
 
-;; TODO: 0.4
-;;
-;; See note on CONTEXT-VISIBLE-PRIMARY-SYSTEM-NAMES
+(defun context-installed-primary-system-names (context)
+  (let* ((context (get-context context))
+         (system-releases (context-system-releases context)))
+    (remove-duplicates
+     (mapcar (compose #'asdf:primary-system-name #'system-name #'system-release-system) system-releases)
+     :test #'equal)))
+
 (defun context-installed-systems (context)
   (let* ((context (get-context context))
          (system-releases (context-system-releases context)))
     (mapcar #'system-release-system system-releases)))
 
-;; NOTE: There is some slightly wonky behavior here that the client currently
-;; depends on when working with bundles, namely the system names from
-;; CONTEXT-ASD-PATHNAMES do not show up. But this is ok since they do not show
-;; up in CONTEXT-INSTALLED-SYSTEMS either. This prevents the client from
-;; unnecessary prompting to install newly created package-inferred-systems in
-;; bundles. Want to re-evaluate this choice and/or function name in 0.4.0.
-;;
-;; Actually, decided to make client not track these things in bundles since
-;; BUNDLE-INSTALL doesn't take any system or project names anyways. But leaving
-;; as a note to future self.
-;;
-;; TODO: 0.4
 (defun context-visible-primary-system-names (context)
   (let* ((context (get-context context))
          (releases (context-releases context))

@@ -11,6 +11,7 @@
   (:export #:asd-pathnames
            #:editable-primary-system-names
            #:find-system-asd-pathname
+           #:installed-primary-system-names
            #:installed-system-names
            #:output-translations
            #:source-registry
@@ -41,6 +42,12 @@
     (with-sources-using-installed-only ()
       (with-context (context)
         (mapcar 'system-name (context-installed-systems context))))))
+
+(defun installed-primary-system-names (&key context)
+  (with-clpm-session ()
+    (with-sources-using-installed-only ()
+      (with-context (context)
+        (context-installed-primary-system-names context)))))
 
 (defun output-translations (&key context)
   (with-clpm-session ()
