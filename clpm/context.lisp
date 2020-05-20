@@ -20,6 +20,7 @@
            #:context-add-requirement!
            #:context-anonymous-p
            #:context-asd-pathnames
+           #:context-editable-primary-system-names
            #:context-find-system-asd-pathname
            #:context-fs-source
            #:context-installed-systems
@@ -211,6 +212,16 @@ in place with the same name. Return the new requirement if it was modified."
          (releases (context-releases context))
          (system-files (flatten (mapcar #'release-system-files releases))))
     (mapcar #'system-file-absolute-asd-pathname system-files)))
+
+(defun context-editable-primary-system-names (context)
+  (let* ((releases (context-releases context))
+         (editable-releases (remove-if-not (lambda (x) (eql x (context-fs-source context)))
+                                           releases
+                                           :key #'release-source))
+         (editable-system-files (mapcan #'release-system-files editable-releases)))
+    (sort (remove-duplicates (mapcar #'system-file-primary-system-name editable-system-files)
+                        :test #'equal)
+          #'string<)))
 
 ;; TODO: 0.4
 ;;

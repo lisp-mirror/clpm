@@ -9,6 +9,7 @@
           #:clpm/session
           #:clpm/source)
   (:export #:asd-pathnames
+           #:editable-primary-system-names
            #:find-system-asd-pathname
            #:installed-system-names
            #:output-translations
@@ -21,6 +22,12 @@
   (with-clpm-session ()
     (with-context (context)
       (context-asd-pathnames context))))
+
+(defun editable-primary-system-names (&key context)
+  (with-clpm-session ()
+    (with-sources-using-installed-only ()
+      (with-context (context)
+        (context-editable-primary-system-names context)))))
 
 (defun find-system-asd-pathname (system-name &key context)
   (with-clpm-session ()
