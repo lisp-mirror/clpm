@@ -12,9 +12,10 @@
   "The behavior if ASDF is unable to find a system and CLPM's ASDF integration
 is active. One of:
 
-+ :ERROR :: Signal a MISSING-SYSTEM condition. The restarts
-RELOAD-CONTEXT-CONFIG, INSTALL-AND-RELOAD-CONTEXT-CONFIG, and
-INSTALL-WITHOUT-DEPENDENCIES-AND-RELOAD-CONTEXT-CONFIG will be available.
++ :ERROR :: (default) Signal a MISSING-SYSTEM condition. The restarts
+INSTALL-AND-RELOAD-CONFIG, RERESOLVE-REQUIREMENTS-AND-RELOAD-CONFIG,
+INSTALL-WITHOUT-DEPENDENCIES-AND-RELOAD-CONFIG, and RELOAD-CONFIG will be
+available.
 
 + :INSTALL :: Install the system and its dependencies without prompting. If the
 active context is a bundle, the system is currently not added to the bundle (you
@@ -41,24 +42,31 @@ to some other included system for this to have any effect).
   (:documentation
    "A condition signaled when CLPM thinks a system is not installed."))
 
-(defun reload-context-config (&optional condition)
-  "Invoke the RELOAD-CONTEXT-CONFIG restart or return NIL if the restart does
-not exist."
-  (let ((restart (find-restart 'reload-context-config condition)))
+(defun reload-config (&optional condition)
+  "Invoke the RELOAD-CONFIG restart or return NIL if the restart does not
+exist."
+  (let ((restart (find-restart 'reload-config condition)))
     (when restart
       (invoke-restart restart))))
 
-(defun install-and-reload-context-config (&optional condition)
-  "Invoke the INSTALL-AND-RELOAD-CONTEXT-CONFIG restart or return NIL if the
-restart does not exist."
-  (let ((restart (find-restart 'install-and-reload-context-config condition)))
+(defun install-and-reload-config (&optional condition)
+  "Invoke the INSTALL-AND-RELOAD-CONFIG restart or return NIL if the restart
+does not exist."
+  (let ((restart (find-restart 'install-and-reload-config condition)))
     (when restart
       (invoke-restart restart))))
 
-(defun install-without-dependencies-and-reload-context-config (&optional condition)
-  "Invoke the INSTALL-WITHOUT-DEPENDENCIES-AND-RELOAD-CONTEXT-CONFIG restart or
-return NIL if the restart does not exist."
-  (let ((restart (find-restart 'install-without-dependencies-and-reload-context-config condition)))
+(defun install-without-dependencies-and-reload-config (&optional condition)
+  "Invoke the INSTALL-WITHOUT-DEPENDENCIES-AND-RELOAD-CONFIG restart or return
+NIL if the restart does not exist."
+  (let ((restart (find-restart 'install-without-dependencies-and-reload-config condition)))
+    (when restart
+      (invoke-restart restart))))
+
+(defun reresolve-requirements-and-reload-config (&optional condition)
+  "Invoke the RERESOLVE-REQUIREMENTS-AND-RELOAD-CONFIG restart or return NIL if
+the restart does not exist."
+  (let ((restart (find-restart 'reresolve-requirements-and-reload-config condition)))
     (when restart
       (invoke-restart restart))))
 
@@ -91,13 +99,17 @@ recursion."
   (asdf:initialize-source-registry source-registry))
 
 (defun handle-missing-system (system-name active-context)
-  (flet ((%install (no-deps)
-           (let ((new-source-registry
-                   (install :systems (unless (context-bundle-p active-context) (list system-name))
-                            :no-deps no-deps
-                            :update-asdf-config t)))
-             (when new-source-registry
-               (find-system-without-clpm system-name)))))
+  (labels ((%do-install (systems no-deps)
+             (let ((new-source-registry
+                     (install :systems systems
+                              :no-deps no-deps
+                              :update-asdf-config t)))
+               (when new-source-registry
+                 (find-system-without-clpm system-name))))
+           (%reresolve ()
+             (%do-install nil nil))
+           (%install (no-deps)
+             (%do-install (unless (context-bundle-p active-context) (list system-name)) no-deps)))
     (ecase *asdf-system-not-found-behavior*
       (:install (%install nil))
       (:install-without-deps (%install t))
@@ -106,31 +118,25 @@ recursion."
            ;; Prevent RESTART-CASE from using WITH-CONDITION-RESTARTS,
            ;; otherwise things can get messed up for defsystem-depends-on
            (signal-missing-system system-name)
-         (reload-context-config ()
+         (reresolve-requirements-and-reload-config ()
+           :report "Reresolve requirements and try again."
+           (%reresolve))
+         (reload-config ()
            :report "Reload the source registry for the context and try again."
            (asdf-configure-source-registry (context-source-registry :context active-context))
            (unless (context-bundle-p active-context)
-             (setf *active-context-installed-systems* (context-installed-system-names active-context)
-                   *active-context-visible-primary-system-names* (context-visible-primary-system-names active-context)))
+             (setf *active-context-installed-systems* (context-installed-system-names :context active-context)
+                   *active-context-visible-primary-system-names* (context-visible-primary-system-names :context active-context)))
            (asdf:search-for-system-definition system-name))
-         (install-and-reload-context-config ()
+         (install-and-reload-config ()
            :report "Attempt to install the system and try again."
            (%install nil))
-         (install-without-dependencies-and-reload-context-config ()
+         (install-without-dependencies-and-reload-config ()
            :report "Attempt to install the system without dependencies and try again."
            (%install t))))
       ((nil)
        nil))))
 
-;; TODO: 0.4
-;;
-;; This function will either become moot or need to be drastically reworked. If
-;; global contexts and bundles become more unified, then global contexts will
-;; also have the ability to "install" systems in an "editable" mode (the context
-;; uses the source code in a user editable location on the file system). If this
-;; happens, then it's possible that editable system gained a new requirement and
-;; we wouldn't want to touch the top level user requirements at all if the
-;; system was brought in that way.
 (defun clpm-system-definition-pre-search (system-name)
   "When used in conjunction with CLPM-SYSTEM-DEFINITION-SEARCH, this creates a
 poor man's :around method for locating systems. This function checks to see if
@@ -139,7 +145,7 @@ that's not installed, but is visible in the the source registry for the active
 context.
 
 This happens because the smallest granularity availble in ASDF's source registry
-is including directories. So, for instance, someone may install CFFI (defined in
+is the directory. So, for instance, someone may install CFFI (defined in
 cffi.asd). Then, some time later, they decide they want to run CFFI's tests,
 defined by the system cffi-tests in cffi-tests.asd *in the same directory as
 cffi.asd*. The cffi-tests system will be found by ASDF, but its dependencies,
@@ -154,6 +160,7 @@ requirement."
                (not (equal "asdf" primary-name))
                (not (equal "uiop" primary-name))
                (not (member system-name *active-context-installed-systems* :test #'equal))
+               (not (member primary-name *active-context-editable-primary-system-names* :test #'equal))
                (member primary-name *active-context-visible-primary-system-names* :test #'equal))
       (handle-missing-system system-name active-context))))
 

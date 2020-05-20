@@ -37,8 +37,8 @@
            #:default-context
            #:inside-bundle-exec-p
            #:install
-           #:install-and-reload-context-config
-           #:install-without-dependencies-and-reload-context-config
+           #:install-and-reload-config
+           #:install-without-dependencies-and-reload-config
            #:maybe-cleanup-clpm-client
            #:missing-system
            #:missing-system-name
@@ -50,7 +50,9 @@
            #:release-diff-old-source
            #:release-diff-old-version
            #:release-diff-project-name
-           #:reload-context-config))
+           #:reload-config
+           #:reresolve-requirements-and-reload-config
+           #:update))
 
 (in-package #:clpm-client)
 

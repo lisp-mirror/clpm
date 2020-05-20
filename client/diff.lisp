@@ -40,47 +40,12 @@
   "Returns non-NIL if DIFF contains no changes."
   (null (context-diff-release-diffs diff)))
 
-(defun make-added-release-diff-from-description (desc)
-  (destructuring-bind (project-name &key version source)
-      desc
-    (make-instance 'release-diff
-                   :project-name project-name
-                   :new-version version
-                   :new-source source)))
-
-(defun make-removed-release-diff-from-description (desc)
-  (destructuring-bind (project-name &key version source)
-      desc
-    (make-instance 'release-diff
-                   :project-name project-name
-                   :old-version version
-                   :old-source source)))
-
-(defun make-changed-release-diff-from-description (desc)
-  (destructuring-bind (project-name &key old new)
-      desc
-    (destructuring-bind (&key ((:version old-version)) ((:source old-source)))
-        old
-      (destructuring-bind (&key ((:version new-version)) ((:source new-source)))
-          new
-        (make-instance 'release-diff
-                       :project-name project-name
-                       :old-version old-version
-                       :old-source old-source
-                       :new-version new-version
-                       :new-source new-source)))))
-
 (defun make-context-diff-from-description (desc)
-  (destructuring-bind (&key added-releases removed-releases changed-releases)
+  (destructuring-bind (&key releases)
       desc
     (make-instance 'context-diff
                    :release-diffs
-                   (sort (append
-                          (mapcar #'make-added-release-diff-from-description added-releases)
-                          (mapcar #'make-removed-release-diff-from-description removed-releases)
-                          (mapcar #'make-changed-release-diff-from-description changed-releases))
-                         #'string<
-                         :key #'release-diff-project-name))))
+                   (mapcar (lambda (x) (apply #'make-instance 'release-diff x)) releases))))
 
 (defun context-diff-column-widths (diff)
   "Returns a list of 5 integers detailing the column widths needed to print a

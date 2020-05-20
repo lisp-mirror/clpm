@@ -20,8 +20,9 @@
 
 (defun asd-pathnames (&key context)
   (with-clpm-session ()
-    (with-context (context)
-      (context-asd-pathnames context))))
+    (with-sources-using-installed-only ()
+      (with-context (context)
+        (context-asd-pathnames context)))))
 
 (defun editable-primary-system-names (&key context)
   (with-clpm-session ()
@@ -31,18 +32,21 @@
 
 (defun find-system-asd-pathname (system-name &key context)
   (with-clpm-session ()
-    (with-context (context)
-      (context-find-system-asd-pathname context system-name))))
+    (with-sources-using-installed-only ()
+      (with-context (context)
+        (context-find-system-asd-pathname context system-name)))))
 
 (defun installed-system-names (&key context)
   (with-clpm-session ()
-    (with-context (context)
-      (mapcar 'system-name (context-installed-systems context)))))
+    (with-sources-using-installed-only ()
+      (with-context (context)
+        (mapcar 'system-name (context-installed-systems context))))))
 
 (defun output-translations (&key context)
   (with-clpm-session ()
-    (with-context (context)
-      (context-output-translations context))))
+    (with-sources-using-installed-only ()
+      (with-context (context)
+        (context-output-translations context)))))
 
 (defun source-registry (&key context with-client-p
                           ignore-inherited-source-registry
@@ -58,5 +62,6 @@
 
 (defun visible-primary-system-names (&key context)
   (with-clpm-session ()
-    (with-context (context)
-      (context-visible-primary-system-names context))))
+    (with-sources-using-installed-only ()
+      (with-context (context)
+        (context-visible-primary-system-names context)))))

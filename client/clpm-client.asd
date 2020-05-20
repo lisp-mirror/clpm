@@ -20,4 +20,5 @@
    (:file "package")
    (:file "proc" :depends-on ("package"))
    (:file "ui" :depends-on ("package"))
+   (:file "update" :depends-on ("package" "proc"))
    (:file "version" :depends-on ("package" "proc"))))

@@ -19,6 +19,9 @@ string (naming a global CLPM context) or a pathname to a clpmfile.")
   "If non-NIL, will be spliced into source registry if inherited config is not
 ignored.")
 
+(defvar *active-context-editable-primary-system-names* nil
+  "List of systems installed in the active context via an editable requirement.")
+
 (defvar *active-context-installed-systems* nil
   "List of systems installed in the active context.")
 
@@ -28,28 +31,33 @@ ignored.")
 (defun configure-from-env ()
   "Determine if there is any active context by looking at environment
 variables."
-  (let ((env-clpmfile (uiop:getenvp "CLPM_BUNDLE_CLPMFILE"))
+  (let ((env-clpmfile (uiop:getenvp "CLPM_EXEC_CLPMFILE"))
         (env-context (uiop:getenvp "CLPM_EXEC_CONTEXT")))
-    (cond
-      (env-clpmfile
-       ;; We're operating within a bundle context.
-       (setf *active-context* (pathname env-clpmfile))
-       (setf *active-context-ignore-inherited-source-registry* t))
-      (env-context
-       ;; We're operating within a global CLPM context.
-       (setf *active-context* env-context)
-       (setf *active-context-ignore-inherited-source-registry*
-             (uiop:getenvp "CLPM_EXEC_IGNORE_INHERITED_SOURCE_REGISTRY"))
-       (setf *active-context-splice-source-registry*
-             (uiop:getenvp "CLPM_EXEC_SPLICE_INHERITED_SOURCE_REGISTRY"))
-       (setf *active-context-installed-systems* (uiop:split-string (uiop:getenv "CLPM_EXEC_INSTALLED_SYSTEMS")))
-       (setf *active-context-visible-primary-system-names* (uiop:split-string (uiop:getenv "CLPM_EXEC_VISIBLE_PRIMARY_SYSTEMS")))))))
+    (when (or env-clpmfile env-context)
+      (setf *active-context* (if env-clpmfile (pathname env-clpmfile) env-context))
+      (uiop:if-let ((installed-systems-string (uiop:getenvp "CLPM_EXEC_INSTALLED_SYSTEMS")))
+        (uiop:with-safe-io-syntax ()
+          (setf *active-context-installed-systems* (read-from-string installed-systems-string))))
+      (uiop:if-let ((visible-systems-string (uiop:getenvp "CLPM_EXEC_VISIBLE_PRIMARY_SYSTEMS")))
+        (uiop:with-safe-io-syntax ()
+          (setf *active-context-visible-primary-system-names* (read-from-string visible-systems-string))))
+      (uiop:if-let ((editable-systems-string (uiop:getenvp "CLPM_EXEC_EDITABLE_PRIMARY_SYSTEMS")))
+        (uiop:with-safe-io-syntax ()
+          (setf *active-context-editable-primary-system-names* (read-from-string editable-systems-string))))
+      (if (uiop:getenvp "CLPM_EXEC_IGNORE_INHERITED_SOURCE_REGISTRY")
+          (progn
+            (setf *active-context-ignore-inherited-source-registry* t)
+            (setf *active-context-splice-source-registry* nil))
+          (progn
+            (setf *active-context-ignore-inherited-source-registry* nil)
+            (setf *active-context-splice-source-registry* (uiop:getenvp "CLPM_EXEC_SPLICE_INHERITED_SOURCE_REGISTRY")))))))
 (uiop:register-image-restore-hook 'configure-from-env)
 
 (defun clear-active-context ()
   (setf *active-context* nil
         *active-context-ignore-inherited-source-registry* nil
         *active-context-splice-source-registry* nil
+        *active-context-visible-primary-system-names* nil
         *active-context-installed-systems* nil
         *active-context-visible-primary-system-names* nil))
 (uiop:register-image-dump-hook 'clear-active-context)
@@ -69,26 +77,19 @@ context."
   "Returns the default context for operations. Defaults to *DEFAULT-CONTEXT*,
 then ACTIVE-CONTEXT, then \"default\"."
   (or *default-context*
-      *active-context*
+      (active-context)
       "default"))
 
 (defun context-bundle-p (context)
   "A context names a bundle if it is a pathname."
   (pathnamep context))
 
-(defun context-asd-pathnames (&optional (context (default-context)))
+(defun context-asd-pathnames (&key (context (default-context)))
   "Given a context, return a list of pathnames to .asd files installed in that
 context."
-  (assert (not (context-bundle-p context)))
   (with-clpm-proc (proc)
-    (clpm-proc-print
-     proc
-     `(context-asd-pathnames ,context))
+    (clpm-proc-print proc `(asd-pathnames :context ,context))
     (clpm-proc-read proc)))
-
-(defun context-asd-directories (&optional (context (default-context)))
-  "Return the directories containing the .asd files installed in CONTEXT."
-  (asd-pathnames-to-directories (context-asd-pathnames context)))
 
 (defun asd-pathnames-to-directories (pathnames)
   "Given a list of pathnames to .ASD files, return a list of pathnames to the
@@ -96,56 +97,44 @@ directories containing the files."
   (remove-duplicates (mapcar 'uiop:pathname-directory-pathname pathnames)
                      :test 'uiop:pathname-equal))
 
-(defun context-find-system-asd-pathname (system-name &optional (context (default-context)))
+(defun context-asd-directories (&key (context (default-context)))
+  "Return the directories containing the .asd files installed in CONTEXT."
+  (asd-pathnames-to-directories (context-asd-pathnames :context context)))
+
+(defun context-editable-primary-system-names (&key (context (default-context)))
+  "Return the names of primary systems editable in CONTEXT."
+  (with-clpm-proc (proc)
+    (clpm-proc-print proc `(editable-primary-system-names :context ,context))
+    (clpm-proc-read proc)))
+
+(defun context-find-system-asd-pathname (system-name &key (context (default-context)))
   "Find the pathname to a system in the given context."
-  (assert (not (context-bundle-p context)))
   (with-clpm-proc (proc)
-    (clpm-proc-print
-     proc
-     `(context-find-system-asd-pathname ,context ,system-name))
+    (clpm-proc-print proc `(find-system-asd-pathname ,system-name :context ,context))
     (clpm-proc-read proc)))
 
-(defun context-installed-system-names (&optional (context (default-context)))
-  "Return the names of systems installed in CONTEXT. Does not currently work on
-bundles."
-  (assert (not (context-bundle-p context)))
+(defun context-installed-system-names (&key (context (default-context)))
+  "Return the names of systems installed in CONTEXT."
   (with-clpm-proc (proc)
-    (clpm-proc-print proc
-                     `(mapcar 'system-name (context-installed-systems ,context)))
+    (clpm-proc-print proc `(installed-system-names :context ,context))
     (clpm-proc-read proc)))
 
-(defun context-visible-primary-system-names (&optional (context (default-context)))
-  "Return the names of primary systems visible to ASDF in CONTEXT. Does not
-currently work on bundles."
-  (assert (not (context-bundle-p context)))
+(defun context-visible-primary-system-names (&key (context (default-context)))
+  "Return the names of primary systems visible to ASDF in CONTEXT."
   (with-clpm-proc (proc)
-    (clpm-proc-print proc
-                     `(context-visible-primary-system-names ,context))
+    (clpm-proc-print proc `(visible-primary-system-names :context ,context))
     (clpm-proc-read proc)))
 
-(defun context-output-translations (&optional (context (default-context)))
+(defun context-output-translations (&key (context (default-context)))
   "Return an output-translations form for CONTEXT."
   (with-clpm-proc (proc)
-    (clpm-proc-print
-     proc
-     (if (context-bundle-p context)
-         `(with-bundle-default-pathname-defaults (,@(when (pathnamep context) (list context)))
-            (with-bundle-local-config (,@(when (pathnamep context) (list context)))
-              (bundle-output-translations ,(if (pathnamep context) context '(bundle-clpmfile-pathname)))))
-         `(context-output-translations ,context)))
+    (clpm-proc-print proc `(output-translations :context ,context))
     (clpm-proc-read proc)))
 
 (defun context-source-registry (&key (context (default-context)) ignore-inherited)
   "Return a source-registry form for the CONTEXT."
   (with-clpm-proc (proc)
-    (clpm-proc-print
-     proc
-     (if (context-bundle-p context)
-         `(with-bundle-default-pathname-defaults (,context)
-            (with-bundle-local-config (,context)
-              (bundle-source-registry ,context)))
-         `(context-to-asdf-source-registry-form ,context
-                                                :ignore-inherited ,ignore-inherited)))
+    (clpm-proc-print proc `(source-registry :context ,context :ignore-inherited-source-registry ,ignore-inherited))
     (clpm-proc-read proc)))
 
 (defun activate-context (context &key activate-asdf-integration
@@ -166,18 +155,20 @@ called."
     (cerror "Continue" "You are attempting to activate a context when a context is already active."))
   (let ((source-registry (context-source-registry :context context
                                                   :ignore-inherited ignore-inherited-source-registry))
-        (output-translations (context-output-translations context))
+        (output-translations (context-output-translations :context context))
         (old-context (active-context)))
     (setf *active-context* context
           *active-context-ignore-inherited-source-registry* ignore-inherited-source-registry
           *active-context-installed-systems* nil
-          *active-context-visible-primary-system-names* nil)
+          *active-context-visible-primary-system-names* nil
+          *active-context-editable-primary-system-names* nil)
     (unless old-context
       (setf *active-context-splice-source-registry* asdf:*source-registry-parameter*))
     (asdf-configure-source-registry source-registry)
     (unless (context-bundle-p context)
-      (setf *active-context-installed-systems* (context-installed-system-names context)
-            *active-context-visible-primary-system-names* (context-visible-primary-system-names context)))
+      (setf *active-context-editable-primary-system-names* (context-editable-primary-system-names :context context)
+            *active-context-installed-systems* (context-installed-system-names :context context)
+            *active-context-visible-primary-system-names* (context-visible-primary-system-names :context context)))
     (when output-translations
       (asdf:initialize-output-translations output-translations))
     (when activate-asdf-integration
