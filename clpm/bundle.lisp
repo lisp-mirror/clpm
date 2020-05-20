@@ -33,32 +33,6 @@
 
 (setup-logger)
 
-(defun call-with-bundle-session (thunk &key clpmfile)
-  (with-clpm-session ()
-    (with-config-source (:pathname (merge-pathnames ".clpm/bundle.conf"
-                                                    (uiop:pathname-directory-pathname
-                                                     (clpmfile-pathname clpmfile))))
-      (let ((*default-pathname-defaults* (uiop:pathname-directory-pathname (clpmfile-pathname clpmfile)))
-            (*vcs-project-override-fun* (make-vcs-override-fun (clpmfile-pathname clpmfile))))
-        (funcall thunk)))))
-
-(defmacro with-bundle-session ((clpmfile) &body body)
-  `(call-with-bundle-session (lambda () ,@body) :clpmfile ,clpmfile))
-
-(defun create-empty-lockfile (clpmfile)
-  (aprog1 (copy-context clpmfile)
-    (setf (context-name it) (clpmfile-lockfile-pathname clpmfile))))
-
-(defun make-vcs-override-fun (clpmfile-pathname)
-  (let ((clpmfile-directory (uiop:pathname-directory-pathname clpmfile-pathname)))
-    (lambda (project-name)
-      (let ((override (config-value :bundle :local project-name)))
-        (when override
-          (merge-pathnames override clpmfile-directory))))))
-
-(defun load-lockfile (pathname)
-  (load-anonymous-context-from-pathname pathname))
-
 (defun bundle-init (&key clpmfile (if-exists :error) asds)
   (with-standard-io-syntax
     (let ((*print-case* :downcase))
@@ -102,7 +76,7 @@ the lock file if necessary."
       lockfile)))
 
 
-(defun bundle-source-registry (&key clpmfile with-client-p ignore-missing-releases)
+(defun bundle-source-registry (&key clpmfile with-client-p)
   (source-registry :with-client-p with-client-p :ignore-inherited-source-registry t
                    :context (clpmfile-pathname clpmfile)))
 
