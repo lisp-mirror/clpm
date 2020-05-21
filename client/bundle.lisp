@@ -12,7 +12,5 @@ CLPMFILE) to the new clpmfile."
   (with-clpm-proc (proc)
     (clpm-proc-print
      proc
-     `(with-bundle-default-pathname-defaults (,clpmfile)
-        (with-bundle-local-config (,clpmfile)
-          (bundle-init :clpmfile ,clpmfile :asds ',asds)))))
-  clpmfile)
+     `(bundle-init :clpmfile ,clpmfile :asds ',asds))
+    (clpm-proc-read proc)))

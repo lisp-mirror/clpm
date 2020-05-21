@@ -137,7 +137,8 @@ directories containing the files."
     (clpm-proc-print proc `(output-translations :context ,context))
     (clpm-proc-read proc)))
 
-(defun context-source-registry (&key (context (default-context)) ignore-inherited)
+(defun context-source-registry (&key (context (default-context))
+                                  (ignore-inherited (context-bundle-p context)))
   "Return a source-registry form for the CONTEXT."
   (with-clpm-proc (proc)
     (clpm-proc-print proc `(source-registry :context ,context :ignore-inherited-source-registry ,ignore-inherited))

@@ -34,7 +34,7 @@ source registry is updated with the results."
                       :update-systems ',(ensure-list systems)
                       :context ,context
                       :validate ,(make-diff-validator-fun)))
-        (list (source-registry :context ,context)
+        (list (source-registry :context ,context :ignore-inherited-source-registry ,(context-bundle-p context))
               (installed-primary-system-names :context ,context)
               (visible-primary-system-names :context ,context)
               (editable-primary-system-names :context ,context))))

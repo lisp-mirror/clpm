@@ -328,7 +328,7 @@ in place with the same name. Return the new requirement if it was modified."
              (t (:root ,@(rest (pathname-directory (clpm-cache-pathname '("bundle" "fasl-cache")
                                                                         :ensure-directory t)))
                        ,(urlencode (format nil "~{~A~^/~}" (rest (pathname-directory pathname))))
-                       :implementation :** :*.*.*))))
+                       :implementation :**/ :*.*.*))))
           (:local
            `(:output-translations
              :ignore-inherited-configuration
