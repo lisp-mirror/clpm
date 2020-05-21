@@ -36,7 +36,7 @@
 
 (defun quicklisp-alternative-rc ()
   #?";;; Use CLPM as a quicklisp alternative (missing systems are silently installed
-;;; on demand).
+;;; on demand and not extra steps need to be taken to turn it on).
 
 (require \"asdf\")
 #-clpm-client
@@ -57,9 +57,8 @@
   (when (probe-file client-asd-pathname)
     (asdf:load-asd client-asd-pathname)
     (asdf:load-system \"clpm-client\")
-    (if (uiop:symbol-call :clpm-client :active-context)
-        (uiop:symbol-call :clpm-client :activate-asdf-integration)
-        (uiop:symbol-call :clpm-client :activate-context \"default\" :activate-asdf-integration t))))")
+    (when (uiop:symbol-call :clpm-client :active-context)
+      (uiop:symbol-call :clpm-client :activate-asdf-integration))))")
 
 (define-cli-command (("client" "rc") *client-rc-ui*) (args options)
   (declare (ignore args))
