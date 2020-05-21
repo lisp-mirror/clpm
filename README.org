@@ -1,5 +1,5 @@
 #+TITLE: Common Lisp Package Manager - CLPM
-#+AUTHOR: CLPM Developers
+#+AUTHOR: Eric Timmons
 #+EMAIL: clpm-devel@common-lisp.net
 #+OPTIONS: email:t toc:1 num:nil
 
@@ -90,16 +90,17 @@ files.
 * Quickstart
 
   Now that you have CLPM installed, this section walks you through how to set
-  it up as a Quicklisp alternative.
+  it up, using the packages provided by the primary Quicklisp distribution.
 
-  First, configure CLPM to use a mirror of the primary Quicklisp distribution
-  as a source for packages [fn:1]. Create a file called
-  =~/.config/clpm/sources.conf= with the following contents:
+  First, configure CLPM to use the primary Quicklisp distribution as a source
+  for packages. Create a file called =~/.config/clpm/sources.conf= (or
+  =C:\Users\$USER\AppData\Local\config\clpm\sources.conf= on Windows) with the
+  following contents:
 
   #+begin_src common-lisp
     ("quicklisp"
-     :type :ql-clpi
-     :url "https://quicklisp.common-lisp-project-index.org/")
+     :type :quicklisp
+     :url "https://beta.quicklisp.org/dist/quicklisp.txt")
   #+end_src
 
   See [[file:docs/sources.org][sources]] for more details on configuring sources.
@@ -108,22 +109,37 @@ files.
   of the following command in your Lisp's init file (such as =~/.sbclrc=).
 
   #+begin_src shell
-    clpm client rc --quicklisp-alternative
+    clpm client rc
   #+end_src
 
-  Then you can start your favorite Common Lisp implementation and try loading a
-  system, such as alexandria:
+  Then you can start your favorite Common Lisp implementation and enter into
+  the default CLPM context.
+
+  #+begin_src common-lisp
+    (clpm-client:activate-context "default" :activate-asdf-integration t)
+  #+end_src
+
+  When using Quicklisp metadata directly, you need to sync in order to get all
+  the metadata locally (other types of sources are able to lazily sync). This
+  step may take a while the first time as it downloads and processes every
+  version of the distribution.
+
+  #+begin_src common-lisp
+    (clpm-client:sync :sources "quicklisp")
+  #+end_src
+
+  Now you can try loading a system, such as alexandria:
 
   #+begin_src common-lisp
     (asdf:load-system :alexandria)
   #+end_src
 
-  CLPM will see that alexandria is not present locally and automatically
-  install it before loading it.
+  CLPM will see that alexandria is not present locally and ask you if you would
+  like to install it automatically.
 
 * Project Goals
 
-  CLPM is far from the only package manager available for Common Lisp[fn:2], but
+  CLPM is far from the only package manager available for Common Lisp[fn:1], but
   it makes very different assumptions and design choices than the other
   available solutions. In this section we describe our high level goals and how
   they affect our design decisions.
@@ -143,11 +159,11 @@ files.
    drive the quality of code in the community at large higher.
 
    The desire to use existing libraries drives the decision for the CLPM core
-   and client to be separated. The client has no external dependencies which
-   allows it to share all the benefits of Quicklisp's model, and the core never
-   needs to be loaded into a development image, so it can leverage any
-   dependency that makes sense without impacting the development image in the
-   slightest.
+   and client to be separated. The client has no external dependencies outside
+   of ASDF/UIOP, which allows it to share all the benefits of Quicklisp's
+   model, and the core never needs to be loaded into a development image, so it
+   can leverage any dependency that makes sense without impacting the
+   development image in the slightest.
 
 ** Support HTTPS
 
@@ -210,11 +226,11 @@ files.
    critical mass did buy in, things wouldn't change overnight.
 
    Therefore, CLPM supports both the status quo (a Quicklisp package index
-   versioned by date) as well as a work in progress package index (working name
+   versioned by date) as well as a [[https://gitlab.common-lisp.net/clpm/clpi][work in progress package index]] (working name
    of CLPI). This new Common Lisp Project Index includes both extra metadata
    about projects (such as the upstream repo which can be used to check out
-   development versions) and requires that systems are versioned in order to be
-   released.
+   development versions) as well as information on the ASDF system version
+   numbers.
 
 * In-depth Documentation
 
@@ -229,11 +245,4 @@ files.
 
 * Footnotes
 
-[fn:1] This mirror is generated using the [[https://gitlab.common-lisp.net/clpm/ql-clpi][ql-clpi project]], which stores
-information about the projects and releases in a [[https://gitlab.common-lisp.net/clpm/clpi][Common Lisp Project Index]]. A
-goal of CLPI is to make it easy to download only the pieces of information
-needed to perform the operation at hand, instead of needing to sync all data
-about all releases locally. If you wish to not use this mirror, see [[file:docs/sources.org][sources]] for
-information on how to use a Quicklisp distribution directly.
-
-[fn:2] See, for example: [[https://www.quicklisp.org/beta/][Quicklisp]], [[https://github.com/fukamachi/qlot/][Qlot]], and [[https://github.com/CodyReichert/qi][Qi]].
+[fn:1] See, for example: [[https://www.quicklisp.org/beta/][Quicklisp]], [[https://github.com/fukamachi/qlot/][Qlot]], and [[https://github.com/CodyReichert/qi][Qi]].

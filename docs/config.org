@@ -1,5 +1,5 @@
 #+TITLE: CLPM Configuration
-#+AUTHOR: CLPM Developers
+#+AUTHOR: Eric Timmons
 #+EMAIL: clpm-devel@common-lisp.net
 #+OPTIONS: toc:1 num:nil H:9
 

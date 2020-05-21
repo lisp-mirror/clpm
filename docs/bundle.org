@@ -1,5 +1,5 @@
 #+TITLE: CLPM Bundle
-#+AUTHOR: CLPM Developers
+#+AUTHOR: Eric Timmons
 #+EMAIL: clpm-devel@common-lisp.net
 #+OPTIONS: toc:1 num:nil
 
@@ -181,12 +181,6 @@ with zero configuration or helpers needed (other than ASDF, of course).
      config table.
    + =CL_SOURCE_REGISTRY= :: Set to contain the parent folders of every .asd
      file in the bundle.
-   + =CLPM_BUNDLE_BIN_PATH= :: Set to the path to the clpm executable. Used by
-     the client.
-   + =CLPM_BUNDLE_CLPMFILE= :: Set to the path to the clpmfile that defines the
-     bundle. Used by the client.
-   + =CLPM_BUNDLE_CLPMFILE_LOCK= :: Set to the path to the clpmfile.lock that
-     defines the bundle. Used by the client.
 
 ** =clpm bundle update=
 

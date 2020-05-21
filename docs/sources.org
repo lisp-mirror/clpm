@@ -1,5 +1,5 @@
 #+TITLE: CLPM Sources
-#+AUTHOR: CLPM Developers
+#+AUTHOR: Eric Timmons
 #+EMAIL: clpm-devel@common-lisp.net
 #+OPTIONS: toc:1 num:nil
 
@@ -75,7 +75,7 @@ The type of every source must be specified with a keyword.
 
    The type specifier is =:clpi= and a =:url= is also required.
 
-   While CLPI sources *can* be synced, it is currently a fairly slow affair due
+   While CLPI sources can be synced, it is currently a fairly slow affair due
    to how many objects the information is spread between. It is recommended
    that you just let CLPM fetch data on demand.
 

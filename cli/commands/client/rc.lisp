@@ -45,6 +45,7 @@
     (asdf:load-asd client-asd-pathname)
     (asdf:load-system \"clpm-client\")
     (setf (symbol-value (uiop:find-symbol* :*asdf-system-not-found-behavior* :clpm-client)) :install)
+    (setf (symbol-value (uiop:find-symbol* :*context-diff-approval-method* :clpm-client)) t)
     (if (uiop:symbol-call :clpm-client :active-context)
         (uiop:symbol-call :clpm-client :activate-asdf-integration)
         (uiop:symbol-call :clpm-client :activate-context \"default\" :activate-asdf-integration t))))")

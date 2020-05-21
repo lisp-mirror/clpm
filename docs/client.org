@@ -1,5 +1,5 @@
 #+TITLE: CLPM Client
-#+AUTHOR: CLPM Developers
+#+AUTHOR: Eric Timmons
 #+EMAIL: clpm-devel@common-lisp.net
 #+OPTIONS: toc:1 num:nil
 
@@ -14,42 +14,37 @@ Note that the clpm-client interface may change at any time before a stable
 * clpm-client ASDF System
 
   The client's ASDF system name is =clpm-client=. It is installed with CLPM,
-  typically in =/usr/local/lib/clpm/src/clpm-client=. In order to use the
-  client, you must configure ASDF to find this system (see the ASDF manual for
-  more information on how to do this) or directly load the .asd file using
+  typically in =/usr/local/lib/clpm/client/=. In order to use the client, you
+  must configure ASDF to find this system (see the ASDF manual for more
+  information on how to do this) or directly load the .asd file using
   =asdf:load-asd=.
 
   The output of =clpm client rc= prints several ways to load and configure the
-  client. The default rc configuration provides a function that loads the
-  client when called. The =--quicklisp-alternative= option can be used to
-  generate rc file contents that automatically load the client and configure it
-  to behave similarly to Quicklisp.
+  client. The default rc configuration loads the client if it is available, but
+  does not enter any context or activate ASDF integration. The
+  =--quicklisp-alternative= option can be used to generate rc file contents
+  that automatically load the client, activates the default context, and
+  configure it to behave similarly to Quicklisp.
 
 * ASDF Integration
 
   By default, the client does not hook into ASDF unless directed to. In order
-  to get the benefit of automatically installing systems, enable the ASDF hooks
-  by running =(clpm-client:activate-clpm-asdf-integration)=
+  to get the benefit of automatically installing systems, activate a context
+  and enable the ASDF hooks by running:
+
+  #+begin_src common-lisp
+    (clpm-client:activate-context "default" :activate-asdf-integration t)
+  #+end_src
 
 * Configuring
 
-  The client exports several variables that control its behavior. These
-  variables are:
+  The client exports several variables that control its behavior. Some of these
+  variables are listed below, each has a doc string describing its current
+  behavior.
 
-  + =*clpm-cleanup-on-dump-p*= :: Defaults to T. If non-NIL, then the client
-    attempts to clean up after itself on image dumps. This cleanup attempts to
-    remove all traces of CLPM from various hooks and then deletes all packages
-    that belong to the client.
-  + =*clpm-context*= :: Defaults to ="default"=. A string naming the global
-    context to use when not inside a bundle.
-  + =*clpm-executable*= :: If you installed CLPM at a non-standard path or wish
-    to execute it with non-standard options, set this variable. It can either
-    be a string (the path to CLPM) or a list of strings.
-  + =*clpm-system-not-found-behavior*= :: Defaults to =:error=. Controls the
-    behavior of the client when it ASDF integration has been enabled and a
-    system cannot be found. If =:error=, it signals a condition with several
-    restarts enabled to let you interactively determine how to proceed. If
-    =:install= then it tries to install the missing system. If
-    =:install-with-deps= then it tries to install the missing system and its
-    dependencies. If NIL, it does nothing (likely resulting in ASDF signaling
-    an error.
+  + =*cleanup-on-dump-p*=
+  + =*default-context*=
+  + =*clpm-executable*=
+  + =*asdf-system-not-found-behavior*=
+  + =*clpm-dribble*=
+  + =*context-diff-approval-method*=
