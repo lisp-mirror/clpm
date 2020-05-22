@@ -1,7 +1,5 @@
 # syntax=docker/dockerfile:1-experimental
 #
-# Builds a Docker image to build CLPM with Ubuntu
-#
 # This software is part of CLPM. See README.org for more information. See
 # LICENSE for license information.
 
@@ -9,12 +7,8 @@
 # executable on older systems.
 FROM daewok/sbcl:2.0.3-ubuntu-bionic-build
 
-COPY docker/customize-target-features.lisp /usr/local/src/sbcl-${SBCL_VERSION}/
-
-RUN rebuild-sbcl
-
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends build-essential libssl-dev libz-dev git curl \
+    && apt-get install -y --no-install-recommends build-essential libssl-dev git curl \
     && rm -rf /var/lists/apt
 
 ENV ASDF_VERSION=3.3.4

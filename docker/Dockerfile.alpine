@@ -1,19 +1,11 @@
 # syntax=docker/dockerfile:1-experimental
 #
-# Builds a Docker image to build CLPM with Ubuntu
-#
 # This software is part of CLPM. See README.org for more information. See
 # LICENSE for license information.
 
-# Use Bionic as Disco upgraded libc, making it more difficult to run the built
-# executable on older systems.
-FROM daewok/sbcl:2.0.3-alpine3.11-build
+FROM daewok/sbcl:2.0.3-alpine3.11
 
-COPY docker/customize-target-features.lisp /usr/local/src/sbcl-${SBCL_VERSION}/
-
-RUN rebuild-sbcl
-
-RUN apk add --no-cache openssl-dev gcc zlib-dev musl-dev git curl
+RUN apk add --no-cache openssl-dev gcc musl-dev git curl
 
 ENV ASDF_VERSION=3.3.4
 
