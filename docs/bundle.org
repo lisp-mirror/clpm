@@ -60,7 +60,7 @@ with zero configuration or helpers needed (other than ASDF, of course).
     The project directive declares a dependency on an entire project.
 
     #+begin_src common-lisp
-      (name &key vcs systems source)
+      (name &key vcs systems source version)
     #+end_src
 
     + ~name~ :: must be a string, naming the project.
@@ -69,21 +69,29 @@ with zero configuration or helpers needed (other than ASDF, of course).
     + ~:vcs~ :: If provided, must be a plist naming the ~:branch~, ~:commit~,
       or ~:tag~ to use when checking out the project from version control.
     + ~:systems~ :: If provided, must be a list of strings naming the systems
-      to be required in the bundle. Otherwise all explicitly defined systems
-      are required.
+      to be required in the bundle. Otherwise all systems are required.
+    + ~:version~ :: If provided, must be a version specifier. Can either be a
+      string (in which case it is parsed as if by =clpm install=), a single
+      version specifier (such as ~(= "1.2")~), or a list of version specifiers
+      (such as ~((>= "1.1") (< "2"))~).
 
 *** ~:system~
 
     The system directive declares a dependency on a specific system.
 
     #+begin_src common-lisp
-      (name &key source)
+      (name &key source version)
     #+end_src
 
     + ~name~ :: must be a string, naming a system provided by one of the
       specified sources.
     + ~:source~ :: If provided, names a source that the system must be located
       in.
+    + ~:version~ :: If provided, must be a version specifier. Can either be a
+      string (in which case it is parsed as if by =clpm install=), a single
+      version specifier (such as ~(= "1.2")~), or a list of version specifiers
+      (such as ~((>= "1.1") (< "2"))~).
+
 
 *** ~:github~
 
@@ -105,7 +113,7 @@ with zero configuration or helpers needed (other than ASDF, of course).
     + ~:commit~ :: If specified, must be a string naming the commit to use.
     + ~:tag~ :: If specified, must be a string naming the tag to use.
     + ~:systems~ :: A list naming the systems to require in the bundle. If NIL,
-      all explicitly defined systems are required.
+      all systems are required.
 
 *** ~:gitlab~
 

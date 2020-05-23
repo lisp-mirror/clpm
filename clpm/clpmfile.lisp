@@ -13,7 +13,8 @@
           #:clpm/repos
           #:clpm/requirement
           #:clpm/source
-          #:clpm/utils)
+          #:clpm/utils
+          #:clpm/version-strings)
   (:export #:clpmfile-lockfile-pathname
            #:clpmfile-pathname
            #:get-clpmfile))
@@ -66,6 +67,15 @@ an error if it does not exist."
             :key #'source-name
             :test #'string-equal)
       (error "Unable to find source ~S" source-name)))
+
+(defun parse-clpmfile-version-specifier (version)
+  (cond
+    ((stringp version)
+     (parse-version-specifier version))
+    ((and (listp version) (listp (first version)))
+     version)
+    ((listp version)
+     (list version))))
 
 (defgeneric parse-clpmfile-form (clpmfile type args))
 
@@ -157,9 +167,7 @@ instance."
                              :source (when source
                                        (find-source-or-error (context-user-sources clpmfile)
                                                              source))
-                             :version-spec (when version
-                                             (cons (first version)
-                                                   (second version)))
+                             :version-spec (when version (parse-clpmfile-version-specifier version))
                              :why t)
               (context-requirements clpmfile)))))
 
@@ -179,7 +187,7 @@ instance."
                          :source (when source
                                    (find-source-or-error (context-user-sources clpmfile)
                                                          source))
-                         :version-spec version
+                         :version-spec (when version (parse-clpmfile-version-specifier version))
                          :why t)
           (context-requirements clpmfile))))
 
