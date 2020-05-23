@@ -135,7 +135,10 @@ recursion."
          (install-without-dependencies-and-reload-config ()
            :report "Attempt to install the system without dependencies and try again."
            :test (lambda (c) (declare (ignore c)) (not (context-bundle-p active-context)))
-           (%install t))))
+           (%install t))
+         (continue ()
+           :report "Return control to ASDF, doing nothing."
+           nil)))
       ((nil)
        nil))))
 
