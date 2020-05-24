@@ -21,8 +21,8 @@
   + Client's INSTALL and UPDATE functions made much simpler and more
     featureful.
   + Client's dribble features improved greatly.
-  + =context source-registry= CLI added.
-  + =context output-translations= CLI added.
+  + =source-registry= CLI added.
+  + =output-translations= CLI added.
   + =exec= CLI added.
   + =activate-context= function added to client to allow changing source registry
     and output translations of the current image.
