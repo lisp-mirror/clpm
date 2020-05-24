@@ -7,6 +7,7 @@
 
 (defun install (&key projects
                   systems
+                  asds
                   version ref source
                   (validate 'context-diff-approved-p)
                   no-deps
@@ -42,6 +43,7 @@ source registry is updated with the results."
                               :no-resolve ,no-resolve)
              `(install :projects ',(ensure-list projects)
                        :systems ',(ensure-list systems)
+                       :asds ',(mapcar #'merge-pathnames (ensure-list asds))
                        :no-deps-p ,no-deps
                        :context ,context
                        :save-context-p t
