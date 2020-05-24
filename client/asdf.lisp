@@ -100,12 +100,10 @@ recursion."
 
 (defun handle-missing-system (system-name active-context)
   (labels ((%do-install (systems no-deps)
-             (let ((new-source-registry
-                     (install :systems systems
-                              :no-deps no-deps
-                              :update-asdf-config t)))
-               (when new-source-registry
-                 (find-system-without-clpm system-name))))
+             (when (install :systems systems
+                            :no-deps no-deps
+                            :update-asdf-config t)
+               (find-system-without-clpm system-name)))
            (%reresolve ()
              (%do-install nil nil))
            (%install (no-deps)

@@ -14,8 +14,7 @@
                   (context (default-context))
                   (update-asdf-config (asdf-integration-active-p))
                   no-resolve)
-  "Install a set of projects and systems. Returns the source registry form for
-the context.
+  "Install a set of projects and systems. Returns T if the diff was approved.
 
 PROJECTS and SYSTEMS must be lists of dependency specifiers. VERSION, REF, and
 SOURCE must be strings and are used as the default constraints on PROJECTS and
@@ -55,13 +54,13 @@ source registry is updated with the results."
               (installed-primary-system-names :context ,context)
               (visible-primary-system-names :context ,context)
               (editable-primary-system-names :context ,context))))
-    (clpm-proc-print proc
-                     (funcall validate (make-context-diff-from-description (clpm-proc-read proc))))
-    (destructuring-bind (source-registry installed-primary-system-names visible-system-names editable-system-names)
-        (clpm-proc-read proc)
-      (when (and update-asdf-config (equal context (active-context)))
-        (asdf-configure-source-registry source-registry)
-        (setf *active-context-installed-primary-system-names* installed-primary-system-names
-              *active-context-visible-primary-system-names* visible-system-names
-              *active-context-editable-primary-system-names* editable-system-names))
-      source-registry)))
+    (let ((validate-result (funcall validate (make-context-diff-from-description (clpm-proc-read proc)))))
+      (clpm-proc-print proc validate-result)
+      (destructuring-bind (source-registry installed-primary-system-names visible-system-names editable-system-names)
+          (clpm-proc-read proc)
+        (when (and update-asdf-config (equal context (active-context)))
+          (asdf-configure-source-registry source-registry)
+          (setf *active-context-installed-primary-system-names* installed-primary-system-names
+                *active-context-visible-primary-system-names* visible-system-names
+                *active-context-editable-primary-system-names* editable-system-names))
+        validate-result))))
