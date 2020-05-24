@@ -8,6 +8,7 @@
   (:use #:cl
         #:clpm/bundle
         #:clpm/client
+        #:clpm/clpi
         #:clpm/config
         #:clpm/context-diff
         #:clpm/context-queries
@@ -26,6 +27,8 @@
            #:bundle-update)
   ;; From client
   (:export #:client-asd-pathname)
+  ;; From clpi
+  (:export #:make-release-jsown)
   ;; From config
   (:export #:config-value)
   ;; From context-queries
