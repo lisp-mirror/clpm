@@ -13,6 +13,7 @@
           #:clpm/config
           #:clpm/data
           #:clpm/log
+          #:clpm/repos
           #:clpm/requirement
           #:clpm/source
           #:do-urlencode)
@@ -438,11 +439,21 @@ in place with the same name. Return the new requirement if it was modified."
 (defmethod process-form (context (section (eql :reverse-dependencies)) form))
 
 (defmethod process-form (context (section (eql :sources)) form)
-  (let ((source (load-source-from-form form)))
-    (unless (or (source-can-lazy-sync-p source)
-                (config-value :local))
-      (sync-source source))
-    (setf (context-user-sources context) (append (context-user-sources context) (list source)))))
+  (case (first form)
+    (:implicit-vcs
+     (dolist (project-description (getf (rest form) :projects))
+       (vcs-source-register-project! (context-vcs-source context)
+                                     (make-repo-from-description (rest project-description))
+                                     (first project-description))))
+    (:implicit-file
+     (dolist (sf (getf (rest form) :system-files))
+       (fs-source-register-asd (context-fs-source context) sf)))
+    (t
+     (let ((source (load-source-from-form form)))
+       (unless (or (source-can-lazy-sync-p source)
+                   (config-value :local))
+         (sync-source source))
+       (setf (context-user-sources context) (append (context-user-sources context) (list source)))))))
 
 (defun load-context-from-stream (stream name)
   (uiop:with-safe-io-syntax ()
