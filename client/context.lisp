@@ -141,7 +141,7 @@ directories containing the files."
                                   (ignore-inherited (context-bundle-p context)))
   "Return a source-registry form for the CONTEXT."
   (with-clpm-proc (proc)
-    (clpm-proc-print proc `(source-registry :context ,context :ignore-inherited-source-registry ,ignore-inherited))
+    (clpm-proc-print proc `(source-registry :context ,context :ignore-inherited-source-registry ,ignore-inherited :with-client-p t))
     (clpm-proc-read proc)))
 
 (defun activate-context (context &key activate-asdf-integration
