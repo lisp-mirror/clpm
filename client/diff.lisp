@@ -83,7 +83,8 @@ source, and finally new source."
 
 (defun print-context-diff-to-stream (diff stream)
   "Print a human readable description of DIFF to STREAM."
-  (let* ((column-lengths (context-diff-column-widths diff))
+  (let* ((*print-circle* nil)
+         (column-lengths (context-diff-column-widths diff))
          (header-format-string
            (apply #'format nil "~~~D<~~A~~>   ~
 ~~~D<~~@[~~A~~]~~>      ~~~D<~~@[~~A~~]~~>   ~
