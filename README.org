@@ -105,6 +105,16 @@ files.
 
   See [[file:docs/sources.org][sources]] for more details on configuring sources.
 
+  Then, configure ASDF to find the CLPM client. Assuming you haven't modified
+  your [[https://common-lisp.net/project/asdf/asdf.html#Controlling-where-ASDF-searches-for-systems][ASDF source registry]] too much, place the output of the following command
+  at =~/.config/common-lisp/source-registry.conf.d/20-clpm-client.conf=. If
+  you've modified your source registry a lot, you probably know what to do with
+  the output.
+
+  #+begin_src shell
+    clpm client source-registry.d
+  #+end_src
+
   Next, configure your favorite Lisp to load the client by placing the output
   of the following command in your Lisp's init file (such as =~/.sbclrc=).
 
@@ -112,8 +122,8 @@ files.
     clpm client rc
   #+end_src
 
-  Then you can start your favorite Common Lisp implementation and enter into
-  the default CLPM context.
+  Now you can start your favorite Common Lisp implementation and enter into the
+  default CLPM context.
 
   #+begin_src common-lisp
     (clpm-client:activate-context "default" :activate-asdf-integration t)
@@ -121,7 +131,7 @@ files.
 
   When using Quicklisp metadata directly, you need to sync in order to get all
   the metadata locally (other types of sources are able to lazily sync). This
-  step may take a while the first time as it downloads and processes every
+  step will take a while the first time as it downloads and processes every
   version of the distribution.
 
   #+begin_src common-lisp

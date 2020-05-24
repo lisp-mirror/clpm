@@ -7,6 +7,7 @@
     (:use #:cl
           #:clpm-cli/commands/client/common
           #:clpm-cli/commands/client/rc
-          #:clpm-cli/commands/client/repl))
+          #:clpm-cli/commands/client/repl
+          #:clpm-cli/commands/client/source-registry.d))
 
 (in-package #:clpm-cli/commands/client)

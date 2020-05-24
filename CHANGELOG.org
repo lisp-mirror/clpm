@@ -28,6 +28,8 @@
     and output translations of the current image.
   + Add =bundle init= CLI and =bundle-init= in client to easily create a new
     clpmfile.
+  + =client source-registry.d= CLI added to generate source registry config so
+    ASDF can find the client.
 
 * v0.2.1 - 2020-04-05
 
