@@ -6,7 +6,8 @@
 
 (uiop:define-package #:clpm/requirement
     (:use #:cl
-          #:anaphora)
+          #:anaphora
+          #:clpm/sources/defs)
   (:export #:convert-asd-system-spec-to-req
            #:fs-system-file-requirement
            #:fs-system-requirement
@@ -210,7 +211,9 @@ represents."))
    (awhen (requirement-version-spec req)
      (list :version it))
    (awhen (requirement-source req)
-     (list :source it))
+     (list :source (if (typep it 'clpm-source)
+                       (source-name it)
+                       it)))
    (awhen (requirement-no-deps-p req)
      (list :no-deps-p it))))
 
@@ -226,7 +229,9 @@ represents."))
    (awhen (requirement-ref req)
      (list :ref it))
    (awhen (requirement-source req)
-     (list :source it))
+     (list :source (if (typep it 'clpm-source)
+                       (source-name it)
+                       it)))
    (awhen (requirement-no-deps-p req)
      (list :no-deps-p it))))
 
