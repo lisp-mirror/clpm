@@ -86,5 +86,9 @@
                                                  "quicklisp/"
                                                  (source-cache-directory source))
                                 :http-client (get-http-client))))
+    (unless (clpi:index-project-index-object-version index)
+      (setf (clpi:index-project-index-object-version index) 0))
+    (unless (clpi:index-system-index-object-version index)
+      (setf (clpi:index-system-index-object-version index) 0))
     (ql-clpi:ql-dist-to-clpi ql-dist index :appendable-p t)
     (clpi:index-save index)))
