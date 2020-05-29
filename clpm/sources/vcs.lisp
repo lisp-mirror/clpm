@@ -468,7 +468,11 @@ include it."
 (defun vcs-release-resolve! (release ref)
   (let ((repo (vcs-release-repo release)))
 
-    (ensure-ref-present-locally! repo ref)
+    ;; We delay making sure commits are present locally until we want to
+    ;; install. This ensures that if a commit is deleted from a repository we
+    ;; don't get into a situation where we can't even parse the context.
+    (unless (eql (first ref) :commit)
+      (ensure-ref-present-locally! repo ref))
 
     (let ((commit-id (resolve-ref-to-commit repo ref)))
       (setf (vcs-release-commit release) commit-id))))
@@ -477,6 +481,8 @@ include it."
   (unless (vcs-release-installed-p release)
     (let ((project (release-project release))
           (repo (vcs-release-repo release)))
+
+      (ensure-ref-present-locally! repo `(:commit ,(vcs-release-commit release)))
 
       (let ((install-root (release-lib-pathname release)))
         (unless (uiop:probe-file* install-root)
