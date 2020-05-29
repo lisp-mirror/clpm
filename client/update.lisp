@@ -26,8 +26,8 @@ source registry is updated with the results."
      `(with-clpm-session ()
         ;; Use a symbol that we know is going to be present in the CLPM package.
         ,(if (context-bundle-p context)
-             `(bundle-update :projects ',(ensure-list projects)
-                             :systems ',(ensure-list systems)
+             `(bundle-update :update-projects ',(ensure-list projects)
+                             :update-systems ',(ensure-list systems)
                              :clpmfile ,context
                              :validate ,(make-diff-validator-fun))
              `(update :update-projects ',(ensure-list projects)
