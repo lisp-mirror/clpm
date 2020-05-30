@@ -1,0 +1,1016 @@
+#+TITLE: CLPM Tutorial
+#+AUTHOR: Eric Timmons
+#+EMAIL: clpm-devel@common-lisp.net
+#+REVEAL_HLEVEL: 1
+#+REVEAL_THEME: black
+#+REVEAL_TRANS: slide
+#+REVEAL_EXTRA_CSS: css/custom.css
+#+REVEAL_PLUGINS: (highlight notes)
+#+OPTIONS: reveal_slide_number:c reveal_width:1920 reveal_height:1080
+#+OPTIONS: email:t toc:1 num:nil date:nil timestamp:nil
+
+* Intro to CLPM
+
+** What is it?
+
+   CLPM stands for Common Lisp Package Manager.
+
+   #+ATTR_REVEAL: :frag t
+   CLPM has several primary goals:
+
+   #+ATTR_REVEAL: :frag t
+   1. Manage packages in both global and project specific contexts.
+   2. Use existing libraries where possible.
+   3. Support HTTPS.
+   4. Do as little work as possible in the development image.
+
+** Terminology
+
+   Below are some common terms used by CLPM and in this tutorial:
+
+   + Package :: This is typically used in the colloquial sense, meaning some
+     unit of software that is installed. There is an unfortunate collision with
+     [[http://www.lispworks.com/documentation/HyperSpec/Body/11_a.htm][Common Lisp's packages]], but hopefully what is meant is clear based on
+     context.
+   + System :: An [[https://common-lisp.net/project/asdf/][ASDF]] defined system.
+   + Project :: Primary development unit of code. Typically corresponds to the
+     contents of a single VCS repository. May contain multiple systems.
+
+   #+REVEAL: split:t
+   + Release :: A versioned snapshot of a project.
+   + System release :: A snapshot of a system contained within a project's
+     release.
+   + Source :: Typically used to refer to a repository of projects, releases,
+     and metadata, such as [[https://www.quicklisp.org/beta/][Quicklisp]].
+   + Context :: A set of requirements and installed releases that satisfy said
+     requirements.
+
+** Architecture
+
+   #+REVEAL_HTML: <div class='leftcol'>
+   Two major pieces:
+
+   + CLPM :: The core of the package manager, intended to be run in a separate
+     process. Additionally, has a command line interface for use outside of
+     Lisp.
+   + CLPM Client :: A small, portable system meant to be loaded into
+     development images. Launches CLPM processes and communicates with them
+     using a REPL.
+
+   #+REVEAL_HTML: </div>
+
+   #+REVEAL_HTML: <div class='rightcol'>
+
+   #+begin_src plantuml :file architecture.svg
+     Client -> CLPM: Start process
+     activate CLPM
+
+         Client -> CLPM: (install :systems '("fiveam") :context "default")
+         CLPM -> Client: t
+         Client -> CLPM: (source-registry :context "default")
+         CLPM -> Client: (:source-registry ...)
+         Client -> CLPM: (quit)
+     deactivate CLPM
+   #+end_src
+
+   #+RESULTS:
+   [[file:architecture.svg]]
+   #+REVEAL_HTML: </div>
+
+*** Architecture Benefits
+
+    This architecture is different from existing solutions (see: [[https://www.quicklisp.org/beta/][Quicklisp]],
+    [[https://github.com/fukamachi/qlot][Qlot]], and [[https://qi-cl.com/][Qi]]). It gives us some very nice benefits, though:
+
+    1. CLPM can load and use foreign libraries you likely do not need in your
+       development image (such as OpenSSL).
+    2. CLPM can use existing libraries without bloating your image or dumped
+       executable footprint.
+    3. CLPM can use existing Lisp libraries without introducing version or
+       package conflicts in your development image.
+    4. CLPM can take advantage of implementation specific features without
+       sacrificing portability.
+
+** Contexts
+
+   CLPM supports two types of contexts.
+
+*** Global Contexts
+
+    Global contexts have a name and all information about these contexts is
+    stored in the CLPM data directory.
+
+    #+ATTR_REVEAL: :frag t :frag_idx 1
+    Similar in spirit to Python virtualenvs (at least those created with
+    [[https://pypi.org/project/virtualenvwrapper/][virtualenvwrapper]]).
+
+    #+ATTR_REVEAL: :frag t
+    Additionally, can write information to standard ASDF source-registry
+    locations (see: ~(:contexts "NAME" :source-registry-files)~ config option),
+    so ASDF can find the systems without involving CLPM at all. Great for
+    installing libraries for global use or when working on projects by
+    yourself.
+
+*** Bundle/Anonymous Contexts
+
+    Identified by a pathname, typically to a file named =clpmfile=.
+
+    #+ATTR_REVEAL: :frag t :frag_idx 1
+    Designed to be portable, so it can be shared (e.g., in a git repo):
+
+    #+ATTR_REVEAL: :frag t :frag_idx 1
+    + =clpmfile= contains sources and top-level requirements.
+    + =clpmfile.lock= contains the same information, but also includes the set
+      of releases that satisfy the requirements. =clpmfile.lock= is enough to
+      recreate the context on another machine.
+
+    #+ATTR_REVEAL: :frag t :frag_idx 2
+    Project local configuration of CLPM (such as overriding git checkouts to
+    use a copy you already have cloned) accomplished using a file
+    =.clpm/bundle.conf= (relative to =clpmfile=).
+
+    #+ATTR_REVEAL: :frag t :frag_idx 3
+    Inspired by Ruby's [[https://bundler.io/][Bundler]] and [[https://github.com/fukamachi/qlot][Qlot]]. Great for working on a project with
+    many collaborators and deploying projects using a known, working
+    configuration.
+
+** Requirements
+
+   Contexts are specified by the user via /requirements/. CLPM understands
+   several types, described below. The included examples show how to specify
+   that requirement in a =clpmfile=.
+
+*** System requirement
+
+    A system requirement says that a specified system and all its dependencies
+    must be available in the context. Can specify:
+
+    + A version range (refering to the ASDF parsed system version). However,
+      this is not currently available for Quicklisp sources as that data is not
+      present in the metadata.
+    + The source from which to install the system.
+
+    #+begin_src common-lisp
+      (:system "fiveam")
+
+      (:system "cffi"
+       :version ((>= "0.20.0")))
+    #+end_src
+
+*** Project requirement
+
+    A project requirement says that all of a project's systems, and all of the
+    dependencies of its systems must be available in the context. Can specify:
+
+
+    + A version range, refering to the version number of the release, which may
+      or may not correspond to the version of any system contained in the
+      release (depending on the project developer's practices). For Quicklisp
+      sources, the release version is date based.
+    + The source from which to install the project.
+
+    #+begin_src common-lisp
+      (:project "fiveam")
+
+      (:project "cffi"
+       :version ((>= "2018-10-20")))
+    #+end_src
+
+*** VCS Project requirement
+
+    Similar to a project requirement, except it states that the project must be
+    checked out from version control. Can specify:
+
+    + Branch, tag, or commit.
+    + The repository (required if the source metadata does not include VCS
+      information).
+
+    Note that any system or project directly included in the context via this
+    type of requirement satisfies *any* version constraint specified by other
+    explicit or implicit requirements.
+
+    #+begin_src common-lisp
+      (:project "cffi"
+       :vcs (:branch "bugfix-1"))
+
+      (:github "cffi"
+       :branch "bugfix-1")
+    #+end_src
+
+*** System File Requirement
+
+    This requirement states that a specified .asd file located on the local
+    filesystem, outside of one of CLPM's directories, is included in the
+    context, as well as any dependencies of the systems defined in it. Can
+    specify:
+
+    + Path to the .asd file.
+
+    Note that with this type of requirement, you may need to occasionally have
+    CLPM reresolve the requirements. For instance if you add a new dependency
+    since the last time you asked CLPM to install things into the context. How
+    to do this is covered in the demos below.
+
+    #+begin_src common-lisp
+      (:asd "super-awesome.asd")
+    #+end_src
+
+** Sources
+
+   CLPM can understand two types of sources for package metadata
+
+*** Quicklisp
+
+    Quicklisp style sources are those that are also compatible with the
+    Quicklisp library manager. These sources version releases of projects by
+    date.
+
+    There are several disadvantages to Quicklisp sources:
+
+    + They contain no system version information.
+    + They routinely do not contain all the dependencies for ASDF
+      [[https://common-lisp.net/project/asdf/asdf.html#The-package_002dinferred_002dsystem-extension][package-inferred-systems]].
+    + They do not contain version control information for projects.
+    + CLPM cannot (yet?) lazily download metadata, an explicit sync step is
+      required that may take some time.
+
+*** CLPI
+
+    CLPI based sources are defined by the [[https://gitlab.common-lisp.net/clpm/clpi][CLPI Project]]. This source
+    specification was created to serve CLPM's needs, so it contains the
+    information for all of CLPM's features, and is designed to enable lazy
+    syncing. However, it is nowhere near as mature or battle tested as
+    Quicklisp's metadata format.
+
+    #+REVEAL: split:t
+    A mirror of the main Quicklisp distribution is stored in CLPI format at
+    [[http://quicklisp.common-lisp-project-index.org/]]. However, it is a straight
+    translation of the Quicklisp metadata and is missing the same
+    information. The CLPM author plans to eventually extend it to include at
+    least better dependencies for package-inferred-systems and system version
+    information. If you choose to use this mirror, realize that it is currently
+    a best-effort project.
+
+** What files does it touch?
+
+   CLPM expects to read and write files in several locations on your hard
+   drive. This section summarizes them.
+
+*** Config
+
+    CLPM's configuration is stored in the =clpm/= subfolder of your [[https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html][XDG]] config
+    directory. The typical locations for your XDG user config directory are:
+
+    + Linux :: =/home/$USER/.config/=
+    + MacOS :: =/Users/$USER/.config/=
+    + Windows :: =C:\Users\$USER\AppData\Local\config\=
+
+    #+ATTR_REVEAL: :frag t
+    This can be overriden using the =CLPM_CONFIG_DIRS= environment variable.
+
+    #+ATTR_REVEAL: :frag t
+    Last, when using bundles, CLPM will project specific configuration from the
+    =.clpm/bundle.conf= file, relative to the =clpmfile=.
+
+    #+ATTR_REVEAL: :frag t
+    CLPM does not currently write to config locations, but may in future
+    versions.
+
+*** Cache
+
+    CLPM caches many files during its operation, including tarballs and package
+    metadata. These files are stored in the =clpm/= subfolder of your XDG cache
+    directory. The typical locations for your XDG cache directory are:
+
+    + Linux :: =/home/$USER/.cache/=
+    + MacOS :: =/Users/$USER/.cache/=
+    + Windows :: =C:\Users\$USER\AppData\cache\=
+
+    #+ATTR_REVEAL: :frag t
+    This location can be overriden using the =CLPM_CACHE_DIR= environment
+    variable.
+
+    #+ATTR_REVEAL: :frag t
+    Typically these files can be deleted any time CLPM is not running and it
+    will recreate them as necessary.
+
+*** Data
+
+    CLPM stores context data, unpacked releases, metadata for installed
+    packages, etc. in the =clpm/= subfolder of your XDG data directory. The
+    typical locations for your XDG data directory are:
+
+    + Linux :: =/home/$USER/.local/share/=
+    + MacOS :: =/Users/$USER/.local/share/=
+    + Windows :: =C:\Users\$USER\AppData\=
+
+    #+ATTR_REVEAL: :frag t
+    This location can be overriden using the =CLPM_DATA_DIR= environment
+    variable.
+
+    #+ATTR_REVEAL: :frag t
+    You should let CLPM manage these files and not edit them manually.
+
+** Additional features
+
+*** ASDF Groveler
+
+    When installing a release directly from version control or your file
+    system, there is no metadata for CLPM to use in order to determine
+    dependencies. CLPM uses the [[https://gitlab.common-lisp.net/clpm/asdf-system-groveler][asdf-system-groveler]] in a separate process to
+    extract the needed information.
+
+*** Groveler Sandbox (Experimental)
+
+    Unfortunately, groveling from .asd files may involve loading arbitrary
+    code. Therefore, CLPM is capable of using [[https://firejail.wordpress.com/][Firejail]] to sandbox the groveler
+    process if it is installed. This feature is very experimental, and the CLPM
+    author would love to have feedback on it, as well as ideas for other
+    sandboxing methods to use!
+
+*** CLPI metadata generation (Very Experimental)
+
+    CLPM has very experimental support for extracting the release metadata
+    needed for CLPI metadata and packaging it as JSON for sending to a web
+    service maintaining a CLPI index. The author is currently trialing this in
+    house. Reach out if you're interested in this feature/running your own CLPI
+    index server.
+
+* Initial Setup
+
+** Installing CLPM
+
+*** Linux
+
+    + Download the latest tarball for your system. Assuming you are running an
+      amd64 processor on most GNU/Linux distributions, it is currently located
+      at
+      [[https://files.clpm.dev/clpm/clpm-amd64-linux-gnu-v0.3.0.tar.gz]].
+    + Download the signed digests for this version from
+      [[https://files.clpm.dev/clpm/clpm-v0.3.0.DIGESTS.asc]].
+    + Download the CLPM Signing Key:
+      #+begin_src shell
+        gpg --recv-keys 0x10327DE761AB977333B1AD7629932AC49F3044CE
+      #+end_src
+    + Verify the signature on the digests file:
+      #+begin_src shell
+        gpg --decrypt clpm-v0.3.0.DIGESTS.asc
+      #+end_src
+
+    #+REVEAL: split:t
+    + Ensure the sha512 sum for the downloaded file matches the one from the
+      digests file:
+      #+begin_src shell
+        sha512sum clpm-amd64-linux-gnu-v0.3.0.tar.gz
+      #+end_src
+    + Unpack the tarball:
+      #+begin_src shell
+        tar xf clpm-amd64-linux-gnu-v0.3.0.tar.gz
+      #+end_src
+    + Install CLPM:
+      #+begin_src shell
+        cd clpm-v0.3.0 && sudo sh ./install.sh
+      #+end_src
+
+*** MacOS
+
+    + Download the latest tarball, currently located at
+      [[https://files.clpm.dev/clpm/clpm-amd64-darwin-v0.3.0.tar.gz]]
+    + Download the signed digests for this version from
+      [[https://files.clpm.dev/clpm/clpm-v0.3.0.DIGESTS.asc]].
+    + Download the CLPM Signing Key:
+      #+begin_src shell
+        gpg --recv-keys 0x10327DE761AB977333B1AD7629932AC49F3044CE
+      #+end_src
+    + Verify the signature on the digests file:
+      #+begin_src shell
+        gpg --decrypt clpm-v0.3.0.DIGESTS.asc
+      #+end_src
+
+    #+REVEAL: split:t
+    + Ensure the sha512 sum for the downloaded file matches the one from the
+      digests file:
+      #+begin_src shell
+        sha512sum clpm-amd64-darwin-v0.3.0.tar.gz
+      #+end_src
+    + Unpack the tarball:
+      #+begin_src shell
+        tar xf clpm-amd64-darwin-v0.3.0.tar.gz
+      #+end_src
+    + Install CLPM:
+      #+begin_src shell
+        cd clpm-v0.3.0 && sudo sh ./install.sh
+      #+end_src
+
+*** Windows
+
+    + Download the latest installer, currently located at
+      [[https://files.clpm.dev/clpm/clpm-amd64-windows-v0.3.0.msi]].
+    + Run the installer.
+
+    NOTE: I do not think gpg is very common on Windows, but if you use it, you
+    should be able to figure out what to do based on the instructions for other
+    OSes.
+
+** Configuring sources
+
+   Global sources configred in =sources.conf= in CLPM's config directory.
+
+   The demos assume you have Quicklisp configured as a source. Described below
+   are two options to do this. See [[*Sources]] for a discussion of pros and cons
+   of each.
+
+*** Quicklisp distribution directly
+
+    Add the following to =sources.conf= to use the primary Quicklisp
+    distribution directly:
+
+    #+begin_src common-lisp
+      ("quicklisp"
+       :type :quicklisp
+       :url "https://beta.quicklisp.org/dist/quicklisp.txt")
+    #+end_src
+
+*** Quicklisp CLPI Mirror
+
+    Alternatively, if you like living on the edge, add the following to
+    =sources.conf=:
+
+    #+begin_src common-lisp
+      ("quicklisp"
+       :type :ql-clpi
+       :url "https://quicklisp.common-lisp-project-index.org/")
+    #+end_src
+
+** Configuring ASDF
+
+   ASDF needs to be configured to find the =clpm-client= system. Assuming you
+   haven't modified your [[https://common-lisp.net/project/asdf/asdf.html#Controlling-where-ASDF-searches-for-systems][ASDF source registry]] too much, place the output of the
+   following command at:
+
+   + Linux/MacOS :: =~.config/common-lisp/source-registry.conf.d/20-clpm-client.conf=
+   + Windows :: =C:\Users\$USER\AppData\Local\config\common-lisp\source-registry.conf.d\20-clpm-client.conf=
+
+   #+begin_src shell
+     clpm client source-registry.d
+   #+end_src
+
+** Configuring the Client
+
+   Configure the client by adding code to your implementation's init file.
+
+   Use the following to print the default configuration. Add =--help= to see
+   options.
+
+   #+begin_src shell
+     clpm client rc
+   #+end_src
+
+   #+begin_notes
+   The CLPM client can be configured by adding forms to your favorite Lisp
+   implementation's initilization script. To use the recommended configuration
+   of the CLPM client, place the output of =clpm client rc= in your
+   initialization script (for example, =~/.sbclrc= for SBCL).
+
+   CLPM ships with several configurations for the client, depending on your
+   preferences. See =clpm client rc --help= for more info (and feel free to
+   contribute new configurations!)
+   #+end_notes
+
+*** Default configuration
+
+    As of v0.3.0, the recommended configuration is:
+
+    # #+ATTR_REVEAL: :code_attribs data-line-numbers='1-2|5-7|8-9'
+    #+begin_src common-lisp
+      ;;; Use CLPM with default configuration.
+      ;;;
+      ;;; Generated by CLPM 0.3.0
+
+      (require "asdf")
+      #-clpm-client
+      (when (asdf:find-system "clpm-client" nil)
+        ;; Load the CLPM client if we can find it.
+        (asdf:load-system "clpm-client")
+        (when (uiop:symbol-call :clpm-client '#:active-context)
+          ;; If started inside a context (i.e., with `clpm exec` or `clpm bundle exec`),
+          ;; activate ASDF integration
+          (uiop:symbol-call :clpm-client '#:activate-asdf-integration)))
+    #+end_src
+
+    #+ATTR_REVEAL: :frag t
+    This configuration:
+
+    #+ATTR_REVEAL: :frag (t)
+    1. Loads ASDF.
+    2. Loads the CLPM client if its .asd file can be found.
+    3. Activates ASDF integration if launched via =clpm exec= or =clpm bundle
+       exec=.
+
+* Demo: Using Global Contexts from the REPL
+
+  This demo shows you how to use CLPM while interactively developing from the
+  REPL in a global context. Before continuing, please ensure you have installed
+  CLPM and configured the client.
+
+  Additionally, clone the [[https://gitlab.common-lisp.net/clpm/clpm-demo][clpm-demo]] project somewhere. (Undoing any changes you
+  made from other demos).
+
+** Start your Lisp!
+
+   Start your Lisp! You can check the client was loaded and it can find CLPM by
+   evaluating:
+
+   #+begin_src common-lisp
+     (clpm-client:clpm-version)
+   #+end_src
+
+   #+REVEAL: split:t
+   [[file:screen-shots/global-repl/version.png]]
+
+** Syncing sources
+
+   If you are using the Quicklisp distribution directly and have not yet synced
+   it, do so now.
+
+   This command will likely take a while as it needs to download data for every
+   version of the distribution. You do not need to do this step if you are
+   using the CLPI mirror.
+
+   #+begin_src common-lisp
+     (clpm-client:sync :sources '("quicklisp"))
+   #+end_src
+
+   #+REVEAL: split:t
+   [[file:screen-shots/global-repl/sync.png]]
+
+** Activating contexts
+
+   Assuming you did not launch your Lisp as a child process of =clpm bundle
+   exec= or =clpm exec= (see the CLI demos for more details), the default
+   configuration does not activate any context.
+
+   You can activate or switch contexts using =clpm-client:activate-context=.
+
+   If you switch contexts you will get a continuable error. This is just a
+   warning that things may break unexpectedly (e.g., you have already loaded
+   systems in some context and are now switching to one where they aren't
+   installed or a different version is installed.
+
+   #+REVEAL: split:t
+
+   Activate the =demo= context now by evaluating:
+
+   #+begin_src common-lisp
+     (clpm-client:activate-context "demo" :activate-asdf-integration t)
+   #+end_src
+
+   This queries CLPM for the ASDF configuration for the =demo= context (source
+   registry and output translations). Then it configures ASDF in the running
+   image with those settings. Last, it hooks into ASDF's system search functions
+
+   #+REVEAL: split:t
+   [[file:screen-shots/global-repl/activate.png]]
+
+** Installing systems
+
+   You can install systems or projects into a context using
+   =clpm-client:install=.
+
+   The systems are installed into the context specified by
+   =clpm-client:*default-context*=. If that is NIL (the default), it installs
+   into the active context. If there is no active context, it falls back to the
+   context named =default=.
+
+   Before modifying the context, CLPM produces a diff and presents it to you
+   for approval. The presentation is controlled by
+   =clpm-client:*context-diff-approval-method*=. It can be set to:
+
+   + =:error= :: Default. A condition is signaled (using =error=, so you will
+     be dropped into the debugger). The restarts =approve-diff= and
+     =reject-diff= will be available.
+   + =:yes-or-no-p= :: The diff is printed and you are asked for approval via
+     =yes-or-no-p=.
+   + =t= :: The diff is silently accepted.
+
+   #+REVEAL: split:t
+
+   Install the CFFI project into the demo context by evaluating:
+
+   #+begin_src common-lisp
+     (clpm-client:install :projects "cffi")
+   #+end_src
+
+   #+REVEAL: split:t
+   [[file:screen-shots/global-repl/install-diff.png]]
+
+   Note how this installs every system that is part of the CFFI project
+   (notably pulling in its testing dependencies), instead of only the CFFI
+   system and its dependencies.
+
+** Lazily installing systems
+
+   Alternatively, if you have an activated context and the client's ASDF
+   integration activated, you can install systems on demand. This works by
+   adding a system search function to ASDF, therefore any attempt to find a
+   system that is not installed (e.g., using =asdf:find-system=,
+   =asdf:load-system=, etc.) will trigger the client.
+
+   #+REVEAL: split:t
+
+   How the client behaves in the presence of a missing system can be configured
+   by the variable =clpm-client:*asdf-system-not-found-behavior*=. It can be
+   set to:
+
+   + =:error= :: Default. A condition is signaled (using =error=, so you will
+     be dropped into the debugger). The restarts =install-and-reload-config=,
+     =reresolve-requirements-and-reload-config=,
+     =install-without-dependencies-and-reload-config=, and =reload-config= will
+     be available.
+   + =:install= :: The client will attempt to install the system and its
+     dependencies without prompting.
+   + =:install-without-deps= :: The client will attempt to install the system
+     without its dependencies without prompting.
+   + =nil= :: The client does nothing.
+
+   #+REVEAL: split:t
+
+   Note that these settings combine with
+   =clpm-client:*context-diff-approval-method*=. Therefore the default behavior
+   is to ask if the system should be installed *and* to ask if the diff is
+   approved (both using the debugger).
+
+   #+REVEAL: split:t
+
+   Lazily load 1am by evaluating:
+
+   #+begin_src common-lisp
+     (asdf:load-system "1am")
+   #+end_src
+
+   Invoke the =install-and-reload-config= restart and then the =approve-diff=
+   restart.
+
+   #+REVEAL: split:t
+   [[file:screen-shots/global-repl/load-error.png]]
+
+   #+REVEAL: split:t
+   [[file:screen-shots/global-repl/load-diff.png]]
+
+** Updating
+
+   When new versions of your dependencies are released, you can easily update a
+   context using =clpm-client:update=. By default, all projects are considered
+   eligible for upgrading (subject to requirements specified via
+   =install=). However, only specific systems or projects can be upgraded by
+   specifying the =:projects= and/or =:systems= arguments.
+
+   #+REVEAL: split:t
+
+   To update everything in the demo context, run:
+
+   #+begin_src common-lisp
+     (clpm-client:update)
+   #+end_src
+
+   If you would like to limit the updates to particular systems or projects,
+   use the appropriate keywords. For example:
+
+   #+begin_src common-lisp
+     (clpm-client:update :projects "1am")
+   #+end_src
+
+   This probably won't do anything right now since you already have the latest
+   versions!
+
+** Installing an editable system
+
+   CLPM allows you to "install" a system into a context using a pointer to the
+   .asd file on your local hard drive. This is great for developing software as
+   you can leave the code in a folder not under CLPM's control, but CLPM will
+   still examine it to determine and install dependencies.
+
+   #+REVEAL: split:t
+
+   Install the clpm-demo project into the demo context by evaluating:
+
+   #+begin_src common-lisp
+     (clpm-client:install :asds '("/path/to/clpm-demo/clpm-demo.asd"
+                                  "/path/to/clpm-demo/clpm-demo-test.asd"))
+   #+end_src
+
+   Then load the system by evaluating:
+
+   #+begin_src common-lisp
+     (asdf:load-system :clpm-demo)
+   #+end_src
+
+   #+REVEAL: split:t
+   [[file:screen-shots/global-repl/editable-diff.png]]
+
+** Adding a dependency to an editable system
+
+   Look at =clpm-demo-test.asd= and =test.lisp=. We have a test suite defined
+   using fiveam, but we forgot to declare a dependency! Add fiveam to the
+   =:depends-on= for the =clpm-demo-test= system:
+
+   #+begin_src common-lisp
+     (defsystem #:clpm-demo-test
+       :version "0.1.0"
+       :description "CLPM Demo Test System"
+       :license "BSD-2-Clause"
+       :depends-on (#:fiveam #:clpm-demo)
+       :components
+       ((:file "test")))
+   #+end_src
+
+   #+REVEAL: split:t
+
+   Now let's run the tests by evaluating:
+
+   #+begin_src common-lisp
+     (asdf:test-system :clpm-demo)
+   #+end_src
+
+   Uh oh, we don't have fiveam installed! This is the perfect time to use the
+   =reresolve-requirements-and-reload-config= restart. It will notice the new
+   dependency and ask you to install it. Accept the diff and watch the test
+   pass.
+
+   #+REVEAL: split:t
+   [[file:screen-shots/global-repl/fiveam-error.png]]
+
+   #+REVEAL: split:t
+   [[file:screen-shots/global-repl/fiveam-diff.png]]
+
+   #+REVEAL: split:t
+   [[file:screen-shots/global-repl/tests-pass.png]]
+
+* Demo: Using Bundles from the REPL
+
+  This demo shows you how to use CLPM while interactively developing from the
+  REPL in an anonymous, project specific context (bundle). Before continuing,
+  please ensure you have installed CLPM and configured the client.
+
+  Additionally, clone the [[https://gitlab.common-lisp.net/clpm/clpm-demo][clpm-demo]] project somewhere. (Undoing any changes you
+  made from other demos).
+
+** Start your Lisp!
+
+   Start your Lisp! You can check the client was loaded and it can find CLPM by
+   evaluating:
+
+   #+begin_src common-lisp
+     (clpm-client:clpm-version)
+   #+end_src
+
+   #+REVEAL: split:t
+   [[file:screen-shots/bundle-repl/version.png]]
+
+** Creating the bundle
+
+   A bundle is a project specific context defined by two files.
+
+   =clpmfile= is generated and maintained by the developer. It contains the
+   sources and requirements for the bundle.
+
+   The second, =clpmfile.lock= is generated by CLPM. It contains a copy of the
+   information from the =clpmfile=, as well as a list of releases that satisfy
+   the requirments. Additionally, it contains a dependency tree. This is not
+   currently used by CLPM, and at the moment is purely to provide the developer
+   information.
+
+   #+REVEAL: split:t
+
+   Initialize a new clpmfile for the =clpm-demo= project by evaluating:
+
+   #+begin_src common-lisp
+     (clpm-client:bundle-init #p"/path/to/clpm-demo/clpmfile"
+                              :asds '("clpm-demo.asd" "clpm-demo-test.asd"))
+   #+end_src
+
+   #+ATTR_REVEAL: :frag t :frag_idx 1
+   This creates a new file named clpmfile at =/path/to/clpm-demo/clpmfile=. It
+   should contain the following:
+
+   #+ATTR_REVEAL: :frag t :frag_idx 1
+   #+begin_src common-lisp
+     ;;; -*- Mode: common-lisp; -*-
+     (:api-version "0.3")
+
+     (:source "quicklisp" :url "https://beta.quicklisp.org/dist/quicklisp.txt" :type :quicklisp)
+
+     (:asd "clpm-demo.asd")
+     (:asd "clpm-demo-test.asd")
+   #+end_src
+
+   #+REVEAL: split:t
+   [[file:screen-shots/bundle-repl/init.png]]
+
+** Installing the bundle
+
+   Before you can use the new bundle, you need to install the dependencies! You
+   can do this using =clpm-client:install=. As you do not have an active
+   context yet, you need to specify the context.
+
+   When specifying a bundle as the context, it is required that you use a
+   pathname!
+
+   #+REVEAL: split:t
+
+   Install all the dependencies for the bundle. Don't forget the =#p=!
+
+   #+begin_src common-lisp
+     (clpm-client:install :context #p"/path/to/clpm-demo/clpmfile")
+   #+end_src
+
+   #+REVEAL: split:t
+   [[file:screen-shots/bundle-repl/install.png]]
+
+** Activating the bundle
+
+   Once you have a lock file, you can activate the context specified by the
+   bundle using =clpm-client:activate-context=.
+
+   If you switch contexts you will get a continuable error. This is just a
+   warning that things may break unexpectedly (e.g., you have already loaded
+   systems in some context and are now switching to one where they aren't
+   installed or a different version is installed.
+
+   #+REVEAL: split:t
+
+   Activate the bundle and the ASDF integration by evaluating:
+
+   #+begin_src common-lisp
+     (clpm-client:activate-context #p"/path/to/clpm-demo/clpmfile"
+                                   :activate-asdf-integration t)
+   #+end_src
+
+   And load the system:
+
+   #+begin_src common-lisp
+     (asdf:load-system :clpm-demo)
+   #+end_src
+
+   #+REVEAL: split:t
+   [[file:screen-shots/bundle-repl/activate.png]]
+
+** Test the system
+
+   Look at =clpm-demo-test.asd= and =test.lisp=. We have a test suite defined
+   using fiveam, but we forgot to declare a dependency! Add fiveam to the
+   =:depends-on= for the =clpm-demo-test= system:
+
+   #+begin_src common-lisp
+     (defsystem #:clpm-demo-test
+       :version "0.1.0"
+       :description "CLPM Demo Test System"
+       :license "BSD-2-Clause"
+       :depends-on (#:fiveam #:clpm-demo)
+       :components
+       ((:file "test")))
+   #+end_src
+
+   #+REVEAL: split:t
+
+   Now run the tests by evaluating:
+
+   #+begin_src common-lisp
+     (asdf:test-system :clpm-demo)
+   #+end_src
+
+   Uh oh, we don't have fiveam installed! This is the perfect time to use the
+   =reresolve-requirements-and-reload-config= restart. It will notice the new
+   dependency and ask you to install it. Accept the diff and watch the test
+   pass.
+
+   #+REVEAL: split:t
+   [[file:screen-shots/bundle-repl/fiveam-error.png]]
+
+   #+REVEAL: split:t
+   [[file:screen-shots/bundle-repl/tests-pass.png]]
+
+** Installing projects from VCS
+
+   Now, let's say you decide that there's a feature in Fiveam's git repository
+   you want to use, but it hasn't been released to Quicklisp yet. No worries!
+   Add the following to the =clpmfile=:
+
+   #+begin_src common-lisp
+     (:github "fiveam"
+      :path "sionescu/fiveam"
+      :branch "master")
+   #+end_src
+
+   #+REVEAL: split:t
+   And reinstall the context (so it gets the new requirement):
+
+   #+begin_src common-lisp
+     (clpm-client:install :context #p"/path/to/clpm-demo/clpmfile")
+   #+end_src
+
+   The diff will show you that it is changing from a released version of fiveam
+   to a specific commit from the git repo.
+
+   #+REVEAL: split:t
+   [[file:screen-shots/bundle-repl/fiveam-git.png]]
+
+   #+REVEAL: split:t
+   If you retest =clpm-demo= now, you'll see that it recompiles fiveam using
+   files from a different location.
+
+   #+begin_src common-lisp
+     (let ((asdf:*compile-file-failure-behaviour* :ignore))
+       (asdf:test-system :clpm-demo))
+   #+end_src
+
+   The binding for =*compile-file-failure-behavior*= was required at the time
+   of writing as FiveAM's master branch had a package definition in variance
+   with the one in the version released in Quicklisp.
+
+** Overriding VCS repos
+
+   Last, let's say you discover a bug in fiveam and want to use a local copy of
+   fiveam in your bundle while you fix it. This can be accomplished by cloning
+   the fiveam repo next to the =clpm-demo= folder and adding the following to
+   =clpm-demo/.clpm/bundle.conf=:
+
+   #+begin_src common-lisp
+     ;;; -*- mode: common-lisp; -*-
+
+     (version "0.2")
+
+     ((:bundle :local "fiveam")
+      "../fiveam/")
+   #+end_src
+
+   This tells CLPM that if it encounters a VCS requirement for fiveam, it
+   should be satisfied using the repository located at =../fiveam/= (relative
+   to the =clpmfile=).
+
+   #+REVEAL: split:t
+
+   #+REVEAL: split:t
+   Reinstall the context (so it gets the new override):
+
+   #+begin_src common-lisp
+     (clpm-client:install :context #p"/path/to/clpm-demo/clpmfile")
+   #+end_src
+
+   In the current diff format, you want see an entry on the diff, but you still
+   need to approve it for the change it take effect in the current
+   session. This will hopefully be made more clear in v0.4.
+
+   #+REVEAL: split:t
+   [[file:screen-shots/bundle-repl/fiveam-override.png]]
+
+   #+REVEAL: split:t
+
+   Using this feature requires great care. If you commit a version of
+   =clpmfile.lock= that references a fiveam commit that you have not pushed,
+   all of your collaborators will have a bad day and blame it on you!
+
+* Demo: Using CLPM from the CLI
+
+  This demo shows off a subset of CLPM's capabilities that can be accessed
+  using its command line interface.
+
+  Most of what was described in previous demos will also work from the CLI and
+  now that you know the concepts, the details can hopefully be figured out by
+  adding =--help= to any invocation of =clpm=.
+
+  A feature of CLPM that is currently unique to its CLI is the =exec=
+  interface. That is described below.
+
+** Executing a process in a global context
+
+   If you would like to use CLPM but not have to deal with the client, you can
+   start processes with environment variables set that allow ASDF to be
+   configured using CLPM without the client.
+
+   #+REVEAL: split:t
+   For example, to run an sbcl process with ASDF configured to use systems
+   installed in the =demo= context, run the following command:
+
+   #+begin_src shell
+     clpm exec --context=demo -- sbcl
+   #+end_src
+
+   The =--= is not required, but highly recommended as it keeps CLPM from
+   trying to parse any options given to SBCL as options for CLPM.
+
+   This sets the =CL_SOURCE_REGISTRY= and =ASDF_OUTPUT_TRANSLATIONS=
+   environment variables to configure ASDF, along with some others in case you
+   choose to load the client in the new process.
+
+** Executing a process in a bundle
+
+   If you would like to execute a command with the environment configured to
+   use a CLPM bundle, instead run:
+
+   #+begin_src shell
+     clpm bundle exec -- sbcl
+   #+end_src
+
+   It defaults to finding =clpmfile= in the current directory, but that can be
+   overriden with =-f=.

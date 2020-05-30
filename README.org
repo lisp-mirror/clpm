@@ -35,6 +35,12 @@ files.
   development of CLPM, you can find the project hosted on the common-lisp.net
   Gitlab server at [[https://gitlab.common-lisp.net/clpm/clpm]].
 
+* Tutorial
+
+  It is highly recommended that you page through the [[file:tutoral/tutorial.org][tutorial]]. It will walk you
+  through installing, configuring, and using CLPM. Abbreviated descriptions are
+  below and the docs folder contains more in-depth technical discussions.
+
 * Installing
 
   CLPM is distributed in both source and binary form. For either version, first

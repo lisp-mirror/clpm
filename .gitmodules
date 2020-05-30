@@ -205,3 +205,6 @@
 [submodule "ext/jsown"]
 	path = ext/jsown
 	url = https://github.com/madnificent/jsown.git
+[submodule "docs/tutorial/reveal.js"]
+	path = tutorial/reveal.js
+	url = https://github.com/hakimel/reveal.js.git

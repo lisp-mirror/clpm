@@ -1,0 +1,46 @@
+.org-svg, svg {
+    font-family: "Lucida Console", Monaco, monospace;
+}
+
+.reveal p code, .reveal dl code, .reveal ul code, .reveal ol code {
+    color: #dca3a3;
+}
+.org-svg {
+    background-color: lavender;
+    width: 100%;
+}
+
+.reveal {
+    font-size: 26px;
+}
+
+.reveal p {
+    text-align: left;
+}
+
+.reveal ul, .reveal ol {
+    display: inherit;
+}
+
+.reveal ul > li, .reveal ol > li {
+    text-align: left;
+}
+
+.leftcol {
+    float: left;
+    width: 50%;
+}
+
+.rightcol {
+    float: right;
+    width: 50%;
+}
+
+.reveal img {
+    width: 95%;
+    display: block;
+}
+
+.slides {
+    width: 1400px;
+}
