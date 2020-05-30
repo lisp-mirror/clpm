@@ -37,7 +37,7 @@ files.
 
 * Tutorial
 
-  It is highly recommended that you page through the [[file:tutoral/tutorial.org][tutorial]]. It will walk you
+  It is highly recommended that you page through the [[file:tutorial/tutorial.org][tutorial]]. It will walk you
   through installing, configuring, and using CLPM. Abbreviated descriptions are
   below and the docs folder contains more in-depth technical discussions.
 
