@@ -83,7 +83,12 @@ pathname (if this is an anonymous context).")
    (system-releases
     :initform nil
     :initarg :system-releases
-    :accessor context-system-releases))
+    :accessor context-system-releases
+    :documentation
+    "An alist mapping release objects to strings naming the systems installed as
+    part of the release. SYSTEM-RELEASE objects must *not* be used here, because
+    they are not guaranteed to be constructable when the context is read (e.g.,
+    in the case of VCS repos where commits have been deleted)."))
   (:documentation
    "Represents a snapshot of a context. Includes sources, the releases installed
 in the context, the requirements that gave rise to those releases, etc. Contexts
@@ -128,7 +133,7 @@ can be named, global contexts, or anonymous."))
                  :requirements (copy-list (context-requirements context))
                  :reverse-dependencies (copy-alist (context-reverse-dependencies context))
                  :user-sources (copy-list (context-user-sources context))
-                 :system-releases (copy-list (context-system-releases context))))
+                 :system-releases (copy-tree (context-system-releases context))))
 
 (defun global-context-pathname (name)
   (clpm-data-pathname (list "contexts" name)))
@@ -229,18 +234,24 @@ in place with the same name. Return the new requirement if it was modified."
   (let* ((context (get-context context))
          (system-releases (context-system-releases context)))
     (remove-duplicates
-     (mapcar (compose #'asdf:primary-system-name #'system-name #'system-release-system) system-releases)
+     (mappend (lambda (x) (mapcar #'asdf:primary-system-name (cdr x)))
+              system-releases)
      :test #'equal)))
 
 (defun context-installed-systems (context)
   (let* ((context (get-context context))
          (system-releases (context-system-releases context)))
-    (mapcar #'system-release-system system-releases)))
+    (mappend #'cdr system-releases)))
 
 (defun context-visible-primary-system-names (context)
   (let* ((context (get-context context))
          (releases (context-releases context))
-         (system-releases (context-system-releases context))
+         (system-release-alist (context-system-releases context))
+         (system-releases (mappend (lambda (x)
+                                     (mapcar (lambda (system-name)
+                                               (release-system-release (car x) system-name))
+                                             (cdr x)))
+                                   system-release-alist))
          (system-files (remove-duplicates (mapcar #'system-release-system-file system-releases)))
          (system-file-directories (remove-duplicates (mapcar (compose #'uiop:pathname-directory-pathname
                                                                       #'system-file-absolute-asd-pathname)
@@ -283,9 +294,11 @@ in place with the same name. Return the new requirement if it was modified."
 
 (defun context-find-system-asd-pathname (context system-name)
   (when-let* ((context (get-context context))
-              (system-release (find system-name (context-system-releases context)
-                                    :key (compose #'system-name #'system-release-system)
-                                    :test #'equal)))
+              (system-release-cons (find-if (lambda (x)
+                                              (member system-name x :test 'equal))
+                                            (context-system-releases context)
+                                            :key #'cdr))
+              (system-release (release-system-release (car system-release-cons) system-name)))
     (system-release-absolute-asd-pathname system-release)))
 
 (defun context-write-asdf-files (context)
@@ -433,8 +446,8 @@ in place with the same name. Return the new requirement if it was modified."
       (push release
             (context-releases context))
       (dolist (system-name systems)
-        (push (release-system-release release system-name)
-              (context-system-releases context))))))
+        (push system-name
+              (assoc-value (context-system-releases context) release))))))
 
 (defmethod process-form (context (section (eql :reverse-dependencies)) form))
 
@@ -541,10 +554,8 @@ in place with the same name. Return the new requirement if it was modified."
       (dolist (release (sort (copy-list (context-releases context)) #'string<
                              :key (compose #'project-name #'release-project)))
         (format stream "~S~%"
-                (context-release-to-form release (remove-if-not (lambda (x)
-                                                                  (eql x release))
-                                                                (context-system-releases context)
-                                                                :key #'system-release-release))))
+                (context-release-to-form release (assoc-value (context-system-releases context)
+                                                              release))))
       (terpri stream)
       (terpri stream)
 
@@ -570,11 +581,11 @@ in place with the same name. Return the new requirement if it was modified."
       ,(list* (requirement-type-keyword req)
               (requirement-to-plist req)))))
 
-(defun context-release-to-form (release system-releases)
+(defun context-release-to-form (release system-names)
   `(,(project-name (release-project release))
     :version ,(release-version release)
     :source ,(source-name (release-source release))
-    :systems ,(mapcar (compose #'system-name #'system-release-system) system-releases)))
+    :systems ,system-names))
 
 (defun context-reverse-deps-to-form (release-and-reverse-deps)
   (destructuring-bind (release . reverse-deps) release-and-reverse-deps

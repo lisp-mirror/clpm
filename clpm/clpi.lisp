@@ -76,10 +76,13 @@
                                     (let* ((missing-system-spec (groveler-dependency-missing-system c))
                                            (missing-req (convert-asd-system-spec-to-req missing-system-spec))
                                            (missing-system-name (requirement-name missing-req))
-                                           (matching-sr (find missing-system-name
-                                                              (context-system-releases clpmfile)
-                                                              :test #'equal
-                                                              :key (compose #'system-name #'system-release-system))))
+                                           (matching-cons (find-if (lambda (x)
+                                                                     (member missing-system-name x :test #'equal))
+                                                                   (context-system-releases clpmfile)
+                                                                   :key #'cdr))
+                                           (matching-sr (when matching-cons
+                                                          (release-system-release (car matching-cons)
+                                                                                  missing-system-name))))
                                       (when (and matching-sr
                                                  (system-release-satisfies-version-spec-p
                                                   matching-sr

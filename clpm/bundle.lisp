@@ -85,10 +85,11 @@ the lock file if necessary."
               (sync-source s))))
         ;; Map all update systems to their projects.
         (dolist (system update-systems)
-          (when-let* ((system-release (find system (context-system-releases lockfile)
-                                            :key (compose #'system-name #'system-release-system)
-                                            :test #'equal))
-                      (release (system-release-release system-release))
+          (when-let* ((release-cons (find-if (lambda (x)
+                                               (member system x :test #'equal))
+                                             (context-system-releases lockfile)
+                                             :key #'cdr))
+                      (release (car release-cons))
                       (project-name (project-name (release-project release))))
             (pushnew project-name update-projects :test #'equal)))
         ;; Nuke the lockfile's requirements so that we pick up deletions
