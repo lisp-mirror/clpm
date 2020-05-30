@@ -41,7 +41,7 @@
   (with-clpm-session ()
     (with-sources-using-installed-only ()
       (with-context (context)
-        (mapcar 'system-name (context-installed-systems context))))))
+        (context-installed-system-names context)))))
 
 (defun installed-primary-system-names (&key context)
   (with-clpm-session ()

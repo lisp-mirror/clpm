@@ -25,7 +25,7 @@
            #:context-find-system-asd-pathname
            #:context-fs-source
            #:context-installed-primary-system-names
-           #:context-installed-systems
+           #:context-installed-system-names
            #:context-name
            #:context-output-translations
            #:context-releases
@@ -238,7 +238,7 @@ in place with the same name. Return the new requirement if it was modified."
               system-releases)
      :test #'equal)))
 
-(defun context-installed-systems (context)
+(defun context-installed-system-names (context)
   (let* ((context (get-context context))
          (system-releases (context-system-releases context)))
     (mappend #'cdr system-releases)))

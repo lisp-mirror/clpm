@@ -39,7 +39,7 @@ If WITH-CLIENT-P is non-NIL, the clpm-client system is available."
                                  :ignore-inherited ignore-inherited-source-registry
                                  :splice-inherited splice-inherited))
                (output-translations (context-output-translations context))
-               (installed-system-names (sort (mapcar #'system-name (context-installed-systems context)) #'string<))
+               (installed-system-names (sort (context-installed-system-names context) #'string<))
                (installed-primary-system-names (remove-duplicates (mapcar #'asdf:primary-system-name installed-system-names)
                                                                   :test #'equal))
                (visible-primary-system-names (sort (context-visible-primary-system-names context) #'string<))
