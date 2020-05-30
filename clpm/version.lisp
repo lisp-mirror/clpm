@@ -19,7 +19,7 @@
   "ASDF is overly picky about its version numbers. This should be the primary
   version number (no prerelease info) as ~*base-version*~.")
 
-(defparameter *base-version* "0.3.0-beta.5"
+(defparameter *base-version* "0.3.0-beta.6"
   "The base version number of CLPM.")
 
 (defparameter *full-version* nil
