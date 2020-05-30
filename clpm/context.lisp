@@ -535,7 +535,19 @@ in place with the same name. Return the new requirement if it was modified."
       (write-section-header "sources" stream)
       (format stream ":sources~%")
       (dolist (source (context-sources context))
-        (format stream "~S~%" (source-to-form source)))
+        (let ((form (source-to-form source)))
+          (when (typep source 'vcs-source)
+            ;; Strip out the projects that aren't installed
+            (setf (getf (rest form) :projects)
+                  (remove-if-not (lambda (x)
+                                   (when-let ((release (find x (context-releases context)
+                                                             :test #'equal
+                                                             :key (compose #'project-name
+                                                                           #'release-project))))
+                                     (equal source (release-source release))))
+                                 (getf (rest form) :projects)
+                                 :key #'car)))
+          (format stream "~S~%" form)))
       (terpri stream)
       (terpri stream)
 
