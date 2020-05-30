@@ -101,6 +101,7 @@
 set of installed releases is updated to be the minimum set that satisfies all
 the requirements."
   (with-sources ((context-sources context))
+    (vcs-source-clear-visible-releases (context-vcs-source context))
     (let* ((*releases-sort-function* (unless (eql update-projects t)
                                        (make-result-sorter context update-projects)))
            (reqs (rewrite-vcs-reqs (context-requirements context) context update-projects))

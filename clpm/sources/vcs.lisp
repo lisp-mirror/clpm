@@ -28,6 +28,7 @@
            #:vcs-release-commit
            #:vcs-remote-release
            #:vcs-source
+           #:vcs-source-clear-visible-releases
            #:vcs-source-register-project!
            #:vcs-system))
 
@@ -71,6 +72,12 @@ source using VCS-SOURCE-REGISTER_PROJECT!."))
   (dolist (project projects)
     (destructuring-bind (project-name . repo-form) project
       (vcs-source-register-project! source (make-repo-from-description repo-form) project-name))))
+
+(defun vcs-source-clear-visible-releases (vcs-source)
+  (maphash (lambda (k v)
+             (declare (ignore k))
+             (setf (vcs-project-visible-releases v) nil))
+           (vcs-source-projects-by-name vcs-source)))
 
 (defun vcs-source-register-project! (vcs-source repo project-name)
   "Registers a project with the vcs source and returns it."
@@ -163,12 +170,15 @@ local override when requesting a VCS release.")
    (repo
     :initarg :repo
     :reader project-repo)
+   (visible-releases
+    :initform nil
+    :accessor vcs-project-visible-releases)
    (releases-by-spec
     :initform (make-hash-table :test 'equal)
     :accessor vcs-project-releases-by-spec)))
 
 (defmethod project-releases ((project vcs-project))
-  (hash-table-values (vcs-project-releases-by-spec project)))
+  (vcs-project-visible-releases project))
 
 (defmethod project-release ((project vcs-project) (version string) &optional (error t))
   "A release named by a string is assumed to refer to a commit."
@@ -178,9 +188,6 @@ local override when requesting a VCS release.")
   (declare (ignore error))
   (apply #'project-vcs-release project version))
 
-(defmethod project-releases ((project vcs-project))
-  (hash-table-values (vcs-project-releases-by-spec project)))
-
 (defmethod project-vcs-release ((project vcs-project) &key commit branch tag ref)
   (let* ((ref (cond
                 (commit `(:commit ,commit))
@@ -189,6 +196,7 @@ local override when requesting a VCS release.")
                 (ref `(:ref ,ref))))
          (release (ensure-gethash ref (vcs-project-releases-by-spec project)
                                   (make-vcs-release (project-source project) project ref))))
+    (pushnew release (vcs-project-visible-releases project))
     (unless commit
       (setf release (ensure-gethash `(:commit ,(vcs-release-commit release)) (vcs-project-releases-by-spec project)
                                     release)))
