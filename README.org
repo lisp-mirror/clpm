@@ -72,6 +72,7 @@ files.
    + [[https://files.clpm.dev/clpm/clpm-armv7-linux-musl-v0.3.0.tar.gz][clpm-armv7-linux-musl-v0.3.0.tar.gz]] :: CLPM compiled for 32bit
      Linux on ARM processors using musl libc.
    + [[https://files.clpm.dev/clpm/clpm-amd64-windows-v0.3.0.msi][clpm-amd64-windows-v0.3.0.msi]] :: CLPM installer for 64 bit Windows.
+   + [[https://files.clpm.dev/clpm/clpm-v0.3.0.tar.gz][clpm-v0.3.0.tar.gz]] :: Source code, including git submodules.
    + [[https://files.clpm.dev/clpm/clpm-v0.3.0.DIGESTS][clpm-v0.3.0.DIGESTS]] :: Text file containing the SHA512 sums for
      every previously mentioned file.
    + [[https://files.clpm.dev/clpm/clpm-v0.3.0.DIGESTS.asc][clpm-v0.3.0.DIGESTS.asc]] :: Same as =clpm-v0.3.0.DIGESTS=,
