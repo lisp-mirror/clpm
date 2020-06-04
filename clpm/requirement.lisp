@@ -198,7 +198,7 @@ represents."))
     (:version
      (make-instance 'system-requirement
                     :name (string-downcase (second dep))
-                    :version-spec `(>= . ,(third dep))
+                    :version-spec `((>= ,(third dep)))
                     :why why))
     (:feature
      (convert-asd-system-spec-to-req (third dep) :why why))))
