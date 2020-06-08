@@ -16,6 +16,7 @@
           #:clpm/repos
           #:clpm/requirement
           #:clpm/source
+          #:clpm/utils
           #:do-urlencode)
   (:export #:context
            #:context-add-requirement!
@@ -563,8 +564,8 @@ in place with the same name. Return the new requirement if it was modified."
       ;; Releases
       (write-section-header "releases" stream)
       (format stream ":releases~%")
-      (dolist (release (sort (copy-list (context-releases context)) #'string<
-                             :key (compose #'project-name #'release-project)))
+      (dolist (release (safe-sort (context-releases context) #'string<
+                                  :key (compose #'project-name #'release-project)))
         (format stream "~S~%"
                 (context-release-to-form release (assoc-value (context-system-releases context)
                                                               release))))
@@ -574,8 +575,8 @@ in place with the same name. Return the new requirement if it was modified."
       ;; Reverse Dependencies
       (write-section-header "reverse-dependencies" stream)
       (format stream ":reverse-dependencies~%")
-      (dolist (reverse-dep (sort (copy-list (context-reverse-dependencies context)) #'string<
-                                 :key (compose #'project-name #'release-project #'car)))
+      (dolist (reverse-dep (safe-sort (context-reverse-dependencies context) #'string<
+                                      :key (compose #'project-name #'release-project #'car)))
         (format stream "~S~%~%" (context-reverse-deps-to-form reverse-dep))))))
 
 ;; ** Releases
@@ -597,7 +598,7 @@ in place with the same name. Return the new requirement if it was modified."
   `(,(project-name (release-project release))
     :version ,(release-version release)
     :source ,(source-name (release-source release))
-    :systems ,system-names))
+    :systems ,(safe-sort system-names #'string<)))
 
 (defun context-reverse-deps-to-form (release-and-reverse-deps)
   (destructuring-bind (release . reverse-deps) release-and-reverse-deps
@@ -609,14 +610,14 @@ in place with the same name. Return the new requirement if it was modified."
                                :key #'requirement-why))
     (let ((project (release-project release))
           reverse-dep-forms)
-      (dolist (reverse-dep (sort (copy-list reverse-deps)
-                                 (lambda (x y)
-                                   (cond
-                                     ((eql x t) t)
-                                     ((eql y t) nil)
-                                     (t (string< (system-name (system-release-system x))
-                                                 (system-name (system-release-system y))))))
-                                 :key #'requirement-why))
+      (dolist (reverse-dep (safe-sort reverse-deps
+                                      (lambda (x y)
+                                        (cond
+                                          ((eql x t) t)
+                                          ((eql y t) nil)
+                                          (t (string< (system-name (system-release-system x))
+                                                      (system-name (system-release-system y))))))
+                                      :key #'requirement-why))
         (push (reverse-dep-to-form reverse-dep) reverse-dep-forms))
       `(,(project-name project) ,@reverse-dep-forms))))
 

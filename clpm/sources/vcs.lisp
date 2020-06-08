@@ -17,7 +17,8 @@
           #:clpm/repos
           #:clpm/requirement
           #:clpm/session
-          #:clpm/sources/defs)
+          #:clpm/sources/defs
+          #:clpm/utils)
   (:export #:*vcs-project-override-fun*
            #:ensure-vcs-release-installed!
            #:make-vcs-release
@@ -127,7 +128,7 @@ source using VCS-SOURCE-REGISTER_PROJECT!."))
              (vcs-source-projects-by-name source))
     (list (source-name source)
           :type :vcs
-          :projects projects)))
+          :projects (safe-sort projects #'string< :key #'car))))
 
 (defmethod sync-source ((source vcs-source))
   nil)

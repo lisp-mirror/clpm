@@ -13,7 +13,8 @@
           #:clpm/requirement
           #:clpm/session
           #:clpm/sources/defs
-          #:clpm/sources/dotted-versioned-project)
+          #:clpm/sources/dotted-versioned-project
+          #:clpm/utils)
   (:export #:fs-source
            #:fs-source-register-asd
            #:fs-release))
@@ -128,7 +129,7 @@ can be relative or absolute."
   (let* ((system-files (hash-table-keys (fs-source-projects-by-namestring source))))
     `(,(source-name source)
       :type :file-system
-      :system-files ,system-files)))
+      :system-files ,(safe-sort system-files #'string<))))
 
 (defmethod sync-source ((source fs-source))
   nil)
