@@ -1,6 +1,6 @@
 #+TITLE: CLPM Changelog
 
-* Unreleased
+* v0.3.2 - 2020-06-08
 
   + Fix bug in client where =activate-context= did not ignore inherited source
     registries for bundles.
