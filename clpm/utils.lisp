@@ -18,6 +18,7 @@
            #:process-stream
            #:retriable-error
            #:run-program-augment-env-args
+           #:safe-sort
            #:sort-plist
            #:uri-to-string
            #:url-port
@@ -212,3 +213,7 @@ overwrites the value from ~default-ht~."
         :do (push key out)
             (push value out))
     (nreverse out)))
+
+(defun safe-sort (sequence predicate &rest args &key key)
+  (declare (ignore key))
+  (apply #'sort (copy-seq sequence) predicate args))
