@@ -7,6 +7,7 @@
 #+REVEAL_EXTRA_CSS: css/custom.css
 #+REVEAL_PLUGINS: (highlight notes)
 #+REVEAL_ROOT: https://cdnjs.cloudflare.com/ajax/libs/reveal.js/3.9.2/
+#+REVEAL_REVEAL_JS_VERSION: 3
 #+OPTIONS: reveal_slide_number:c reveal_width:1920 reveal_height:1080
 #+OPTIONS: email:t toc:1 num:nil date:nil timestamp:nil
 
