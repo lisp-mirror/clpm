@@ -145,7 +145,7 @@ directories containing the files."
     (clpm-proc-read proc)))
 
 (defun activate-context (context &key activate-asdf-integration
-                                   ignore-inherited-source-registry)
+                                   (ignore-inherited-source-registry (context-bundle-p context)))
   "Activate a CLPM context. This clears ASDF's current configuration and
 replaces it with configuration appropriate for CONTEXT.
 
