@@ -37,6 +37,9 @@ appended to.")
 (defvar *clpm-dribble-output-prefix* "CLPM-OUT> "
   "The prefix for lines to *CLPM-DRIBBLE* that are read by this process.")
 
+(defvar *clpm-error-dribble-prefix* "CLPM-ERR> "
+  "The prefix for lines to *CLPM-ERROR-DRIBBLE*.")
+
 (defun call-with-dribble-stream (thunk designator)
   (cond
     ((streamp designator)
@@ -79,12 +82,12 @@ or the same CLPM used to execute the bundle."
   ((proc-info
     :initarg :proc-info
     :reader clpm-proc-info)
-   (error-string-output-stream
-    :initarg :error-string-output-stream
-    :reader clpm-proc-error-string-output-stream)
    (error-dribble
     :initarg :error-dribble
-    :reader clpm-proc-error-dribble))
+    :reader clpm-proc-error-dribble)
+   (error-pathname
+    :initarg :error-pathname
+    :reader clpm-proc-error-pathname))
   (:documentation
    "A CLPM process."))
 
@@ -98,22 +101,17 @@ or the same CLPM used to execute the bundle."
 (defun make-clpm-proc ()
   "Makes a child CLPM process with the CLPM REPL running. The returned CLPM-PROC
 *must* be stopped in order to free up resources belonging to the process."
-  (let* ((error-string-output-stream (make-string-output-stream))
-         (error-dribble-stream (open-dribble-stream *clpm-error-dribble*))
-         (error-output-stream (if error-dribble-stream
-                                  (make-broadcast-stream error-string-output-stream
-                                                         error-dribble-stream)
-                                  error-string-output-stream))
-         (proc-info (uiop:launch-program
-                     (append (ensure-list (clpm-executable))
-                             (list "client" "repl"))
-                     :input :stream
-                     :output :stream
-                     :error-output error-output-stream)))
-    (make-instance 'clpm-proc
-                   :proc-info proc-info
-                   :error-dribble (unless (streamp *clpm-error-dribble*) error-dribble-stream)
-                   :error-string-output-stream error-string-output-stream)))
+  (uiop:with-temporary-file (:pathname error-pathname :keep t :prefix "clpm")
+    (let ((proc-info (uiop:launch-program
+                      (append (ensure-list (clpm-executable))
+                              (list "client" "repl"))
+                      :input :stream
+                      :output :stream
+                      :error-output error-pathname)))
+      (make-instance 'clpm-proc
+                     :proc-info proc-info
+                     :error-dribble *clpm-error-dribble*
+                     :error-pathname error-pathname))))
 
 (defun clpm-proc-print (proc command &key read-eval-p)
   "Print COMMAND to PROC. If READ-EVAL-P is non-NIL, the command is prefixed
@@ -152,8 +150,9 @@ all streams."
         (uiop:terminate-process (clpm-proc-info proc))
         (clpm-proc-print proc '(uiop:quit) :read-eval-p t)))
   (prog1 (uiop:wait-process (clpm-proc-info proc))
-    (when (clpm-proc-error-dribble proc)
-      (close (clpm-proc-error-dribble proc)))))
+    (with-dribble-stream (s (clpm-proc-error-dribble proc))
+      (with-open-file (file (clpm-proc-error-pathname proc))
+        (uiop:copy-stream-to-stream file s :prefix *clpm-error-dribble-prefix* :linewise t)))))
 
 (defun call-with-clpm-proc (thunk)
   (let ((proc (make-clpm-proc))
@@ -170,9 +169,10 @@ all streams."
              (setf stopped-p t)
              (error 'clpm-error
                     :wrapped-condition c
-                    :error-output (get-output-stream-string (clpm-proc-error-string-output-stream proc)))))
+                    :error-output (uiop:read-file-string (clpm-proc-error-pathname proc)))))
       (unless stopped-p
-        (clpm-proc-stop proc)))))
+        (clpm-proc-stop proc))
+      (uiop:delete-file-if-exists (clpm-proc-error-pathname proc)))))
 
 (defmacro with-clpm-proc ((proc) &body body)
   `(call-with-clpm-proc (lambda (,proc) ,@body)))

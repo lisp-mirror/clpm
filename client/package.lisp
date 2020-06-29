@@ -11,6 +11,7 @@
            #:*clpm-dribble-input-prefix*
            #:*clpm-dribble-output-prefix*
            #:*clpm-error-dribble*
+           #:*clpm-error-dribble-prefix*
            #:*clpm-executable*
            #:*context-diff-approval-method*
            #:*default-context*
