@@ -69,7 +69,7 @@
     `(("Wix" "xmlns" "http://schemas.microsoft.com/wix/2006/wi")
       (("Product" "Id" "*"
                   "Name" "Common Lisp Package Manager (CLPM)"
-                  "Version" "0.3.3"
+                  "Version" "0.3.4"
                   "Manufacturer" "https://www.clpm.dev"
                   "UpgradeCode" "D499FD17-A05C-41F8-837E-8B1BF4C4403B"
                   "Language" "1033")
