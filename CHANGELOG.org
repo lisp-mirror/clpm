@@ -1,5 +1,10 @@
 #+TITLE: CLPM Changelog
 
+* Unreleased
+
+  + Fix bug in parsing contexts referring to git commits when the git repo is
+    not yet present on the filesystem.
+
 * v0.3.3 - 2020-06-29
 
   + Fix bug in client that caused CLPM to stall when too much was printed to

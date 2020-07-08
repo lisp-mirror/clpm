@@ -480,11 +480,12 @@ include it."
     ;; We delay making sure commits are present locally until we want to
     ;; install. This ensures that if a commit is deleted from a repository we
     ;; don't get into a situation where we can't even parse the context.
-    (unless (eql (first ref) :commit)
-      (ensure-ref-present-locally! repo ref))
-
-    (let ((commit-id (resolve-ref-to-commit repo ref)))
-      (setf (vcs-release-commit release) commit-id))))
+    (if (eql (first ref) :commit)
+        (setf (vcs-release-commit release) (second ref))
+        (progn
+          (ensure-ref-present-locally! repo ref)
+          (let ((commit-id (resolve-ref-to-commit repo ref)))
+            (setf (vcs-release-commit release) commit-id))))))
 
 (defmethod ensure-release-installed! ((release vcs-release))
   (unless (vcs-release-installed-p release)
