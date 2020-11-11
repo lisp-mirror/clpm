@@ -58,24 +58,24 @@ files.
    [[https://files.clpm.dev/clpm/][https://files.clpm.dev/clpm/]]. The current release files for each platform
    are:
 
-   + [[https://files.clpm.dev/clpm/clpm-amd64-darwin-v0.3.4.tar.gz][clpm-amd64-darwin-v0.3.4.tar.gz]] :: CLPM compiled for 64bit Mac OS.
-   + [[https://files.clpm.dev/clpm/clpm-amd64-linux-gnu-v0.3.4.tar.gz][clpm-amd64-linux-gnu-v0.3.4.tar.gz]] :: CLPM compiled for 64bit Linux
+   + [[https://files.clpm.dev/clpm/clpm-amd64-darwin-v0.3.5.tar.gz][clpm-amd64-darwin-v0.3.5.tar.gz]] :: CLPM compiled for 64bit Mac OS.
+   + [[https://files.clpm.dev/clpm/clpm-amd64-linux-gnu-v0.3.5.tar.gz][clpm-amd64-linux-gnu-v0.3.5.tar.gz]] :: CLPM compiled for 64bit Linux
      using GNU libc (by far the most common).
-   + [[https://files.clpm.dev/clpm/clpm-amd64-linux-musl-v0.3.4.tar.gz][clpm-amd64-linux-musl-v0.3.4.tar.gz]] :: CLPM compiled for 64bit
+   + [[https://files.clpm.dev/clpm/clpm-amd64-linux-musl-v0.3.5.tar.gz][clpm-amd64-linux-musl-v0.3.5.tar.gz]] :: CLPM compiled for 64bit
      Linux using musl libc (e.g., Alpine Linux).
-   + [[https://files.clpm.dev/clpm/clpm-arm64-linux-gnu-v0.3.4.tar.gz][clpm-arm64-linux-gnu-v0.3.4.tar.gz]] :: CLPM compiled for 64bit Linux
+   + [[https://files.clpm.dev/clpm/clpm-arm64-linux-gnu-v0.3.5.tar.gz][clpm-arm64-linux-gnu-v0.3.5.tar.gz]] :: CLPM compiled for 64bit Linux
      on ARM processors using GNU libc.
-   + [[https://files.clpm.dev/clpm/clpm-arm64-linux-musl-v0.3.4.tar.gz][clpm-arm64-linux-musl-v0.3.4.tar.gz]] :: CLPM compiled for 64bit
+   + [[https://files.clpm.dev/clpm/clpm-arm64-linux-musl-v0.3.5.tar.gz][clpm-arm64-linux-musl-v0.3.5.tar.gz]] :: CLPM compiled for 64bit
      Linux on ARM processors using musl libc.
-   + [[https://files.clpm.dev/clpm/clpm-armv7-linux-gnu-v0.3.4.tar.gz][clpm-armv7-linux-gnu-v0.3.4.tar.gz]] :: CLPM compiled for 32bit Linux
+   + [[https://files.clpm.dev/clpm/clpm-armv7-linux-gnu-v0.3.5.tar.gz][clpm-armv7-linux-gnu-v0.3.5.tar.gz]] :: CLPM compiled for 32bit Linux
      on ARM processors using GNU libc.
-   + [[https://files.clpm.dev/clpm/clpm-armv7-linux-musl-v0.3.4.tar.gz][clpm-armv7-linux-musl-v0.3.4.tar.gz]] :: CLPM compiled for 32bit
+   + [[https://files.clpm.dev/clpm/clpm-armv7-linux-musl-v0.3.5.tar.gz][clpm-armv7-linux-musl-v0.3.5.tar.gz]] :: CLPM compiled for 32bit
      Linux on ARM processors using musl libc.
-   + [[https://files.clpm.dev/clpm/clpm-amd64-windows-v0.3.4.msi][clpm-amd64-windows-v0.3.4.msi]] :: CLPM installer for 64 bit Windows.
-   + [[https://files.clpm.dev/clpm/clpm-v0.3.4.tar.gz][clpm-v0.3.4.tar.gz]] :: Source code, including git submodules.
-   + [[https://files.clpm.dev/clpm/clpm-v0.3.4.DIGESTS][clpm-v0.3.4.DIGESTS]] :: Text file containing the SHA512 sums for
+   + [[https://files.clpm.dev/clpm/clpm-amd64-windows-v0.3.5.msi][clpm-amd64-windows-v0.3.5.msi]] :: CLPM installer for 64 bit Windows.
+   + [[https://files.clpm.dev/clpm/clpm-v0.3.5.tar.gz][clpm-v0.3.5.tar.gz]] :: Source code, including git submodules.
+   + [[https://files.clpm.dev/clpm/clpm-v0.3.5.DIGESTS][clpm-v0.3.5.DIGESTS]] :: Text file containing the SHA512 sums for
      every previously mentioned file.
-   + [[https://files.clpm.dev/clpm/clpm-v0.3.4.DIGESTS.asc][clpm-v0.3.4.DIGESTS.asc]] :: Same as =clpm-v0.3.4.DIGESTS=,
+   + [[https://files.clpm.dev/clpm/clpm-v0.3.5.DIGESTS.asc][clpm-v0.3.5.DIGESTS.asc]] :: Same as =clpm-v0.3.5.DIGESTS=,
      but signed with GPG key =0x10327DE761AB977333B1AD7629932AC49F3044CE=.
 
 *** GNU/Linux and Darwin
