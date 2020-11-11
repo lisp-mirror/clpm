@@ -6,6 +6,7 @@
 (uiop:define-package #:clpm/version-strings
     (:use #:cl
           #:alexandria)
+  (:import-from #:cl-semver)
   (:import-from #:uiop
                 #:split-string)
   (:export #:parse-semantic-version
@@ -131,18 +132,6 @@ by the character used to separate the segments."
     (assert (semantic-version-p out))
     out))
 
-(defun integer-or-string< (thing1 thing2)
-  "numeric always have lower precedence than strings"
-  (cond
-    ((and (stringp thing1) (stringp thing2))
-     (string< thing1 thing2))
-    ((stringp thing1)
-     nil)
-    ((stringp thing2)
-     t)
-    (t
-     (< thing1 thing2))))
-
 (defun semantic-version< (version1 version2)
   (cond
     ((null version1)
@@ -150,15 +139,8 @@ by the character used to separate the segments."
     ((null version2)
      nil)
     (t
-     (destructuring-bind (v1 pre1 build1)
-         (parse-semantic-version version1)
-       (declare (ignore build1))
-       (destructuring-bind (v2 pre2 build2)
-           (parse-semantic-version version2)
-         (declare (ignore build2))
-         (or (uiop:lexicographic< #'< v1 v2)
-             (and (equal v1 v2)
-                  (uiop:lexicographic< #'integer-or-string< pre1 pre2))))))))
+     (cl-semver:version< (cl-semver:read-version-from-string version1)
+                         (cl-semver:read-version-from-string version2)))))
 
 (defun semantic-version<= (version1 version2)
   (not (semantic-version< version2 version1)))

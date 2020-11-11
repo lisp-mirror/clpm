@@ -320,8 +320,14 @@
 
 (defmethod release-> ((release-1 clpi-release)
                       (release-2 clpi-release))
-  (string> (release-version release-1)
-           (release-version release-2)))
+  (let ((scheme (clpi:project-version-scheme (clpi:project (clpi-backing-object release-1))))
+        (version-1 (release-version release-1))
+        (version-2 (release-version release-2)))
+    (ecase scheme
+      (:date
+       (string> version-1 version-2))
+      (:semver
+       (semantic-version<= version-2 version-1)))))
 
 (defmethod release-satisfies-version-spec-p ((release clpi-release) version-spec)
   (let ((scheme (clpi:project-version-scheme (clpi:project (clpi-backing-object release))))
