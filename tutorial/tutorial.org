@@ -265,7 +265,7 @@
 
     + Linux :: =/home/$USER/.config/=
     + MacOS :: =/Users/$USER/.config/=
-    + Windows :: =C:\Users\$USER\AppData\Local\config\=
+    + Windows :: =%LOCALAPPDATA%\config\=
 
     #+ATTR_REVEAL: :frag t
     This can be overriden using the =CLPM_CONFIG_DIRS= environment variable.
@@ -286,7 +286,7 @@
 
     + Linux :: =/home/$USER/.cache/=
     + MacOS :: =/Users/$USER/.cache/=
-    + Windows :: =C:\Users\$USER\AppData\cache\=
+    + Windows :: =%LOCALAPPDATA%\cache\=
 
     #+ATTR_REVEAL: :frag t
     This location can be overriden using the =CLPM_CACHE_DIR= environment
@@ -304,7 +304,7 @@
 
     + Linux :: =/home/$USER/.local/share/=
     + MacOS :: =/Users/$USER/.local/share/=
-    + Windows :: =C:\Users\$USER\AppData\=
+    + Windows :: =%LOCALAPPDATA%=
 
     #+ATTR_REVEAL: :frag t
     This location can be overriden using the =CLPM_DATA_DIR= environment
@@ -451,7 +451,7 @@
    following command at:
 
    + Linux/MacOS :: =~.config/common-lisp/source-registry.conf.d/20-clpm-client.conf=
-   + Windows :: =C:\Users\$USER\AppData\Local\config\common-lisp\source-registry.conf.d\20-clpm-client.conf=
+   + Windows :: =%LOCALAPPDATA%\config\common-lisp\source-registry.conf.d\20-clpm-client.conf=
 
    #+begin_src shell
      clpm client source-registry.d

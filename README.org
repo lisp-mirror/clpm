@@ -101,8 +101,8 @@ files.
 
   First, configure CLPM to use the primary Quicklisp distribution as a source
   for packages. Create a file called =~/.config/clpm/sources.conf= (or
-  =C:\Users\$USER\AppData\Local\config\clpm\sources.conf= on Windows) with the
-  following contents:
+  =%LOCALAPPDATA%\config\clpm\sources.conf= on Windows) with the following
+  contents:
 
   #+begin_src common-lisp
     ("quicklisp"
