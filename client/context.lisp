@@ -50,7 +50,8 @@ variables."
             (setf *active-context-splice-source-registry* nil))
           (progn
             (setf *active-context-ignore-inherited-source-registry* nil)
-            (setf *active-context-splice-source-registry* (uiop:getenvp "CLPM_EXEC_SPLICE_INHERITED_SOURCE_REGISTRY")))))))
+            (setf *active-context-splice-source-registry* (asdf/source-registry:parse-source-registry-string
+                                                           (uiop:getenvp "CLPM_EXEC_SPLICE_INHERITED_SOURCE_REGISTRY"))))))))
 (uiop:register-image-restore-hook 'configure-from-env)
 
 (defun clear-active-context ()
