@@ -22,7 +22,8 @@
 (define-cli-command (("client" "repl") *client-repl-ui*) (args options)
   (declare (ignore args options))
   (with-standard-io-syntax
-    (let ((*package* (find-package :clpm)))
+    (let ((*package* (find-package :clpm))
+          (*print-readably* nil))
       (loop
         (print (eval (read)) *stdout*)
         (terpri *stdout*)
