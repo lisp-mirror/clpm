@@ -7,7 +7,7 @@
   :version (:read-file-form "version.lisp" :at (1 2))
   :description "A client for CLPM"
   :license "BSD-2-Clause"
-  :depends-on ((:version #:uiop "3.3.0"))
+  :depends-on ((:version #:uiop "3.1.7.26"))
   :serial nil
   :components
   ((:file "asdf" :depends-on ("package" "cleanup" "context"))
