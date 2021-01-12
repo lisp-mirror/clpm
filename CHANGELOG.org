@@ -1,5 +1,12 @@
 #+TITLE: CLPM Changelog
 
+* v0.3.6 - 2021-01-11
+
+  + Fix bug saving project metadata on Windows.
+  + Fix client's UIOP dependency to better suit ECL's bundled fork of ASDF.
+  + Fix issue READing strings in client from a lisp that is not SBCL.
+  + Parse inherited CL_SOURCE_REGISTRY config in client using ASDF.
+
 * v0.3.5 - 2020-11-11
 
   + Fix bug in ordering releases for semantic versioned projects that include
