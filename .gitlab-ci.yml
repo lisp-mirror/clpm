@@ -1,12 +1,29 @@
-image: debian
-
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
+  ALPINE_VERSION: 3.13
+  ASDF_VERSION: 3.3.4
+  SBCL_VERSION: 2.1.1
+  DOCKER_HUB_CI_REPO: daewok/clpm-ci
 
-quiet:
-  stage: build
+image: clfoundation/sbcl:$SBCL_VERSION-alpine$ALPINE_VERSION
+
+stages:
+  - prep
+
+##############################################################################
+# Build CI Images
+##############################################################################
+
+# Build the image used for making the executable.
+ci-image:amd64:
+  stage: prep
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
   script:
-    - "true"
+    - mkdir -p /kaniko/.docker
+    - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$DOCKER_HUB_USERNAME\",\"password\":\"$DOCKER_HUB_PASSWORD\"}}}" > /kaniko/.docker/config.json
+    - /kaniko/executor --cache --cache-repo $DOCKER_HUB_CI_REPO --context $CI_PROJECT_DIR --build-arg asdf_version=$ASDF_VERSION --build-arg sbcl_version=$SBCL_VERSION --build-arg alpine_version=$ALPINE_VERSION --dockerfile $CI_PROJECT_DIR/Dockerfile.sbcl-ci --destination $DOCKER_HUB_CI_REPO:$SBCL_VERSION-alpine$ALPINE_VERSION-asdf$ASDF_VERSION-amd64
 
 # build-glibc:
 #   image:
