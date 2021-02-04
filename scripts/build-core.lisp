@@ -24,4 +24,10 @@
 (dolist (lib sb-alien::*shared-objects*)
   (setf (sb-alien::shared-object-dont-save lib) t))
 
-(uiop:dump-image (merge-pathnames "clpm.core" *build-root-pathname*))
+(defun my-arch ()
+  #+x86-64 :amd64)
+
+(uiop:dump-image (merge-pathnames (format nil "~A-~A/clpm.core"
+                                          (string-downcase (uiop:operating-system))
+                                          (string-downcase (my-arch)))
+                                  *build-root-pathname*))
