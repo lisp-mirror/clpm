@@ -53,7 +53,7 @@ ci-image:amd64:
     - |
       src/runtime/static-sbcl --core $CI_PROJECT_DIR/$BUILD_DIR/$CI_PROJECT_NAME.core \
                               --non-interactive \
-                              --eval "(sb-ext:save-lisp-and-die \"$CI_PROJECT_DIR/$RELEASE_DIR/$CI_PROJECT_NAME\" :executable t :toplevel #'uiop:restore-image :compression t :save-runtime-options t)"
+                              --eval "(sb-ext:save-lisp-and-die \"$CI_PROJECT_DIR/$RELEASE_DIR/$CI_PROJECT_NAME\" :executable t :toplevel #'uiop:restore-image :save-runtime-options t)"
   artifacts:
     paths:
       - $BUILD_DIR
