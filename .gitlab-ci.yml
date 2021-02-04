@@ -25,6 +25,48 @@ ci-image:amd64:
     - echo "{\"auths\":{\"https://index.docker.io/v1/\":{\"username\":\"$DOCKER_HUB_USERNAME\",\"password\":\"$DOCKER_HUB_PASSWORD\"}}}" > /kaniko/.docker/config.json
     - /kaniko/executor --cache --cache-repo $DOCKER_HUB_CI_REPO --context $CI_PROJECT_DIR --build-arg asdf_version=$ASDF_VERSION --build-arg sbcl_version=$SBCL_VERSION --build-arg alpine_version=$ALPINE_VERSION --dockerfile $CI_PROJECT_DIR/Dockerfile.sbcl-ci --destination $DOCKER_HUB_CI_REPO:$SBCL_VERSION-alpine$ALPINE_VERSION-asdf$ASDF_VERSION-amd64
 
+##############################################################################
+# Build static executables
+##############################################################################
+
+.static-exec:
+  stage: build
+  image: $DOCKER_HUB_CI_REPO:$SBCL_VERSION-alpine$ALPINE_VERSION-asdf$ASDF_VERSION-$ARCH
+  script:
+    - apk add --no-cache openssl-dev openssl-libs-static
+    - mkdir -p $BUILD_DIR
+    - mkdir -p $RELEASE_DIR
+    - sbcl --script scripts/build-core.lisp
+    # Dump linkage info.
+    - cd /usr/local/src/sbcl-$SBCL_VERSION
+    - |
+      sbcl --core $CI_PROJECT_DIR/$BUILD_DIR/$CI_PROJECT_NAME.core \
+           --non-interactive \
+           --load tools-for-build/dump-linkage-info.lisp \
+           --eval "(sb-dump-linkage-info:dump-to-file \"$CI_PROJECT_DIR/$BUILD_DIR/linkage-info.sexp\")"
+    # Create the linkage table override info.
+    - sbcl --script tools-for-build/create-linkage-table-prefill-info-override.lisp "$CI_PROJECT_DIR/$BUILD_DIR/linkage-info.sexp"
+    # Build the static runtime.
+    - LDLIBS="-lssl" make -C src/runtime static-sbcl
+    # Redump the core, this time as an executable.
+    - |
+      src/runtime/static-sbcl --core $CI_PROJECT_DIR/$BUILD_DIR/$CI_PROJECT_NAME.core \
+                              --non-interactive \
+                              --eval "(sb-ext:save-lisp-and-die \"$CI_PROJECT_DIR/$RELEASE_DIR/$CI_PROJECT_NAME\" :executable t :toplevel #'uiop:restore-image :compression t :save-runtime-options t)"
+  artifacts:
+    paths:
+      - $BUILD_DIR
+      - $RELEASE_DIR
+
+static-exec:linux:amd64:
+  extends: .static-exec
+  variables:
+    ARCH: amd64
+    BUILD_DIR: build/linux-amd64
+    RELEASE_DIR: build/release/linux-amd64
+  needs:
+    - ci-image:amd64
+
 # build-glibc:
 #   image:
 #     name: daewok/sbcl:1.5.2-debian-build
