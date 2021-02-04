@@ -48,7 +48,7 @@ ci-image:amd64:
     # Create the linkage table override info.
     - sbcl --script tools-for-build/create-linkage-table-prefill-info-override.lisp "$CI_PROJECT_DIR/$BUILD_DIR/linkage-info.sexp"
     # Build the static runtime.
-    - LDLIBS="-lssl" make -C src/runtime static-sbcl
+    - LDLIBS="-lssl -lcrypto" make -C src/runtime static-sbcl
     # Redump the core, this time as an executable.
     - |
       src/runtime/static-sbcl --core $CI_PROJECT_DIR/$BUILD_DIR/$CI_PROJECT_NAME.core \
