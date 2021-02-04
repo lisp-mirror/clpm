@@ -22,7 +22,7 @@ ci-image:amd64:
     entrypoint: [""]
   script:
     - mkdir -p /kaniko/.docker
-    - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$DOCKER_HUB_USERNAME\",\"password\":\"$DOCKER_HUB_PASSWORD\"}}}" > /kaniko/.docker/config.json
+    - echo "{\"auths\":{\"https://index.docker.io/v1/\":{\"username\":\"$DOCKER_HUB_USERNAME\",\"password\":\"$DOCKER_HUB_PASSWORD\"}}}" > /kaniko/.docker/config.json
     - /kaniko/executor --cache --cache-repo $DOCKER_HUB_CI_REPO --context $CI_PROJECT_DIR --build-arg asdf_version=$ASDF_VERSION --build-arg sbcl_version=$SBCL_VERSION --build-arg alpine_version=$ALPINE_VERSION --dockerfile $CI_PROJECT_DIR/Dockerfile.sbcl-ci --destination $DOCKER_HUB_CI_REPO:$SBCL_VERSION-alpine$ALPINE_VERSION-asdf$ASDF_VERSION-amd64
 
 # build-glibc:
