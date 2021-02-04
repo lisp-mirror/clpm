@@ -32,6 +32,8 @@ RUN set -x \
     && grep "sbcl-${SBCL_VERSION}-source.tar" "sbcl-${SBCL_VERSION}-crhodes.txt" > "${SBCL_VERSION}-sum-file.txt" \
     && sha256sum -c "${SBCL_VERSION}-sum-file.txt" \
     && tar xf "sbcl-${SBCL_VERSION}-source.tar" \
+    && pkill -9 gpg-agent \
+    && pkill -9 dirmngr \
     && rm -rf "$GNUPGHOME"
 
 WORKDIR /usr/local/src/sbcl-$SBCL_VERSION/
@@ -54,6 +56,8 @@ RUN set -x \
     && patch -p1 < static-executable-support.patch \
     && rm static-executable-support.patch static-executable-support.patch.asc \
     && echo "\"$SBCL_VERSION-static-executable-v2\"" > version.lisp-expr \
+    && pkill -9 gpg-agent \
+    && pkill -9 dirmngr \
     && rm -rf "$GNUPGHOME"
 
 # Build it!
