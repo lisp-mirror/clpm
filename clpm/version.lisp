@@ -63,11 +63,11 @@ NIL until an image is dumped and is set by ~cache-full-version~.")
    :separator '(#\-)))
 
 (defun get-git-common-ancestor ()
-  (clpm-git '("merge-base" "HEAD" "master")
+  (clpm-git '("merge-base" "HEAD" "origin/master")
             :output '(:string :stripped t)))
 
 (defun get-git-distance-from-master ()
-  (parse-integer (clpm-git '("rev-list" "--count" "HEAD" "--not" "master")
+  (parse-integer (clpm-git '("rev-list" "--count" "HEAD" "--not" "origin/master")
                            :output '(:string :stripped t))))
 
 (defun get-git-tag-p ()
