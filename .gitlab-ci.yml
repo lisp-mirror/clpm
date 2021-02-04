@@ -9,6 +9,7 @@ image: clfoundation/sbcl:$SBCL_VERSION-alpine$ALPINE_VERSION
 
 stages:
   - prep
+  - build
 
 ##############################################################################
 # Build CI Images
