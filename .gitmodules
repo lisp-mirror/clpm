@@ -205,3 +205,9 @@
 [submodule "ext/jsown"]
 	path = ext/jsown
 	url = https://github.com/madnificent/jsown.git
+[submodule "ext/trivial-with-current-source-form"]
+	path = ext/trivial-with-current-source-form
+	url = https://github.com/scymtym/trivial-with-current-source-form
+[submodule "ext/global-vars"]
+	path = ext/global-vars
+	url = https://github.com/lmj/global-vars.git

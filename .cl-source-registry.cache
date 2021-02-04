@@ -71,6 +71,7 @@
  "ext/fast-io/fast-io-test.asd"
  "ext/fast-io/fast-io.asd"
  "ext/flexi-streams/flexi-streams.asd"
+ "ext/global-vars/global-vars.asd"
  "ext/ieee-floats/ieee-floats.asd"
  "ext/ironclad/ironclad-text.asd"
  "ext/ironclad/ironclad.asd"
