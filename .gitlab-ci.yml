@@ -34,7 +34,7 @@ ci-image:amd64:
   stage: build
   image: $DOCKER_HUB_CI_REPO:$SBCL_VERSION-alpine$ALPINE_VERSION-asdf$ASDF_VERSION-$ARCH
   script:
-    - apk add --no-cache openssl-dev openssl-libs-static
+    - apk add --no-cache git openssl-dev openssl-libs-static
     - mkdir -p $BUILD_DIR
     - mkdir -p $RELEASE_DIR
     - sbcl --script scripts/build-core.lisp
