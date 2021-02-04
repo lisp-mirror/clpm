@@ -1,6 +1,6 @@
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
-  ALPINE_VERSION: 3.13
+  ALPINE_VERSION: "3.13"
   ASDF_VERSION: 3.3.4
   SBCL_VERSION: 2.1.1
   DOCKER_HUB_CI_REPO: daewok/clpm-ci
