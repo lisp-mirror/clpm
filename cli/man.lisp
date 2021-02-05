@@ -8,9 +8,22 @@
           #:alexandria
           #:clpm-cli/interface-defs)
   (:import-from #:adopt)
-  (:export #:output-manual))
+  (:export #:manual-file-names
+           #:output-manual))
 
 (in-package #:clpm-cli/man)
+
+(defun manual-file-names ()
+  (let ((out))
+    (maphash
+     (lambda (path ui)
+       (declare (ignore ui))
+       (let ((file-name (if (listp path)
+                            (format nil "clpm-~{~A~^-~}.1" path)
+                            path)))
+         (push file-name out)))
+     *uis*)
+    out))
 
 (defun output-manual (dir)
   (ensure-directories-exist dir)
@@ -23,4 +36,4 @@
                         :direction :output
                         :if-exists :supersede)
          (adopt:print-manual ui :stream s))))
-           *uis*))
+   *uis*))
