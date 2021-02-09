@@ -91,6 +91,7 @@
  "ext/lparallel/lparallel.asd"
  "ext/named-readtables/named-readtables.asd"
  "ext/nibbles/nibbles.asd"
+ "ext/osicat/osicat.asd"
  "ext/parse-float/parse-float.asd"
  "ext/proc-parse/proc-parse-test.asd"
  "ext/proc-parse/proc-parse.asd"
