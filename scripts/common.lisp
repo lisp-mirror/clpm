@@ -8,15 +8,6 @@
 
 (in-package #:clpm-scripts)
 
-;; Load in ASDF.
-(let* ((asdf.lisp (merge-pathnames "../ext/asdf.lisp" *load-truename*))
-       (asdf.fasl (compile-file-pathname asdf.lisp)))
-  (when (or (not (probe-file asdf.fasl))
-            (< (file-write-date asdf.fasl)
-               (file-write-date asdf.lisp)))
-    (compile-file asdf.lisp :verbose nil :print nil :progress nil))
-  (load asdf.fasl))
-
 (defvar *setup-file-pathname* *load-truename*
   "The pathname to this file.")
 
@@ -29,14 +20,7 @@
   "The pathname to the root of the build directory. Defaults to build/ inside
 *ROOT-PATHNAME*")
 
-(defun setup-asdf (&optional (cache-dir ""))
-  (let ((build-cache (uiop:ensure-directory-pathname
-                      (merge-pathnames (concatenate 'string "cl-cache/" cache-dir)
-                                       *build-root-pathname*))))
-    (asdf:clear-configuration)
-    (asdf:initialize-source-registry `(:source-registry
-                                       :ignore-inherited-configuration
-                                       (:tree ,*root-pathname*)))
-    (asdf:initialize-output-translations `(:output-translations
-                                           :ignore-inherited-configuration
-                                           (:root (,build-cache :implementation :**/ :*.*.*))))))
+(defun setup-asdf ()
+  (asdf:initialize-source-registry `(:source-registry
+                                     :ignore-inherited-configuration
+                                     (:tree ,*root-pathname*))))

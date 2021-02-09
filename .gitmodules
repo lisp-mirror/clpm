@@ -205,3 +205,6 @@
 [submodule "ext/global-vars"]
 	path = ext/global-vars
 	url = https://github.com/lmj/global-vars.git
+[submodule "ext/asdf"]
+	path = ext/asdf
+	url = https://gitlab.common-lisp.net/asdf/asdf.git
