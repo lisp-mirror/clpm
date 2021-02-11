@@ -208,3 +208,21 @@
 [submodule "ext/asdf"]
 	path = ext/asdf
 	url = https://gitlab.common-lisp.net/asdf/asdf.git
+[submodule "ext/zippy"]
+	path = ext/zippy
+	url = https://github.com/Shinmera/zippy.git
+[submodule "ext/documentation-utils"]
+	path = ext/documentation-utils
+	url = https://github.com/Shinmera/documentation-utils.git
+[submodule "ext/file-attributes"]
+	path = ext/file-attributes
+	url = https://github.com/Shinmera/file-attributes.git
+[submodule "ext/pathname-utils"]
+	path = ext/pathname-utils
+	url = https://github.com/Shinmera/pathname-utils.git
+[submodule "ext/3bz"]
+	path = ext/3bz
+	url = https://github.com/3b/3bz.git
+[submodule "ext/mmap"]
+	path = ext/mmap
+	url = https://github.com/Shinmera/mmap.git
