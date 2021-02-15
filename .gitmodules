@@ -36,7 +36,7 @@
 	url = https://github.com/sharplispers/split-sequence.git
 [submodule "ext/cl-plus-ssl"]
 	path = ext/cl-plus-ssl
-	url = https://github.com/cl-plus-ssl/cl-plus-ssl.git
+	url = https://github.com/daewok/cl-plus-ssl.git
 [submodule "ext/trivial-features"]
 	path = ext/trivial-features
 	url = https://github.com/trivial-features/trivial-features.git
