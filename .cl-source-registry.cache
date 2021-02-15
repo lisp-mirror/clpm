@@ -12,6 +12,7 @@
  "ext/alexandria/alexandria.asd"
  "ext/anaphora/anaphora.asd"
  "ext/archive/archive.asd"
+ "ext/asdf-release-ops/asdf-release-ops.asd"
  "ext/asdf-system-groveler/asdf-system-groveler.asd"
  "ext/babel/babel-streams.asd"
  "ext/babel/babel-tests.asd"

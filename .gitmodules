@@ -226,3 +226,6 @@
 [submodule "ext/mmap"]
 	path = ext/mmap
 	url = https://github.com/Shinmera/mmap.git
+[submodule "ext/asdf-release-ops"]
+	path = ext/asdf-release-ops
+	url = https://github.com/daewok/asdf-release-ops.git
