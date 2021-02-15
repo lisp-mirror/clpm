@@ -2,7 +2,7 @@
  "clpm-cli.asd"
  "clpm-features.asd"
  "clpm.asd"
- "client/clpm-client.asd"
+ "clpm-client/clpm-client.asd"
  "ext/3bz/3bz.asd"
  "ext/asdf/asdf.asd"
  "ext/asdf/uiop/asdf-driver.asd"
