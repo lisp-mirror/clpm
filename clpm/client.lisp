@@ -8,6 +8,7 @@
           #:clpm/archives
           #:clpm/data
           #:clpm/version)
+  (:import-from #:alexandria)
   (:import-from #:flexi-streams
                 #:make-in-memory-input-stream)
   (:export #:*clpm-client-asd-pathname*
@@ -17,7 +18,9 @@
 
 (in-package #:clpm/client)
 
-(defvar *clpm-client-tarball-contents* nil)
+(defparameter *clpm-client-tarball-contents*
+  (alexandria:read-file-into-byte-vector (asdf:output-file 'clpm-asdf:build-clpm-client-tarball-op :clpm)))
+
 (defparameter *clpm-client-concatenated-source*
   (uiop:read-file-string (asdf:output-file 'asdf:concatenate-source-op :clpm-client)))
 

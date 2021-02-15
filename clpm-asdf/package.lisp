@@ -6,6 +6,7 @@
 (uiop:define-package #:clpm-asdf
     (:use #:cl)
   (:local-nicknames (#:ops #:asdf-release-ops))
-  (:export #:clpm-system))
+  (:export #:build-clpm-client-tarball-op
+           #:clpm-system))
 
 (in-package #:clpm-asdf)
