@@ -50,6 +50,10 @@
                      (:readme-file "README")
                      (:dependencies-license-file "BUNDLED-LICENSES"))))))))
   :in-order-to ((program-op (load-op :clpm-cli))
-                (load-op (concatenate-source-op :clpm-client)
-                         (clpm-asdf:build-clpm-client-tarball-op :clpm))
                 (asdf-release-ops:perform-program-image-op (load-op :clpm-cli))))
+
+(defsystem #:clpm/client-helper
+  :description "Helper to make sure clpm-client is built before clpm/client is
+  loaded. This is nasty and I really want to remove it soon."
+  :in-order-to ((load-op (concatenate-source-op :clpm-client)
+                         (clpm-asdf:build-clpm-client-tarball-op :clpm))))

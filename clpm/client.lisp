@@ -8,6 +8,8 @@
           #:clpm/archives
           #:clpm/data
           #:clpm/version)
+  ;; TODO: GROSS, GROSS, GROSS. Need to find a way to get rid of this.
+  (:import-from #:clpm/client-helper)
   (:import-from #:alexandria)
   (:import-from #:flexi-streams
                 #:make-in-memory-input-stream)
