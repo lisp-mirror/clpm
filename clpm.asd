@@ -19,6 +19,7 @@
   :entry-point "clpm-cli/entry:main"
   :class "clpm-asdf:clpm-system"
   :build-operation "asdf-release-ops:dynamic-program-op"
+  :build-pathname "../build/bin/clpm"
   :defsystem-depends-on (#:clpm-asdf)
   :depends-on (#:clpm/clpm
                (:feature :clpm-curl #:clpm-multi-http-client-impl/curl)

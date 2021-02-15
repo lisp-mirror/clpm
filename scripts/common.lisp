@@ -8,6 +8,8 @@
 
 (in-package #:clpm-scripts)
 
+(require :asdf)
+
 (defvar *setup-file-pathname* *load-truename*
   "The pathname to this file.")
 
