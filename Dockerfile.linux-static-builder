@@ -1,0 +1,118 @@
+# This Dockerfile is used to build the image used to build static releases for
+# Linux.
+
+ARG sbcl_version=2.1.1
+ARG daewok_signing_key=823DF61DEDB633B3DE7B2B7C181191EF9ACF6934
+ARG alpine_version=3.13
+ARG asdf_version=3.3.4
+ARG image_repo=clfoundation/sbcl
+
+FROM $image_repo:$sbcl_version-alpine$alpine_version
+
+WORKDIR /usr/local/src/
+
+# Install prereqs
+RUN set -x \
+    && apk add --no-cache git ca-certificates curl openssl make gcc musl-dev linux-headers gnupg patch zlib-dev zlib-static
+
+# Download the SBCL source code.
+RUN set -x \
+    && GNUPGHOME="$(mktemp -d)" \
+    && export GNUPGHOME \
+    && (gpg --batch --keyserver ha.pool.sks-keyservers.net --recv-keys "$SBCL_SIGNING_KEY" \
+        || gpg --batch --keyserver keyserver.ubuntu.com --recv-keys "$SBCL_SIGNING_KEY" \
+       ) \
+    && curl -fsSL "https://downloads.sourceforge.net/project/sbcl/sbcl/${SBCL_VERSION}/sbcl-${SBCL_VERSION}-crhodes.asc" > "sbcl-${SBCL_VERSION}-crhodes.asc" \
+    && gpg --batch --verify "sbcl-${SBCL_VERSION}-crhodes.asc" \
+    && gpg --batch --decrypt "sbcl-${SBCL_VERSION}-crhodes.asc" > "sbcl-${SBCL_VERSION}-crhodes.txt" \
+    && curl -fsSL "https://downloads.sourceforge.net/project/sbcl/sbcl/${SBCL_VERSION}/sbcl-${SBCL_VERSION}-source.tar.bz2" > "sbcl-${SBCL_VERSION}-source.tar.bz2" \
+    && bunzip2 "sbcl-${SBCL_VERSION}-source.tar.bz2" \
+    && grep "sbcl-${SBCL_VERSION}-source.tar" "sbcl-${SBCL_VERSION}-crhodes.txt" > "${SBCL_VERSION}-sum-file.txt" \
+    && sha256sum -c "${SBCL_VERSION}-sum-file.txt" \
+    && tar xf "sbcl-${SBCL_VERSION}-source.tar" \
+    && pkill -9 gpg-agent \
+    && pkill -9 dirmngr \
+    && rm -rf "$GNUPGHOME"
+
+WORKDIR /usr/local/src/sbcl-$SBCL_VERSION/
+
+ARG daewok_signing_key
+
+# Patch the source code.
+RUN set -x \
+    && GNUPGHOME="$(mktemp -d)" \
+    && export GNUPGHOME \
+    && (gpg --batch --keyserver ha.pool.sks-keyservers.net --recv-keys "$daewok_signing_key" \
+        || gpg --batch --keyserver keyserver.ubuntu.com --recv-keys "$daewok_signing_key" \
+       ) \
+    # Remove the hardcoding of armv5 as target arch. Use the default provided
+    # by the base image.
+    && sed -i -e "s/CFLAGS += -marm -march=armv5/CFLAGS += -marm/" src/runtime/Config.arm-linux \
+    && curl -fsSL "https://www.timmons.dev/static/patches/sbcl/$SBCL_VERSION/static-executable-support-v2.patch" > static-executable-support.patch \
+    && curl -fsSL "https://www.timmons.dev/static/patches/sbcl/$SBCL_VERSION/static-executable-support-v2.patch.asc" > static-executable-support.patch.asc \
+    && gpg --batch --verify static-executable-support.patch.asc static-executable-support.patch \
+    && patch -p1 < static-executable-support.patch \
+    && rm static-executable-support.patch static-executable-support.patch.asc \
+    && echo "\"$SBCL_VERSION-static-executable-v2\"" > version.lisp-expr \
+    && pkill -9 gpg-agent \
+    && pkill -9 dirmngr \
+    && rm -rf "$GNUPGHOME"
+# sbcl --eval '(require :asdf)' --eval '(asdf:load-system :asdf-release-ops)' --eval "(asdf:operate 'asdf-release-ops:static-release-archive-op :clpm)"
+# Build it!
+RUN set -x \
+    && case "$(cat /etc/apk/arch)" in \
+         armv7) SBCL_ARCH=arm;; \
+         aarch64) SBCL_ARCH=arm64;; \
+         x86_64) SBCL_ARCH=x86-64;; \
+         *) echo "Unknown arch" >&2; exit 1;; \
+       esac \
+    && export SBCL_ARCH \
+    && sh make.sh --with-sb-linkable-runtime --with-sb-prelink-linkage-table \
+    && sh install.sh
+
+# Make the user
+RUN addgroup -g 1000 docker && \
+    adduser -u 1000 -G docker -h /home/docker -s /bin/sh -D docker
+
+RUN USER=docker && \
+    GROUP=docker && \
+    curl -SsL https://github.com/boxboat/fixuid/releases/download/v0.5/fixuid-0.5-linux-amd64.tar.gz | tar -C /usr/local/bin -xzf - && \
+    chown root:root /usr/local/bin/fixuid && \
+    chmod 4755 /usr/local/bin/fixuid && \
+    mkdir -p /etc/fixuid && \
+    printf "user: $USER\ngroup: $GROUP\n" > /etc/fixuid/config.yml
+
+RUN apk add --no-cache openssl-dev openssl-libs-static pkgconfig
+
+ENV CL_SOURCE_REGISTRY=/app//
+ENV ASDF_OUTPUT_TRANSLATIONS="(:output-translations :ignore-inherited-configuration (t (#p\"/app/build/cache/docker/\" :implementation :**/ :*.*.*)))"
+
+WORKDIR /app
+
+USER docker:docker
+ENTRYPOINT ["fixuid"]
+
+# COPY . ./
+
+# RUN apk add --no-cache openssl-dev openssl-libs-static pkgconfig \
+#     && case "$(cat /etc/apk/arch)" in \
+#          armv7) BUILD_DIR=build/linux-armv7;; \
+#          aarch64) BUILD_DIR=build/linux-arm64;; \
+#          x86_64) BUILD_DIR=build/linux-amd64;; \
+#          *) echo "Unknown arch" >&2; exit 1;; \
+#        esac \
+#     && mkdir -p "$BUILD_DIR" \
+#     && CL_SOURCE_REGISTRY=/app// sbcl --script scripts/build-static-release.lisp
+
+    # && sbcl --script scripts/build-core.lisp \
+    # && sbcl --core $BUILD_DIR/clpm.core \
+    #         --non-interactive \
+    #         --load /usr/local/src/sbcl-$SBCL_VERSION/tools-for-build/dump-linkage-info.lisp \
+    #         --eval "(sb-dump-linkage-info:dump-to-file \"$BUILD_DIR/linkage-info.sexp\")" \
+    #         --load "scripts/dump-core-without-loading-shared-objects.lisp" \
+    # && sbcl --script /usr/local/src/sbcl-$SBCL_VERSION/tools-for-build/create-linkage-table-prefill-info-override.lisp "$BUILD_DIR/linkage-info.sexp" \
+    # && LDLIBS="-lssl -lcrypto" make -C /usr/local/src/sbcl-$SBCL_VERSION/src/runtime static-sbcl \
+    # && /usr/local/src/sbcl-$SBCL_VERSION/src/runtime/static-sbcl \
+    #                           --core $BUILD_DIR/clpm.core \
+    #                           --non-interactive \
+    #                           --load "scripts/dump-executable.lisp"
