@@ -31,5 +31,23 @@
   :release-readme-file "../README.org"
   :release-staging-directory "../build/release-staging/"
   :release-directory "../releases/"
+
+  :release-structure
+  ((:module "bin"
+    :components
+    ((:program-file "clpm")))
+   (:module "share"
+    :components
+    ( ;; (:man-directory "man")
+     (:module "clpm"
+      :components
+      ((:clpm-client-directory "client")))
+     (:module "doc"
+      :components
+      ((:module "clpm"
+        :append-version t
+        :components ((:license-file "LICENSE")
+                     (:readme-file "README")
+                     (:dependencies-license-file "BUNDLED-LICENSES"))))))))
   :in-order-to ((program-op (load-op :clpm-cli))
                 (asdf-release-ops:perform-program-image-op (load-op :clpm-cli))))

@@ -15,4 +15,5 @@
   :components ((:file "package")
                (:file "features" :depends-on ("package"))
                (:file "system" :depends-on ("package" "features"))
-               (:file "dependencies-license-op" :depends-on ("package" "system"))))
+               (:file "dependencies-license-op" :depends-on ("package" "system"))
+               (:file "client" :depends-on ("package"))))
