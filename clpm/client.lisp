@@ -11,12 +11,15 @@
   (:import-from #:flexi-streams
                 #:make-in-memory-input-stream)
   (:export #:*clpm-client-asd-pathname*
+           #:*clpm-client-concatenated-source*
            #:*clpm-client-tarball-contents*
            #:client-asd-pathname))
 
 (in-package #:clpm/client)
 
 (defvar *clpm-client-tarball-contents* nil)
+(defparameter *clpm-client-concatenated-source*
+  (uiop:read-file-string (asdf:output-file 'asdf:concatenate-source-op :clpm-client)))
 
 (defun unpack-client ()
   (let ((dir-pathname (clpm-data-pathname `("client"

@@ -50,4 +50,5 @@
                      (:readme-file "README")
                      (:dependencies-license-file "BUNDLED-LICENSES"))))))))
   :in-order-to ((program-op (load-op :clpm-cli))
+                (load-op (concatenate-source-op :clpm-client))
                 (asdf-release-ops:perform-program-image-op (load-op :clpm-cli))))
