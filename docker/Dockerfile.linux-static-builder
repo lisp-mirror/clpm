@@ -1,10 +1,9 @@
-# This Dockerfile is used to build the image used to build static releases for
-# Linux.
+# This Dockerfile builds an image with all neded dependencies to create static
+# releases for Linux.
 
 ARG sbcl_version=2.1.1
 ARG daewok_signing_key=823DF61DEDB633B3DE7B2B7C181191EF9ACF6934
 ARG alpine_version=3.13
-ARG asdf_version=3.3.4
 ARG image_repo=clfoundation/sbcl
 
 FROM $image_repo:$sbcl_version-alpine$alpine_version
@@ -91,28 +90,3 @@ WORKDIR /app
 
 USER docker:docker
 ENTRYPOINT ["fixuid"]
-
-# COPY . ./
-
-# RUN apk add --no-cache openssl-dev openssl-libs-static pkgconfig \
-#     && case "$(cat /etc/apk/arch)" in \
-#          armv7) BUILD_DIR=build/linux-armv7;; \
-#          aarch64) BUILD_DIR=build/linux-arm64;; \
-#          x86_64) BUILD_DIR=build/linux-amd64;; \
-#          *) echo "Unknown arch" >&2; exit 1;; \
-#        esac \
-#     && mkdir -p "$BUILD_DIR" \
-#     && CL_SOURCE_REGISTRY=/app// sbcl --script scripts/build-static-release.lisp
-
-    # && sbcl --script scripts/build-core.lisp \
-    # && sbcl --core $BUILD_DIR/clpm.core \
-    #         --non-interactive \
-    #         --load /usr/local/src/sbcl-$SBCL_VERSION/tools-for-build/dump-linkage-info.lisp \
-    #         --eval "(sb-dump-linkage-info:dump-to-file \"$BUILD_DIR/linkage-info.sexp\")" \
-    #         --load "scripts/dump-core-without-loading-shared-objects.lisp" \
-    # && sbcl --script /usr/local/src/sbcl-$SBCL_VERSION/tools-for-build/create-linkage-table-prefill-info-override.lisp "$BUILD_DIR/linkage-info.sexp" \
-    # && LDLIBS="-lssl -lcrypto" make -C /usr/local/src/sbcl-$SBCL_VERSION/src/runtime static-sbcl \
-    # && /usr/local/src/sbcl-$SBCL_VERSION/src/runtime/static-sbcl \
-    #                           --core $BUILD_DIR/clpm.core \
-    #                           --non-interactive \
-    #                           --load "scripts/dump-executable.lisp"
