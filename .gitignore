@@ -5,3 +5,4 @@ customize-target-features.lisp-expr
 .clpm-docker-build-config
 /tutorial/architecture.svg
 /tutorial/tutorial.html
+/releases
