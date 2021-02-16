@@ -83,9 +83,6 @@ RUN USER=docker && \
 
 RUN apk add --no-cache openssl-dev openssl-libs-static pkgconfig
 
-ENV CL_SOURCE_REGISTRY=/app//
-ENV ASDF_OUTPUT_TRANSLATIONS="(:output-translations :ignore-inherited-configuration (t (#p\"/app/build/cache/docker/\" :implementation :**/ :*.*.*)))"
-
 WORKDIR /app
 
 USER docker:docker
