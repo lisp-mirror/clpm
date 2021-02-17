@@ -56,7 +56,7 @@ RUN set -x \
     && pkill -9 gpg-agent \
     && pkill -9 dirmngr \
     && rm -rf "$GNUPGHOME"
-# sbcl --eval '(require :asdf)' --eval '(asdf:load-system :asdf-release-ops)' --eval "(asdf:operate 'asdf-release-ops:static-release-archive-op :clpm)"
+
 # Build it!
 RUN set -x \
     && case "$(cat /etc/apk/arch)" in \
