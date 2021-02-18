@@ -70,12 +70,12 @@ dynamic-exec:linux:arm64:
   tags:
     - arm64v8
 
-dynamic-exec:linux:armv7:
-  extends: .dynamic-exec
-  variables:
-    ARCH: armhf
-  tags:
-    - armv7
+# dynamic-exec:linux:armv7:
+#   extends: .dynamic-exec
+#   variables:
+#     ARCH: armhf
+#   tags:
+#     - armv7
 
 dynamic-exec:macos:amd64:
   stage: build
