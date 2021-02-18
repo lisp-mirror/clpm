@@ -22,11 +22,19 @@ stages:
   artifacts:
     paths:
       - releases/
+  needs: []
 
 static-release:linux:amd64:
   extends: .static-release
   variables:
     ARCH: amd64
+
+static-release:linux:arm64:
+  extends: .static-release
+  variables:
+    ARCH: arm64
+  tags:
+    - arm64v8
 
 ##############################################################################
 # Build dynamic executables
@@ -34,12 +42,8 @@ static-release:linux:amd64:
 
 .dynamic-exec:
   stage: build
-  image: clfoundation/sbcl:$SBCL_VERSION
+  image: $DOCKER_HUB_CI_REPO:$SBCL_VERSION-alpine$ALPINE_VERSION-$ARCH
   script:
-    - cd /usr/local/src/sbcl
-    - sh make.sh --with-sb-linkable-runtime
-    - sh install.sh
-    - cd $CI_PROJECT_DIR
     - sbcl --script scripts/build.lisp
   artifacts:
     paths:
@@ -47,4 +51,12 @@ static-release:linux:amd64:
 
 dynamic-exec:linux:amd64:
   extends: .dynamic-exec
-  needs: []
+  variables:
+    ARCH: amd64
+
+dynamic-exec:linux:arm64:
+  extends: .dynamic-exec
+  variables:
+    ARCH: arm64
+  tags:
+    - arm64v8
