@@ -4,8 +4,6 @@ variables:
   SBCL_VERSION: 2.1.1
   DOCKER_HUB_CI_REPO: daewok/clpm-ci
 
-image: clfoundation/sbcl:$SBCL_VERSION-alpine$ALPINE_VERSION
-
 stages:
   - prep
   - build
@@ -78,14 +76,6 @@ dynamic-exec:linux:armv7:
 
 dynamic-exec:macos:amd64:
   stage: build
-  before_script:
-    - git checkout -B $CI_COMMIT_BRANCH $CI_COMMIT_SHA
-  script:
-    - sbcl --script scripts/build.lisp
-  artifacts:
-    paths:
-      - build/bin/
+  extends: .dynamic-exec
   tags:
     - macos-0.4-amd64
-  rules:
-    - if: '$CI_COMMIT_BRANCH'
