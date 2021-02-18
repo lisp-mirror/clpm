@@ -1,0 +1,67 @@
+#+TITLE: Developer README
+
+This file is meant to be a colleciton of notes for CLPM developers that users
+don't typically have to worry about.
+
+* CI
+
+  The CI jobs require SBCL to be built with non standard options (and a
+  patch). To avoid having to build SBCL with these changes in every job, we
+  build a Docker image with this patched SBCL. The ideal situation would be to
+  have a job early in the pipeline that builds the image (only if needed) and
+  then the later jobs consume this image.
+
+  Unfortunately, gitlab.common-lisp.net does not have the built in container
+  registry enabled. This means that we have to use a third party, such as
+  Docker Hub, to hold the image between jobs. I strongly prefer to not put
+  access tokens to my personal Docker Hub account on the clpm group (as I'd
+  like to eventually have more people added to the group). Therefore, I
+  (etimmons) build the CI images locally, push them to Docker Hub, and then
+  just use those images in the CI pipeline. In the future we may want to make a
+  clpm org on Docker Hub or see if the admins can enable the built-in Docker
+  registry for us.
+
+  Build on amd64:
+  #+begin_src shell
+    ARCH=amd64
+    SBCL_VERSION=2.1.1
+    ALPINE_VERSION=3.13
+    docker build --build-arg sbcl_version=$SBCL_VERSION \
+                 --build-arg alpine_version=$ALPINE_VERSION \
+                 -t daewok/clpm-ci:$SBCL_VERSION-alpine$ALPINE_VERSION-$ARCH \
+                 --pull \
+                 --platform=linux/amd64 \
+                 -f docker/Dockerfile.linux-ci \
+                 docker
+    docker push daewok/clpm-ci:$SBCL_VERSION-alpine$ALPINE_VERSION-$ARCH
+  #+end_src
+
+  Build on armhf:
+  #+begin_src shell
+    ARCH=armhf
+    SBCL_VERSION=2.1.1
+    ALPINE_VERSION=3.13
+    docker build --build-arg sbcl_version=$SBCL_VERSION \
+                 --build-arg alpine_version=$ALPINE_VERSION \
+                 -t daewok/clpm-ci:$SBCL_VERSION-alpine$ALPINE_VERSION-$ARCH \
+                 --pull \
+                 --platform=linux/arm/v7 \
+                 -f docker/Dockerfile.linux-ci \
+                 docker
+    docker push daewok/clpm-ci:$SBCL_VERSION-alpine$ALPINE_VERSION-$ARCH
+  #+end_src
+
+  Build on arm64:
+  #+begin_src shell
+    ARCH=arm64
+    SBCL_VERSION=2.1.1
+    ALPINE_VERSION=3.13
+    docker build --build-arg sbcl_version=$SBCL_VERSION \
+                 --build-arg alpine_version=$ALPINE_VERSION \
+                 -t daewok/clpm-ci:$SBCL_VERSION-alpine$ALPINE_VERSION-$ARCH \
+                 --pull \
+                 --platform=linux/arm64/v8 \
+                 -f docker/Dockerfile.linux-ci \
+                 docker
+    docker push daewok/clpm-ci:$SBCL_VERSION-alpine$ALPINE_VERSION-$ARCH
+  #+end_src

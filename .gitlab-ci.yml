@@ -11,21 +11,6 @@ stages:
   - build
 
 ##############################################################################
-# Build CI Images
-##############################################################################
-
-# Build the image used for making the executable.
-ci-image:amd64:
-  stage: prep
-  image:
-    name: gcr.io/kaniko-project/executor:debug
-    entrypoint: [""]
-  script:
-    - mkdir -p /kaniko/.docker
-    - echo "{\"auths\":{\"https://index.docker.io/v1/\":{\"username\":\"$DOCKER_HUB_USERNAME\",\"password\":\"$DOCKER_HUB_PASSWORD\"}}}" > /kaniko/.docker/config.json
-    - /kaniko/executor --cache --cache-repo $DOCKER_HUB_CI_REPO --context $CI_PROJECT_DIR --build-arg sbcl_version=$SBCL_VERSION --build-arg alpine_version=$ALPINE_VERSION --dockerfile $CI_PROJECT_DIR/docker/Dockerfile.linux-static-builder --destination $DOCKER_HUB_CI_REPO:$SBCL_VERSION-alpine$ALPINE_VERSION-amd64
-
-##############################################################################
 # Build static releases
 ##############################################################################
 
@@ -42,8 +27,6 @@ static-release:linux:amd64:
   extends: .static-release
   variables:
     ARCH: amd64
-  needs:
-    - ci-image:amd64
 
 ##############################################################################
 # Build dynamic executables

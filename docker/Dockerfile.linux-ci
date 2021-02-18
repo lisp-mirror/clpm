@@ -1,5 +1,4 @@
-# This Dockerfile builds an image with all neded dependencies to create static
-# releases for Linux.
+# This Dockerfile builds a Linux image for use on Gitlab CI.
 
 ARG sbcl_version=2.1.1
 ARG daewok_signing_key=823DF61DEDB633B3DE7B2B7C181191EF9ACF6934
@@ -60,15 +59,13 @@ RUN set -x \
 # Build it!
 RUN set -x \
     && case "$(cat /etc/apk/arch)" in \
-         armv7) SBCL_ARCH=arm;; \
-         aarch64) SBCL_ARCH=arm64;; \
-         x86_64) SBCL_ARCH=x86-64;; \
+         armv7) SBCL_ARCH=arm; SBCL_MAKE_ARGS="--with-sb-linkable-runtime";; \
+         aarch64) SBCL_ARCH=arm64; SBCL_MAKE_ARGS="--with-sb-linkable-runtime --with-sb-prelink-linkage-table";; \
+         x86_64) SBCL_ARCH=x86-64; SBCL_MAKE_ARGS="--with-sb-linkable-runtime --with-sb-prelink-linkage-table";; \
          *) echo "Unknown arch" >&2; exit 1;; \
        esac \
     && export SBCL_ARCH \
-    && sh make.sh --with-sb-linkable-runtime --with-sb-prelink-linkage-table \
+    && sh make.sh $SBCL_MAKE_ARGS \
     && sh install.sh
 
 RUN apk add --no-cache openssl-dev openssl-libs-static pkgconfig
-
-WORKDIR /app
