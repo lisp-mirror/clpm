@@ -17,12 +17,16 @@ stages:
 .static-release:
   stage: build
   image: $DOCKER_HUB_CI_REPO:$SBCL_VERSION-alpine$ALPINE_VERSION-$ARCH
+  pre_script:
+    - git checkout -B $CI_COMMIT_BRANCH $CI_COMMIT_SHA
   script:
     - sbcl --script scripts/build-static-release.lisp
   artifacts:
     paths:
       - releases/
   needs: []
+  rules:
+    - if: '$CI_COMMIT_BRANCH'
 
 static-release:linux:amd64:
   extends: .static-release
@@ -43,11 +47,15 @@ static-release:linux:arm64:
 .dynamic-exec:
   stage: build
   image: $DOCKER_HUB_CI_REPO:$SBCL_VERSION-alpine$ALPINE_VERSION-$ARCH
+  pre_script:
+    - git checkout -B $CI_COMMIT_BRANCH $CI_COMMIT_SHA
   script:
     - sbcl --script scripts/build.lisp
   artifacts:
     paths:
       - build/bin/
+  rules:
+    - if: '$CI_COMMIT_BRANCH'
 
 dynamic-exec:linux:amd64:
   extends: .dynamic-exec
@@ -70,6 +78,8 @@ dynamic-exec:linux:armv7:
 
 dynamic-exec:macos:amd64:
   stage: build
+  pre_script:
+    - git checkout -B $CI_COMMIT_BRANCH $CI_COMMIT_SHA
   script:
     - sbcl --script scripts/build.lisp
   artifacts:
@@ -77,3 +87,5 @@ dynamic-exec:macos:amd64:
       - build/bin/
   tags:
     - macos-0.4-amd64
+  rules:
+    - if: '$CI_COMMIT_BRANCH'
