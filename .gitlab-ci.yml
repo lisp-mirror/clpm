@@ -67,3 +67,13 @@ dynamic-exec:linux:armv7:
     ARCH: armhf
   tags:
     - armv7
+
+dynamic-exec:macos:amd64:
+  stage: build
+  script:
+    - sbcl --script scripts/build.lisp
+  artifacts:
+    paths:
+      - build/bin/
+  tags:
+    - macos-0.4-amd64
