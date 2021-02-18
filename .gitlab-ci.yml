@@ -4,6 +4,9 @@ variables:
   SBCL_VERSION: 2.1.1
   DOCKER_HUB_CI_REPO: daewok/clpm-ci
 
+include:
+  - template: 'Workflows/Branch-Pipelines.gitlab-ci.yml'
+
 stages:
   - prep
   - build
