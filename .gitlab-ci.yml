@@ -17,7 +17,7 @@ stages:
 .static-release:
   stage: build
   image: $DOCKER_HUB_CI_REPO:$SBCL_VERSION-alpine$ALPINE_VERSION-$ARCH
-  pre_script:
+  before_script:
     - git checkout -B $CI_COMMIT_BRANCH $CI_COMMIT_SHA
   script:
     - sbcl --script scripts/build-static-release.lisp
@@ -47,7 +47,7 @@ static-release:linux:arm64:
 .dynamic-exec:
   stage: build
   image: $DOCKER_HUB_CI_REPO:$SBCL_VERSION-alpine$ALPINE_VERSION-$ARCH
-  pre_script:
+  before_script:
     - git checkout -B $CI_COMMIT_BRANCH $CI_COMMIT_SHA
   script:
     - sbcl --script scripts/build.lisp
@@ -78,7 +78,7 @@ dynamic-exec:linux:armv7:
 
 dynamic-exec:macos:amd64:
   stage: build
-  pre_script:
+  before_script:
     - git checkout -B $CI_COMMIT_BRANCH $CI_COMMIT_SHA
   script:
     - sbcl --script scripts/build.lisp
