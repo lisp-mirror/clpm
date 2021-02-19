@@ -1,0 +1,66 @@
+# This Dockerfile builds a Windows image for use on Gitlab CI.
+
+ARG sbcl_version=2.1.1
+ARG image_repo=clfoundation/sbcl
+
+FROM $image_repo:$sbcl_version-windowsservercore
+
+SHELL ["powershell", "-Command", "$ErrorActionPreference = 'Stop';"]
+
+RUN [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; \
+    echo 'Installing choco'; \
+    Set-ExecutionPolicy Bypass -Scope Process -Force; \
+    iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1')); \
+    Import-Module 'C:\ProgramData\chocolatey\helpers\chocolateyProfile.psm1'; \
+    \
+    echo 'Installing WIX. As of last check, dotnet35 is broken in chocolatey'; \
+    Invoke-WebRequest -Uri 'https://github.com/wixtoolset/wix3/releases/download/wix3112rtm/wix311-binaries.zip' -OutFile wix311-binaries.zip; \
+    mkdir wix/bin; \
+    Expand-Archive -LiteralPath 'wix311-binaries.zip' -DestinationPath C:\wix\bin; \
+    rm wix311-binaries.zip; \
+    \
+    echo 'Installing msys2'; \
+    choco install -y msys2 --params '/NoUpdate' ; \
+    \
+    echo 'Adding mingw64 to machine PATH'; \
+    $machineKey = [Microsoft.Win32.Registry]::LocalMachine.OpenSubKey('SYSTEM\ControlSet001\Control\Session Manager\Environment\'); \
+    $machinePath = $machineKey.GetValue('PATH', [string]::Empty, 'DoNotExpandEnvironmentNames').ToString(); \
+    $machineKey.Close(); \
+    $machinePath = ('C:\tools\msys64\usr\bin;c:\tools\msys64\mingw64\bin;{0}' -f $machinePath); \
+    $machineKey = [Microsoft.Win32.Registry]::LocalMachine.OpenSubKey('SYSTEM\ControlSet001\Control\Session Manager\Environment\', $true); \
+    $machineKey.SetValue('PATH', $machinePath, 'ExpandString'); \
+    $machineKey.Close(); \
+    $env:PATH = ('C:\tools\msys64\usr\bin;c:\tools\msys64\mingw64\bin;{0}' -f $env:PATH); \
+    \
+    echo 'Installing build tools'; \
+    pacman -S --noconfirm --needed mingw-w64-x86_64-gcc make diffutils tar; \
+    \
+    echo 'Downloading SBCL source'; \
+    $sbclurl = ('https://downloads.sourceforge.net/project/sbcl/sbcl/{0}/sbcl-{0}-source.tar.bz2' -f $env:SBCL_VERSION); \
+    Invoke-WebRequest -Uri $sbclurl -OutFile sbcl-source.tar.bz2 -UserAgent "NativeHost"; \
+    $actualsha256 = (Get-FileHash sbcl-source.tar.bz2 -Algorithm sha256).Hash; \
+    Write-Host ('Verifying sha256 {0} (expected: {1})' -f $actualsha256, $env:SBCL_SOURCE_SHA256); \
+    if ($actualsha256 -ne $env:SBCL_SOURCE_SHA256) { \
+        Write-Host 'SHA256 check FAILED!'; \
+        exit 1; \
+    }; \
+    \
+    echo 'Unpacking source'; \
+    sh -c 'tar -x -v -f sbcl-source.tar.bz2'; \
+    rm sbcl-source.tar.bz2;
+
+RUN echo 'Building SBCL'; \
+    $env:WIX = '/c/wix'; \
+    cd sbcl-$env:SBCL_VERSION; \
+    sh ./make.sh --with-sb-linkable-runtime; \
+    sh ./make-windows-installer.sh; \
+    cd ..; \
+    \
+    echo 'Installing SBCL --with-linkable-runtime'; \
+    cp C:\sbcl-$env:SBCL_VERSION\output\sbcl-$env:SBCL_VERSION-x86-64-windows-binary.msi sbcl-installer.msi; \
+    Start-Process msiexec.exe -Wait -ArgumentList '/I C:\sbcl-installer.msi'; \
+    echo 'Removing SBCL Installer'; \
+    Remove-Item -Force -Path C:\sbcl-installer.msi;
+
+RUN echo 'Installing git'; \
+    choco install -y git;
