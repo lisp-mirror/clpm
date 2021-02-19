@@ -63,4 +63,4 @@ RUN echo 'Building SBCL'; \
     Remove-Item -Force -Path C:\sbcl-installer.msi;
 
 RUN echo 'Installing git'; \
-    choco install -y git;
+    choco install -y git --params "/NoAutoCrlf";
