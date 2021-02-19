@@ -10,3 +10,6 @@
 
 (defmethod ops:program-image-features (o (s clpm-system))
   (augment-features (clpm-features)))
+
+(defmethod ops::release-system-version-designator ((s clpm-system))
+  (clpm-version))

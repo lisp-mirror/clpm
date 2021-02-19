@@ -9,7 +9,7 @@
 (in-package :asdf-user)
 
 (defsystem #:clpm-cli
-  :version (:read-file-form "clpm/version.lisp" :at (2 2))
+  :version (:read-file-form "version.lisp-expr")
   :description "Command Line Interface for CLPM"
   :license "BSD-2-Clause"
   :pathname "cli/"

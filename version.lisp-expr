@@ -1,0 +1,6 @@
+;;;; -*- Mode: common-lisp; -*-
+;;;;
+;;;; This file contains a single string naming the version that is being
+;;;; currently worked on. It should be bumped immediately after releasing the
+;;;; version. This should not contain any prerelease info.
+"0.4.0"

@@ -6,14 +6,16 @@
 (load-system :asdf-release-ops)
 
 (defsystem #:clpm-asdf
-  :version (:read-file-form "clpm/version.lisp" :at (2 2))
+  :version (:read-file-form "version.lisp-expr")
   :description "ASDF bootstrapping for CLPM"
   :license "BSD-2-Clause"
   :pathname "clpm-asdf/"
   :depends-on (#:asdf-release-ops
+               #:cl-semver
                #:trivial-features)
   :components ((:file "package")
                (:file "features" :depends-on ("package"))
-               (:file "system" :depends-on ("package" "features"))
+               (:file "version" :depends-on ("package"))
+               (:file "system" :depends-on ("package" "features" "version"))
                (:file "dependencies-license-op" :depends-on ("package" "system"))
                (:file "client" :depends-on ("package" "system"))))

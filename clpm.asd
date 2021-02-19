@@ -12,7 +12,7 @@
 (load-system :clpm-asdf)
 
 (defsystem #:clpm
-  :version (:read-file-form "clpm/version.lisp" :at (2 2))
+  :version (:read-file-form "version.lisp-expr")
   :description "A Common Lisp Package Manager"
   :license "BSD-2-Clause"
   :pathname "clpm/"
