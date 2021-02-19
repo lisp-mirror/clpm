@@ -141,7 +141,7 @@
 	url = https://github.com/Shinmera/trivial-indent.git
 [submodule "ext/cffi"]
 	path = ext/cffi
-	url = https://github.com/cffi/cffi.git
+	url = https://github.com/daewok/cffi.git
 [submodule "ext/cl-ansi-text"]
 	path = ext/cl-ansi-text
 	url = https://github.com/pnathan/cl-ansi-text.git
