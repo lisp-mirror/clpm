@@ -87,7 +87,7 @@
 	url = https://github.com/edicl/cl-interpol.git
 [submodule "ext/cl-unicode"]
 	path = ext/cl-unicode
-	url = https://github.com/daewok/cl-unicode.git
+	url = https://github.com/edicl/cl-unicode.git
 [submodule "ext/lparallel"]
 	path = ext/lparallel
 	url = https://github.com/lmj/lparallel.git
