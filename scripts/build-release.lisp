@@ -1,4 +1,4 @@
-;;;; Script to build CLPM executables
+;;;; Script to build CLPM releases
 ;;;;
 ;;;; This software is part of CLPM. See README.org for more information. See
 ;;;; LICENSE for license information.
@@ -46,27 +46,13 @@
 (asdf:load-system :clpm)
 (asdf:load-system :clpm-cli)
 
-(defmethod asdf:output-files ((o asdf-release-ops:dynamic-program-op) (s (eql (asdf:find-system :clpm))))
-  (values
-   (list (uiop:subpathname (asdf:component-pathname s)
-                           "../build/bin/clpm"
-                           :type (asdf::bundle-pathname-type :program)))
-   t))
-
-(defmethod asdf:output-files ((o asdf-release-ops:static-program-op) (s (eql (asdf:find-system :clpm))))
-  (values
-   (list (uiop:subpathname (asdf:component-pathname s)
-                           "../build/bin/clpm"
-                           :type (asdf::bundle-pathname-type :program)))
-   t))
-
 (defparameter *op* (if (gethash :static *opts*)
-                       'asdf-release-ops:static-program-op
-                       'asdf-release-ops:dynamic-program-op))
+                       'asdf-release-ops:static-release-archive-op
+                       'asdf-release-ops:dynamic-release-archive-op))
 
 (asdf:operate *op* :clpm)
 
 (format uiop:*stdout*
-        "A ~:[dynamic~;static~] executable has been built at ~A~%"
+        "A ~:[dynamic~;static~] release has been built at ~A~%"
         (gethash :static *opts*)
         (asdf:output-file *op* :clpm))

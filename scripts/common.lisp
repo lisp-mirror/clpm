@@ -26,3 +26,17 @@
   (asdf:initialize-source-registry `(:source-registry
                                      :ignore-inherited-configuration
                                      (:tree ,*root-pathname*))))
+
+(setup-asdf)
+
+(let ((*standard-output* (make-broadcast-stream))
+      (*error-output* (make-broadcast-stream)))
+  (asdf:load-system :adopt))
+
+(defparameter *option-help*
+  (adopt:make-option
+   :help
+   :help "Print this help text and exit"
+   :short #\h
+   :long "help"
+   :reduce (constantly t)))
