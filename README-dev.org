@@ -65,3 +65,46 @@ don't typically have to worry about.
                  docker
     docker push daewok/clpm-ci:$SBCL_VERSION-alpine$ALPINE_VERSION-$ARCH
   #+end_src
+
+* Dependencies
+
+  CLPM has a lot of dependencies. Probably too many, but that's a problem for
+  another day. CLPM has a habit of finding issues in its dependencies that
+  sometimes take a while to get fixed. To support both getting the needed fixes
+  before upstream merges them and to make builds reproducible, we use git
+  submodules for all our dpeendencies.
+
+  One day, I'd like to see CLPM self host itself so we can have a clpmfile.lock
+  instead. But CLPM needs to get a little more stable first.
+
+** Fixes
+
+   This is a list of the fixes we have submitted upstream and their current
+   status. For most of these, if there is an outstanding PR, CLPM pulls its
+   code from a fork that has the PR merged. We don't necessarily depend on all
+   these libraries any more, but PRs are kept for posterity.
+
+   - cl-plus-ssl ::
+     - [ ] https://github.com/cl-plus-ssl/cl-plus-ssl/pull/116
+     - [ ] https://github.com/cl-plus-ssl/cl-plus-ssl/pull/115 (not submitted
+       by us, but needed by us)
+   - osicat ::
+     - [ ] https://github.com/osicat/osicat/pull/39
+   - dexador ::
+     - [ ] https://github.com/fukamachi/dexador/pull/86
+     - [ ] https://github.com/fukamachi/dexador/issues/87
+   - cffi ::
+     - [ ] https://github.com/cffi/cffi/pull/141
+   - cl-unicode ::
+     - [X] https://github.com/edicl/cl-unicode/pull/26
+   - archive :: There doesn't seem to be any active upstream for this
+     project... May try sending some merge requests to sharplispers, but if
+     that fails, CLPM may have to hard fork/try to assume ownership.
+   - cl-semver ::
+     - [X] https://github.com/cldm/cl-semver/pull/4
+     - [X] https://github.com/cldm/cl-semver/pull/5
+   - deploy ::
+     - [X] https://github.com/Shinmera/deploy/pull/12
+     - [X] https://github.com/Shinmera/deploy/pull/13
+   - mito ::
+     - [X] https://github.com/fukamachi/mito/pull/53
