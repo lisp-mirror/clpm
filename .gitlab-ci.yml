@@ -86,3 +86,5 @@ dynamic-exec:macos:amd64:
 dynamic-exec:windows:amd64:
   extends: .dynamic-exec
   image: $DOCKER_HUB_CI_REPO:$SBCL_VERSION-windowsservercore
+  tags:
+    - windows-amd64
