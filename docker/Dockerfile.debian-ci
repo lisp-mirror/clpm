@@ -1,0 +1,21 @@
+# This Dockerfile builds a Linux image for use on Gitlab CI.
+
+ARG sbcl_version=2.1.1
+ARG debian_version=stretch
+ARG image_repo=clfoundation/sbcl
+
+FROM $image_repo:$sbcl_version-$debian_version
+
+WORKDIR /usr/local/src/sbcl/
+
+# Build it!
+RUN set -x \
+    && case "$(dpkg --print-architecture)" in \
+         armhf) SBCL_ARCH=arm; SBCL_MAKE_ARGS="--with-sb-linkable-runtime";; \
+         arm64) SBCL_ARCH=arm64; SBCL_MAKE_ARGS="--with-sb-linkable-runtime";; \
+         amd64) SBCL_ARCH=x86-64; SBCL_MAKE_ARGS="--with-sb-linkable-runtime";; \
+         *) echo "Unknown arch" >&2; exit 1;; \
+    esac \
+    && export SBCL_ARCH \
+    && sh make.sh $SBCL_MAKE_ARGS \
+    && sh install.sh

@@ -1,6 +1,7 @@
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
   ALPINE_VERSION: "3.13"
+  DEBIAN_VERSION: stretch
   SBCL_VERSION: 2.1.1
   DOCKER_HUB_CI_REPO: daewok/clpm-ci
 
@@ -47,14 +48,14 @@ static-release:linux:arm64:
 
 .dynamic-release:
   stage: build
-  image: $DOCKER_HUB_CI_REPO:$SBCL_VERSION-alpine$ALPINE_VERSION-$ARCH
+  image: $DOCKER_HUB_CI_REPO:$SBCL_VERSION-$DEBIAN_VERSION-$ARCH
   before_script:
     - git checkout -B $CI_COMMIT_BRANCH $CI_COMMIT_SHA
   script:
     - sbcl --script scripts/build-release.lisp
   artifacts:
     paths:
-      - build/bin/
+      - releases/
   rules:
     - if: '$CI_COMMIT_BRANCH'
 
@@ -63,12 +64,12 @@ dynamic-release:linux:amd64:
   variables:
     ARCH: amd64
 
-dynamic-release:linux:arm64:
-  extends: .dynamic-release
-  variables:
-    ARCH: arm64
-  tags:
-    - arm64v8
+# dynamic-release:linux:arm64:
+#   extends: .dynamic-release
+#   variables:
+#     ARCH: arm64
+#   tags:
+#     - arm64v8
 
 # dynamic-release:linux:armv7:
 #   extends: .dynamic-release
