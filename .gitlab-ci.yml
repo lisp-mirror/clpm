@@ -1,12 +1,10 @@
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
-  ALPINE_VERSION: "3.13"
-  DEBIAN_VERSION: stretch
-  SBCL_VERSION: 2.1.1
   DOCKER_HUB_CI_REPO: daewok/clpm-ci
 
 include:
   - template: 'Workflows/MergeRequest-Pipelines.gitlab-ci.yml'
+  - local: "/.gitlab-ci.versions.yml"
 
 stages:
   - prep
@@ -31,6 +29,11 @@ stages:
                        --build-arg alpine_version=$ALPINE_VERSION \
                        --dockerfile $CI_PROJECT_DIR/docker/Dockerfile.alpine-ci \
                        --destination $CI_REGISTRY_IMAGE/ci:$SBCL_VERSION-alpine$ALPINE_VERSION-$ARCH
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && ($CI_PROJECT_NAMESPACE == "clpm" || $ARCH == "amd64")'
+      changes:
+        - .gitlab-ci.versions.yml
+        - docker/Dockerfile.alpine-ci
 
 .debian-image:
   stage: prep
@@ -47,6 +50,11 @@ stages:
                        --build-arg debian_version=$DEBIAN_VERSION \
                        --dockerfile $CI_PROJECT_DIR/docker/Dockerfile.debian-ci \
                        --destination $CI_REGISTRY_IMAGE/ci:$SBCL_VERSION-$DEBIAN_VERSION-$ARCH
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && ($CI_PROJECT_NAMESPACE == "clpm" || $ARCH == "amd64")'
+      changes:
+        - .gitlab-ci.versions.yml
+        - docker/Dockerfile.debian-ci
 
 alpine-image:amd64:
   extends: .alpine-image
@@ -59,8 +67,6 @@ alpine-image:arm64:
     ARCH: arm64
   tags:
     - arm64
-  rules:
-    - if: '$CI_PROJECT_NAMESPACE == "clpm"'
 
 debian-image:amd64:
   extends: .debian-image
@@ -73,8 +79,6 @@ debian-image:arm64:
     ARCH: arm64
   tags:
     - arm64
-  rules:
-    - if: '$CI_PROJECT_NAMESPACE == "clpm"'
 
 ##############################################################################
 # Build static releases
@@ -95,8 +99,6 @@ static-release:linux:amd64:
   extends: .static-release
   variables:
     ARCH: amd64
-  needs:
-    - alpine-image:amd64
 
 static-release:linux:arm64:
   extends: .static-release
@@ -104,8 +106,6 @@ static-release:linux:arm64:
     ARCH: arm64
   tags:
     - arm64
-  needs:
-    - alpine-image:arm64
   rules:
     - if: '$CI_PROJECT_NAMESPACE == "clpm"'
 
@@ -128,8 +128,6 @@ dynamic-release:linux:amd64:
   extends: .dynamic-release
   variables:
     ARCH: amd64
-  needs:
-    - debian-image:amd64
 
 dynamic-release:linux:arm64:
   extends: .dynamic-release
@@ -137,8 +135,6 @@ dynamic-release:linux:arm64:
     ARCH: arm64
   tags:
     - arm64
-  needs:
-    - debian-image:arm64
   rules:
     - if: '$CI_PROJECT_NAMESPACE == "clpm"'
 
@@ -160,7 +156,7 @@ dynamic-release:macos:amd64:
 
 dynamic-release:windows:amd64:
   stage: build
-  image: $DOCKER_HUB_CI_REPO:$SBCL_VERSION-windowsservercore
+  image: $CI_REGISTRY_IMAGE/ci:$SBCL_VERSION-windowsservercore
   variables:
     GIT_STRATEGY: clone
     GIT_SUBMODULE_STRATEGY: none
