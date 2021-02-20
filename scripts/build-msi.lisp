@@ -54,7 +54,7 @@
                                     ((equal dir-name "bin")
                                      "BINDIR")
                                     (t
-                                     (sanitize-id dir-id))))))
+                                     (uiop:strcat "_" (sanitize-id dir-id)))))))
          (component-name (sanitize-id (uiop:strcat component-base-id "_" dir-name)))
          (component-names (list component-name))
          (component `((("CreateFolder"))
