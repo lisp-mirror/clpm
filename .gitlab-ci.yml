@@ -21,7 +21,7 @@ stages:
   before_script:
     - git checkout -B $CI_COMMIT_BRANCH $CI_COMMIT_SHA
   script:
-    - sbcl --script scripts/build-static-release.lisp
+    - sbcl --script scripts/build-release.lisp --static
   artifacts:
     paths:
       - releases/
@@ -42,49 +42,49 @@ static-release:linux:arm64:
     - arm64v8
 
 ##############################################################################
-# Build dynamic executables
+# Build dynamic releases
 ##############################################################################
 
-.dynamic-exec:
+.dynamic-release:
   stage: build
   image: $DOCKER_HUB_CI_REPO:$SBCL_VERSION-alpine$ALPINE_VERSION-$ARCH
   before_script:
     - git checkout -B $CI_COMMIT_BRANCH $CI_COMMIT_SHA
   script:
-    - sbcl --script scripts/build.lisp
+    - sbcl --script scripts/build-release.lisp
   artifacts:
     paths:
       - build/bin/
   rules:
     - if: '$CI_COMMIT_BRANCH'
 
-dynamic-exec:linux:amd64:
-  extends: .dynamic-exec
+dynamic-release:linux:amd64:
+  extends: .dynamic-release
   variables:
     ARCH: amd64
 
-dynamic-exec:linux:arm64:
-  extends: .dynamic-exec
+dynamic-release:linux:arm64:
+  extends: .dynamic-release
   variables:
     ARCH: arm64
   tags:
     - arm64v8
 
-# dynamic-exec:linux:armv7:
-#   extends: .dynamic-exec
+# dynamic-release:linux:armv7:
+#   extends: .dynamic-release
 #   variables:
 #     ARCH: armhf
 #   tags:
 #     - armv7
 
-dynamic-exec:macos:amd64:
+dynamic-release:macos:amd64:
   stage: build
-  extends: .dynamic-exec
+  extends: .dynamic-release
   tags:
     - macos-0.4-amd64
 
-dynamic-exec:windows:amd64:
-  extends: .dynamic-exec
+dynamic-release:windows:amd64:
+  extends: .dynamic-release
   image: $DOCKER_HUB_CI_REPO:$SBCL_VERSION-windowsservercore
   variables:
     GIT_STRATEGY: clone
@@ -94,5 +94,9 @@ dynamic-exec:windows:amd64:
     - git checkout -B $CI_COMMIT_BRANCH $CI_COMMIT_SHA
     - git submodule init
     - git submodule update
+  script:
+    - $env:WIX = "C:\wix"
+    - sbcl --script scripts/build-release.lisp
+    - sbcl --script scripts/build-msi.lisp
   tags:
     - windows-amd64
