@@ -1,12 +1,35 @@
 # This Dockerfile builds a Linux image for use on Gitlab CI.
 
 ARG sbcl_version=2.1.1
+ARG daewok_signing_key=823DF61DEDB633B3DE7B2B7C181191EF9ACF6934
 ARG debian_version=stretch
 ARG image_repo=clfoundation/sbcl
 
 FROM $image_repo:$sbcl_version-$debian_version
 
 WORKDIR /usr/local/src/sbcl/
+
+ARG daewok_signing_key
+
+# Patch the source code.
+RUN set -x \
+    && GNUPGHOME="$(mktemp -d)" \
+    && export GNUPGHOME \
+    && (gpg --batch --keyserver ha.pool.sks-keyservers.net --recv-keys "$daewok_signing_key" \
+        || gpg --batch --keyserver keyserver.ubuntu.com --recv-keys "$daewok_signing_key" \
+       ) \
+    # Remove the hardcoding of armv5 as target arch. Use the default provided
+    # by the base image.
+    && sed -i -e "s/CFLAGS += -marm -march=armv5/CFLAGS += -marm/" src/runtime/Config.arm-linux \
+    && curl -fsSL "https://www.timmons.dev/static/patches/sbcl/$SBCL_VERSION/static-executable-support-v2.patch" > static-executable-support.patch \
+    && curl -fsSL "https://www.timmons.dev/static/patches/sbcl/$SBCL_VERSION/static-executable-support-v2.patch.asc" > static-executable-support.patch.asc \
+    && gpg --batch --verify static-executable-support.patch.asc static-executable-support.patch \
+    && patch -p1 < static-executable-support.patch \
+    && rm static-executable-support.patch static-executable-support.patch.asc \
+    && echo "\"$SBCL_VERSION-static-executable-v2\"" > version.lisp-expr \
+    && pkill -9 gpg-agent \
+    && pkill -9 dirmngr \
+    && rm -rf "$GNUPGHOME"
 
 # Build it!
 RUN set -x \
