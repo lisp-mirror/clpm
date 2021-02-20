@@ -97,6 +97,8 @@ static-release:linux:amd64:
   extends: .static-release
   variables:
     ARCH: amd64
+  needs:
+    - alpine-image:amd64
 
 static-release:linux:arm64:
   extends: .static-release
@@ -104,6 +106,8 @@ static-release:linux:arm64:
     ARCH: arm64
   tags:
     - arm64
+  needs:
+    - alpine-image:arm64
 
 ##############################################################################
 # Build dynamic releases
@@ -126,6 +130,8 @@ dynamic-release:linux:amd64:
   extends: .dynamic-release
   variables:
     ARCH: amd64
+  needs:
+    - debian-image:amd64
 
 dynamic-release:linux:arm64:
   extends: .dynamic-release
@@ -133,6 +139,8 @@ dynamic-release:linux:arm64:
     ARCH: arm64
   tags:
     - arm64
+  needs:
+    - debian-image:arm64
 
 # dynamic-release:linux:armv7:
 #   extends: .dynamic-release
@@ -146,6 +154,7 @@ dynamic-release:macos:amd64:
   extends: .dynamic-release
   tags:
     - macos-0.4-amd64
+  needs: []
 
 dynamic-release:windows:amd64:
   image: $DOCKER_HUB_CI_REPO:$SBCL_VERSION-windowsservercore
@@ -166,5 +175,6 @@ dynamic-release:windows:amd64:
       - releases/
   rules:
     - if: '$CI_COMMIT_BRANCH'
+  needs: []
   tags:
     - windows-amd64
