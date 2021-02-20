@@ -31,8 +31,6 @@ stages:
                        --build-arg alpine_version=$ALPINE_VERSION \
                        --dockerfile $CI_PROJECT_DIR/docker/Dockerfile.alpine-ci \
                        --destination $CI_REGISTRY_IMAGE/ci:$SBCL_VERSION-alpine$ALPINE_VERSION-$ARCH
-  rules:
-    - if: '$CI_PROJECT_NAMESPACE == "clpm"'
 
 .debian-image:
   stage: prep
@@ -49,8 +47,6 @@ stages:
                        --build-arg debian_version=$DEBIAN_VERSION \
                        --dockerfile $CI_PROJECT_DIR/docker/Dockerfile.debian-ci \
                        --destination $CI_REGISTRY_IMAGE/ci:$SBCL_VERSION-$DEBIAN_VERSION-$ARCH
-  rules:
-    - if: '$CI_PROJECT_NAMESPACE == "clpm"'
 
 alpine-image:amd64:
   extends: .alpine-image
@@ -63,6 +59,8 @@ alpine-image:arm64:
     ARCH: arm64
   tags:
     - arm64
+  rules:
+    - if: '$CI_PROJECT_NAMESPACE == "clpm"'
 
 debian-image:amd64:
   extends: .debian-image
@@ -75,6 +73,8 @@ debian-image:arm64:
     ARCH: arm64
   tags:
     - arm64
+  rules:
+    - if: '$CI_PROJECT_NAMESPACE == "clpm"'
 
 ##############################################################################
 # Build static releases
@@ -90,8 +90,6 @@ debian-image:arm64:
   artifacts:
     paths:
       - releases/
-  rules:
-    - if: '$CI_COMMIT_BRANCH'
 
 static-release:linux:amd64:
   extends: .static-release
@@ -108,6 +106,8 @@ static-release:linux:arm64:
     - arm64
   needs:
     - alpine-image:arm64
+  rules:
+    - if: '$CI_PROJECT_NAMESPACE == "clpm"'
 
 ##############################################################################
 # Build dynamic releases
@@ -123,8 +123,6 @@ static-release:linux:arm64:
   artifacts:
     paths:
       - releases/
-  rules:
-    - if: '$CI_COMMIT_BRANCH'
 
 dynamic-release:linux:amd64:
   extends: .dynamic-release
@@ -141,6 +139,8 @@ dynamic-release:linux:arm64:
     - arm64
   needs:
     - debian-image:arm64
+  rules:
+    - if: '$CI_PROJECT_NAMESPACE == "clpm"'
 
 # dynamic-release:linux:armv7:
 #   extends: .dynamic-release
@@ -155,6 +155,8 @@ dynamic-release:macos:amd64:
   tags:
     - macos-0.4-amd64
   needs: []
+  rules:
+    - if: '$CI_PROJECT_NAMESPACE == "clpm"'
 
 dynamic-release:windows:amd64:
   image: $DOCKER_HUB_CI_REPO:$SBCL_VERSION-windowsservercore
@@ -174,7 +176,7 @@ dynamic-release:windows:amd64:
     paths:
       - releases/
   rules:
-    - if: '$CI_COMMIT_BRANCH'
+    - if: '$CI_PROJECT_NAMESPACE == "clpm"'
   needs: []
   tags:
     - windows-amd64
