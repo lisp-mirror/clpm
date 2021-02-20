@@ -95,6 +95,8 @@ don't typically have to worry about.
      - [ ] https://github.com/fukamachi/dexador/issues/87
    - cffi ::
      - [ ] https://github.com/cffi/cffi/pull/141
+   - zippy ::
+     - [ ] https://github.com/Shinmera/zippy/pull/1
    - cl-unicode ::
      - [X] https://github.com/edicl/cl-unicode/pull/26
    - archive :: There doesn't seem to be any active upstream for this
