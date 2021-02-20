@@ -13,12 +13,76 @@ stages:
   - build
 
 ##############################################################################
+# Build Docker images for CI
+##############################################################################
+
+.alpine-image:
+  stage: prep
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
+  script:
+    - mkdir -p /kaniko/.docker
+    - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}" > /kaniko/.docker/config.json
+    - |
+      /kaniko/executor --cache --cache-repo $CI_REGISTRY_IMAGE/kaniko \
+                       --context $CI_PROJECT_DIR \
+                       --build-arg sbcl_version=$SBCL_VERSION \
+                       --build-arg alpine_version=$ALPINE_VERSION \
+                       --dockerfile $CI_PROJECT_DIR/docker/Dockerfile.alpine-ci \
+                       --destination $CI_REGISTRY_IMAGE/ci:$SBCL_VERSION-alpine$ALPINE_VERSION-$ARCH
+  rules:
+    - if: '$CI_PROJECT_NAMESPACE == "clpm"'
+
+.debian-image:
+  stage: prep
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
+  script:
+    - mkdir -p /kaniko/.docker
+    - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}" > /kaniko/.docker/config.json
+    - |
+      /kaniko/executor --cache --cache-repo $CI_REGISTRY_IMAGE/kaniko \
+                       --context $CI_PROJECT_DIR \
+                       --build-arg sbcl_version=$SBCL_VERSION \
+                       --build-arg debian_version=$DEBIAN_VERSION \
+                       --dockerfile $CI_PROJECT_DIR/docker/Dockerfile.debian-ci \
+                       --destination $CI_REGISTRY_IMAGE/ci:$SBCL_VERSION-$DEBIAN_VERSION-$ARCH
+  rules:
+    - if: '$CI_PROJECT_NAMESPACE == "clpm"'
+
+alpine-image:amd64:
+  extends: .alpine-image
+  variables:
+    ARCH: amd64
+
+alpine-image:arm64:
+  extends: .alpine-image
+  variables:
+    ARCH: arm64
+  tags:
+    - arm64
+
+debian-image:amd64:
+  extends: .debian-image
+  variables:
+    ARCH: amd64
+
+debian-image:arm64:
+  extends: .debian-image
+  variables:
+    ARCH: arm64
+  tags:
+    - arm64
+
+##############################################################################
 # Build static releases
 ##############################################################################
 
 .static-release:
   stage: build
-  image: $DOCKER_HUB_CI_REPO:$SBCL_VERSION-alpine$ALPINE_VERSION-$ARCH
+  image: $CI_REGISTRY_IMAGE/ci:$SBCL_VERSION-alpine$ALPINE_VERSION-$ARCH
   before_script:
     - git checkout -B $CI_COMMIT_BRANCH $CI_COMMIT_SHA
   script:
@@ -26,7 +90,6 @@ stages:
   artifacts:
     paths:
       - releases/
-  needs: []
   rules:
     - if: '$CI_COMMIT_BRANCH'
 
@@ -40,7 +103,7 @@ static-release:linux:arm64:
   variables:
     ARCH: arm64
   tags:
-    - arm64v8
+    - arm64
 
 ##############################################################################
 # Build dynamic releases
@@ -48,7 +111,7 @@ static-release:linux:arm64:
 
 .dynamic-release:
   stage: build
-  image: $DOCKER_HUB_CI_REPO:$SBCL_VERSION-$DEBIAN_VERSION-$ARCH
+  image: $CI_REGISTRY_IMAGE/ci:$SBCL_VERSION-$DEBIAN_VERSION-$ARCH
   before_script:
     - git checkout -B $CI_COMMIT_BRANCH $CI_COMMIT_SHA
   script:
@@ -64,12 +127,12 @@ dynamic-release:linux:amd64:
   variables:
     ARCH: amd64
 
-# dynamic-release:linux:arm64:
-#   extends: .dynamic-release
-#   variables:
-#     ARCH: arm64
-#   tags:
-#     - arm64v8
+dynamic-release:linux:arm64:
+  extends: .dynamic-release
+  variables:
+    ARCH: arm64
+  tags:
+    - arm64
 
 # dynamic-release:linux:armv7:
 #   extends: .dynamic-release
@@ -85,7 +148,6 @@ dynamic-release:macos:amd64:
     - macos-0.4-amd64
 
 dynamic-release:windows:amd64:
-  extends: .dynamic-release
   image: $DOCKER_HUB_CI_REPO:$SBCL_VERSION-windowsservercore
   variables:
     GIT_STRATEGY: clone
@@ -99,5 +161,10 @@ dynamic-release:windows:amd64:
     - $env:WIX = "C:\wix"
     - sbcl --script scripts/build-release.lisp
     - sbcl --script scripts/build-msi.lisp
+  artifacts:
+    paths:
+      - releases/
+  rules:
+    - if: '$CI_COMMIT_BRANCH'
   tags:
     - windows-amd64
