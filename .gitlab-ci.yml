@@ -159,6 +159,7 @@ dynamic-release:macos:amd64:
     - if: '$CI_PROJECT_NAMESPACE == "clpm"'
 
 dynamic-release:windows:amd64:
+  stage: build
   image: $DOCKER_HUB_CI_REPO:$SBCL_VERSION-windowsservercore
   variables:
     GIT_STRATEGY: clone
