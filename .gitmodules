@@ -210,7 +210,7 @@
 	url = https://gitlab.common-lisp.net/asdf/asdf.git
 [submodule "ext/zippy"]
 	path = ext/zippy
-	url = https://github.com/daewok/zippy.git
+	url = https://github.com/Shinmera/zippy.git
 [submodule "ext/documentation-utils"]
 	path = ext/documentation-utils
 	url = https://github.com/Shinmera/documentation-utils.git
