@@ -9,6 +9,7 @@ include:
 stages:
   - prep
   - build
+  - test
 
 ##############################################################################
 # Build Docker images for CI
@@ -202,3 +203,30 @@ dynamic-release:windows:amd64:
   needs: []
   tags:
     - windows-amd64
+
+##############################################################################
+# Tests
+##############################################################################
+
+test-static-release:linux:amd64:
+  stage: test
+  image: clfoundation/sbcl:$SBCL_VERSION
+  variables:
+    ARCH: amd64
+  before_script:
+    # This looks a little funky, but only one of
+    # $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME and $CI_COMMIT_BRANCH will ever be
+    # defined at once.
+    - git checkout -B $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME $CI_COMMIT_BRANCH $CI_COMMIT_SHA
+  script:
+    # Install from the release archive!
+    - VERSION=$(sbcl --script scripts/version.lisp)
+    - cd /tmp
+    - tar xvf $CI_PROJECT_DIR/releases/static/clpm-$VERSION-linux-$ARCH.tar.gz
+    - cd clpm-$VERSION-linux-$ARCH
+    - sh install.sh
+    - clpm version -VV
+    - cd $CI_PROJECT_DIR
+    - sbcl --script scripts/test.lisp
+  needs:
+    - static-release:linux:amd64
