@@ -85,7 +85,9 @@ don't typically have to worry about.
    these libraries any more, but PRs are kept for posterity.
 
    - cl-plus-ssl ::
-     - [ ] https://github.com/cl-plus-ssl/cl-plus-ssl/pull/116
+     - [ ] https://github.com/cl-plus-ssl/cl-plus-ssl/pull/116 (likely
+       rejected. seems to not play well with some implementations that already
+       load an SSL library).
      - [ ] https://github.com/cl-plus-ssl/cl-plus-ssl/pull/115 (not submitted
        by us, but needed by us)
    - osicat ::
