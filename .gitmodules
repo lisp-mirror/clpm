@@ -235,3 +235,15 @@
 [submodule "ext/fiveam"]
 	path = ext/fiveam
 	url = https://github.com/lispci/fiveam.git
+[submodule "ext/asdf-flv"]
+	path = ext/asdf-flv
+	url = https://github.com/didierverna/asdf-flv.git
+[submodule "ext/trivial-backtrace"]
+	path = ext/trivial-backtrace
+	url = https://github.com/gwkkwg/trivial-backtrace.git
+[submodule "ext/md5"]
+	path = ext/md5
+	url = https://github.com/pmai/md5.git
+[submodule "ext/rfc2388"]
+	path = ext/rfc2388
+	url = https://github.com/jdz/rfc2388.git
