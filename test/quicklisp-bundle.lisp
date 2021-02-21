@@ -6,6 +6,6 @@
       (uiop:run-program `(,*clpm* "bundle" "install" "-y" "--no-resolve")
                         :output :interactive
                         :error-output :interactive)
-      (uiop:run-program `(,*clpm* "bundle" "exec" "--" "sbcl" "--non-interactive" "--eval" "(asdf:load-system :quicklisp-bundle)" "--quit")
+      (uiop:run-program `(,*clpm* "bundle" "exec" "--" "sbcl" "--non-interactive" "--no-userinit" "--no-sysinit" "--eval" "(require :asdf)" "--eval" "(asdf:load-system :quicklisp-bundle)" "--quit")
                         :output :interactive
                         :error-output :interactive))))
