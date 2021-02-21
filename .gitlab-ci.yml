@@ -98,7 +98,10 @@ debian-image:arm:
   stage: build
   image: $CI_REGISTRY_IMAGE/ci:$SBCL_VERSION-alpine$ALPINE_VERSION-$ARCH
   before_script:
-    - git checkout -B $CI_COMMIT_BRANCH $CI_COMMIT_SHA
+    # This looks a little funky, but only one of
+    # $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME and $CI_COMMIT_BRANCH will ever be
+    # defined at once.
+    - git checkout -B $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME $CI_COMMIT_BRANCH $CI_COMMIT_SHA
   script:
     - sbcl --script scripts/build-release.lisp --static
   artifacts:
@@ -127,7 +130,10 @@ static-release:linux:arm64:
   stage: build
   image: $CI_REGISTRY_IMAGE/ci:$SBCL_VERSION-$DEBIAN_VERSION-$ARCH
   before_script:
-    - git checkout -B $CI_COMMIT_BRANCH $CI_COMMIT_SHA
+    # This looks a little funky, but only one of
+    # $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME and $CI_COMMIT_BRANCH will ever be
+    # defined at once.
+    - git checkout -B $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME $CI_COMMIT_BRANCH $CI_COMMIT_SHA
   script:
     - sbcl --script scripts/build-release.lisp
   artifacts:
@@ -174,7 +180,10 @@ dynamic-release:windows:amd64:
     GIT_SUBMODULE_STRATEGY: none
     GIT_CHECKOUT: "false"
   before_script:
-    - git checkout -B $CI_COMMIT_BRANCH $CI_COMMIT_SHA
+    # This looks a little funky, but only one of
+    # $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME and $CI_COMMIT_BRANCH will ever be
+    # defined at once.
+    - git checkout -B $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME $CI_COMMIT_BRANCH $CI_COMMIT_SHA
     - git submodule init
     - git submodule update
   script:
