@@ -26,7 +26,9 @@
            #:bundle-source-registry
            #:bundle-update)
   ;; From client
-  (:export #:client-asd-pathname)
+  (:export #:client-asd-pathname
+           #:client-user-data-pathname
+           #:install-client-to-user-data)
   ;; From clpi
   (:export #:make-release-jsown)
   ;; From config
