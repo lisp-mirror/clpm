@@ -1,0 +1,8 @@
+;;; -*- mode: common-lisp -*-
+(:api-version "0.3")
+
+(:source "quicklisp"
+ :type :quicklisp
+ :url "http://localhost:8091/dist/quicklisp-test.txt")
+
+(:asd "quicklisp-bundle.asd")

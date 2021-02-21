@@ -1,0 +1,2 @@
+# project url size file-md5 content-sha1 prefix [system-file1..system-fileN]
+alexandria http://localhost:8091/archive/alexandria/2020-09-25/alexandria-20200925-git.tgz 54730 59c8237a854de6f4f93328cd5747cd14 c531b4f1469d257643362b700745b3a54c132bef alexandria-20200925-git alexandria-tests.asd alexandria.asd

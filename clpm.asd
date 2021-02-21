@@ -51,7 +51,13 @@
                      (:readme-file "README")
                      (:dependencies-license-file "BUNDLED-LICENSES"))))))))
   :in-order-to ((program-op (load-op :clpm-cli))
-                (asdf-release-ops:perform-program-image-op (load-op :clpm-cli))))
+                (asdf-release-ops:perform-program-image-op (load-op :clpm-cli))
+                (test-op (asdf-release-ops:dynamic-program-op :clpm)
+                         (load-op :clpm-test)))
+
+  :perform (test-op (o c)
+                    (funcall (uiop:find-symbol* :run-tests-with-server :clpm-test)
+                             :clpm (output-file 'asdf-release-ops:dynamic-program-op c))))
 
 (defsystem #:clpm/client-helper
   :description "Helper to make sure clpm-client is built before clpm/client is

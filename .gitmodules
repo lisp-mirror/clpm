@@ -229,3 +229,9 @@
 [submodule "ext/asdf-release-ops"]
 	path = ext/asdf-release-ops
 	url = https://github.com/daewok/asdf-release-ops.git
+[submodule "ext/hunchentoot"]
+	path = ext/hunchentoot
+	url = https://github.com/edicl/hunchentoot.git
+[submodule "ext/fiveam"]
+	path = ext/fiveam
+	url = https://github.com/lispci/fiveam.git

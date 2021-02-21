@@ -1,0 +1,7 @@
+name: quicklisp-test
+version: 2021-02-21
+system-index-url: http://localhost:8091/dist/quicklisp-test/2021-02-01/systems.txt
+release-index-url: http://localhost:8091/dist/quicklisp-test/2021-02-01/releases.txt
+archive-base-url: http://localhost:8091/
+canonical-distinfo-url: http://localhost:8091/dist/quicklisp-test/2021-02-01/distinfo.txt
+distinfo-subscription-url: http://localhost:8091/dist/quicklisp-test.txt

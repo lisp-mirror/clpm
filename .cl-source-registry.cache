@@ -1,6 +1,7 @@
 (:source-registry-cache
  "clpm-asdf.asd"
  "clpm-cli.asd"
+ "clpm-test.asd"
  "clpm.asd"
  "clpm-client/clpm-client.asd"
  "ext/3bz/3bz.asd"
@@ -76,8 +77,10 @@
  "ext/fast-io/fast-io-test.asd"
  "ext/fast-io/fast-io.asd"
  "ext/file-attributes/file-attributes.asd"
+ "ext/fiveam/fiveam.asd"
  "ext/flexi-streams/flexi-streams.asd"
  "ext/global-vars/global-vars.asd"
+ "ext/hunchentoot/hunchentoot.asd"
  "ext/ieee-floats/ieee-floats.asd"
  "ext/ironclad/ironclad-text.asd"
  "ext/ironclad/ironclad.asd"
