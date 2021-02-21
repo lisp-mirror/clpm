@@ -30,7 +30,7 @@ stages:
                        --dockerfile $CI_PROJECT_DIR/docker/Dockerfile.alpine-ci \
                        --destination $CI_REGISTRY_IMAGE/ci:$SBCL_VERSION-alpine$ALPINE_VERSION-$ARCH
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && ($CI_PROJECT_NAMESPACE == "clpm" || $ARCH == "amd64")'
+    - if: '($CI_PIPELINE_SOURCE == "merge_request_event" || $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH) && ($CI_PROJECT_NAMESPACE == "clpm" || $ARCH == "amd64")'
       changes:
         - .gitlab-ci.versions.yml
         - docker/Dockerfile.alpine-ci
@@ -52,7 +52,7 @@ stages:
                        --dockerfile $CI_PROJECT_DIR/docker/Dockerfile.debian-ci \
                        --destination $CI_REGISTRY_IMAGE/ci:$SBCL_VERSION-$DEBIAN_VERSION-$ARCH
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && ($CI_PROJECT_NAMESPACE == "clpm" || $ARCH == "amd64")'
+    - if: '($CI_PIPELINE_SOURCE == "merge_request_event" || $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH) && ($CI_PROJECT_NAMESPACE == "clpm" || $ARCH == "amd64")'
       changes:
         - .gitlab-ci.versions.yml
         - docker/Dockerfile.debian-ci
