@@ -18,4 +18,5 @@
                (:file "version" :depends-on ("package"))
                (:file "system" :depends-on ("package" "features" "version"))
                (:file "dependencies-license-op" :depends-on ("package" "system"))
-               (:file "client" :depends-on ("package" "system"))))
+               (:file "client" :depends-on ("package" "system"))
+               (:file "install-script" :depends-on ("package" "system"))))

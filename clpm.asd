@@ -34,7 +34,8 @@
   :release-directory "../releases/"
 
   :release-structure
-  ((:module "bin"
+  ((:clpm-install-script "install.sh" :if-feature (:not :os-windows))
+   (:module "bin"
     :components
     ((:program-file "clpm")))
    (:module "share"
