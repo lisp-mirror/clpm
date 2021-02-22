@@ -35,7 +35,7 @@ don't typically have to worry about.
      - [ ] https://github.com/cl-plus-ssl/cl-plus-ssl/pull/115 (not submitted
        by us, but needed by us)
    - osicat ::
-     - [ ] https://github.com/osicat/osicat/pull/39
+     - [X] https://github.com/osicat/osicat/pull/39
    - dexador ::
      - [ ] https://github.com/fukamachi/dexador/pull/86
      - [ ] https://github.com/fukamachi/dexador/issues/87

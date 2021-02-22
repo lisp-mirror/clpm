@@ -48,7 +48,7 @@
 	url = https://github.com/trivial-garbage/trivial-garbage.git
 [submodule "ext/osicat"]
 	path = ext/osicat
-	url = https://github.com/daewok/osicat
+	url = https://github.com/osicat/osicat
 [submodule "ext/archive"]
 	path = ext/archive
 	url = https://github.com/daewok/archive.git
