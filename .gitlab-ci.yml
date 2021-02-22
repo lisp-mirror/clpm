@@ -269,7 +269,7 @@ test-dynamic-release:linux:arm64:
   rules:
     - if: '$CLPM_CI_LINUX_ARM64'
 
-test-dynamic-release:linux:arm:
+.test-dynamic-release:linux:arm:
   extends: .linux-test
   # We need an image that specifes the arch directly since we're testing on an
   # arm64 machine.
