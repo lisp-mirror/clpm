@@ -92,8 +92,6 @@ debian-image:arm:
     ARCH: arm
   tags:
     - arm64
-  rules:
-    - when: on_success
 
 ##############################################################################
 # Utils
