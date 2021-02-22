@@ -318,6 +318,7 @@ test-dynamic-release:windows:amd64:
     - $VERSION = sbcl --script scripts/version.lisp
     - cp "releases/$VARIANT/clpm-$VERSION-windows-amd64.msi" "C:\clpm-installer.msi"
     - Start-Process msiexec.exe -Wait -ArgumentList '/I C:\clpm-installer.msi'
+    - Update-SessionEnvironment
     - clpm version -VV
     - sbcl --script scripts/test.lisp
   needs:
