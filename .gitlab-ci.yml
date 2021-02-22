@@ -296,7 +296,7 @@ test-dynamic-release:macos:amd64:
     - cd /tmp
     - tar xvf $CI_PROJECT_DIR/releases/$VARIANT/clpm-$VERSION-darwin-$ARCH.tar.gz
     - cd clpm-$VERSION-darwin-$ARCH
-    - sh install.sh
+    - sudo sh install.sh
     - clpm version -VV
     - cd $CI_PROJECT_DIR
     - sbcl --script scripts/test.lisp
