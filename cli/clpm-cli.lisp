@@ -6,7 +6,6 @@
 (uiop:define-package #:clpm-cli/clpm-cli
     (:nicknames #:clpm-cli)
   (:use #:cl
-        #:clpm-cli/clpm-program-op
         #:clpm-cli/commands
         #:clpm-cli/entry
         #:clpm-cli/man))
