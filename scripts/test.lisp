@@ -5,6 +5,8 @@
 
 (in-package #:cl-user)
 
+(pushnew :hunchentoot-no-ssl *features*)
+
 (load (merge-pathnames "common.lisp" *load-truename*))
 
 (in-package #:clpm-scripts)
