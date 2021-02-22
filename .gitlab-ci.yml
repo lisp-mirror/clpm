@@ -33,7 +33,7 @@ stages:
                        --dockerfile $CI_PROJECT_DIR/docker/Dockerfile.alpine-ci \
                        --destination $CI_REGISTRY_IMAGE/ci:$SBCL_VERSION-alpine$ALPINE_VERSION-$ARCH
   rules:
-    - if: '($CI_PIPELINE_SOURCE == "merge_request_event" || $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH) && ($CI_PROJECT_NAMESPACE == "clpm" || $ARCH == "amd64")'
+    - if: '($CI_PIPELINE_SOURCE == "merge_request_event" || $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH) && ($ARCH == "amd64" || ($ARCH == "arm" && $CLPM_CI_LINUX_ARM64) || ($ARCH == "arm64" && $CLPM_CI_LINUX_ARM64))'
       changes:
         - .gitlab-ci.versions.yml
         - docker/Dockerfile.alpine-ci
@@ -57,7 +57,7 @@ stages:
                        --dockerfile $CI_PROJECT_DIR/docker/Dockerfile.debian-ci \
                        --destination $CI_REGISTRY_IMAGE/ci:$SBCL_VERSION-$DEBIAN_VERSION-$ARCH
   rules:
-    - if: '($CI_PIPELINE_SOURCE == "merge_request_event" || $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH) && ($CI_PROJECT_NAMESPACE == "clpm" || $ARCH == "amd64")'
+    - if: '($CI_PIPELINE_SOURCE == "merge_request_event" || $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH) && ($ARCH == "amd64" || ($ARCH == "arm" && $CLPM_CI_LINUX_ARM64) || ($ARCH == "arm64" && $CLPM_CI_LINUX_ARM64))'
       changes:
         - .gitlab-ci.versions.yml
         - docker/Dockerfile.debian-ci
@@ -125,7 +125,7 @@ static-release:linux:arm64:
   tags:
     - arm64
   rules:
-    - if: '$CI_PROJECT_NAMESPACE == "clpm"'
+    - if: '$CLPM_CI_LINUX_ARM64'
 
 ##############################################################################
 # Build dynamic releases
@@ -157,16 +157,16 @@ dynamic-release:linux:arm64:
   tags:
     - arm64
   rules:
-    - if: '$CI_PROJECT_NAMESPACE == "clpm"'
+    - if: '$CLPM_CI_LINUX_ARM64'
 
-dynamic-release:linux:armv7:
+dynamic-release:linux:arm:
   extends: .dynamic-release
   variables:
     ARCH: arm
   tags:
     - arm64
   rules:
-    - if: '$CI_PROJECT_NAMESPACE == "clpm"'
+    - if: '$CLPM_CI_LINUX_ARM64'
 
 dynamic-release:macos:amd64:
   stage: build
@@ -175,7 +175,7 @@ dynamic-release:macos:amd64:
     - macos-0.4-amd64
   needs: []
   rules:
-    - if: '$CI_PROJECT_NAMESPACE == "clpm"'
+    - if: '$CLPM_CI_MACOS_AMD64'
 
 dynamic-release:windows:amd64:
   stage: build
@@ -199,7 +199,7 @@ dynamic-release:windows:amd64:
     paths:
       - releases/
   rules:
-    - if: '$CI_PROJECT_NAMESPACE == "clpm"'
+    - if: '$CLPM_CI_WINDOWS_AMD64'
   needs: []
   tags:
     - windows-amd64

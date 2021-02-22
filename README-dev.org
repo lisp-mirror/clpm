@@ -3,6 +3,13 @@
 This file is meant to be a colleciton of notes for CLPM developers that users
 don't typically have to worry about.
 
+* CI
+
+  The canonical repo has Linux arm, Windows, and Mac runners associated with
+  it. Since forks are unlikely to have these, the jobs that run on them are
+  guarded by the presence of the environment variables =CLPM_CI_LINUX_ARM64=,
+  =CLPM_CI_WINDOWS_AMD64=, and =CLPM_CI_MACOS_AMD64=.
+
 * Dependencies
 
   CLPM has a lot of dependencies. Probably too many, but that's a problem for
