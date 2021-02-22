@@ -307,23 +307,23 @@ test-dynamic-release:macos:amd64:
   rules:
     - if: '$CLPM_CI_MACOS_AMD64'
 
-test-dynamic-release:windows:amd64:
-  stage: test
-  extends: .git-repo-needed:windows
-  image: $CI_REGISTRY_IMAGE/ci:$SBCL_VERSION-windowsservercore
-  variables:
-    ARCH: amd64
-    VARIANT: dynamic
-  script:
-    - $VERSION = sbcl --script scripts/version.lisp
-    - cp "releases/$VARIANT/clpm-$VERSION-windows-amd64.msi" "C:\clpm-installer.msi"
-    - Start-Process msiexec.exe -Wait -ArgumentList '/I C:\clpm-installer.msi'
-    - Update-SessionEnvironment
-    - clpm version -VV
-    - sbcl --script scripts/test.lisp
-  needs:
-    - dynamic-release:windows:amd64
-  tags:
-    - windows-amd64
-  rules:
-    - if: '$CLPM_CI_WINDOWS_AMD64'
+# test-dynamic-release:windows:amd64:
+#   stage: test
+#   extends: .git-repo-needed:windows
+#   image: $CI_REGISTRY_IMAGE/ci:$SBCL_VERSION-windowsservercore
+#   variables:
+#     ARCH: amd64
+#     VARIANT: dynamic
+#   script:
+#     - $VERSION = sbcl --script scripts/version.lisp
+#     - cp "releases/$VARIANT/clpm-$VERSION-windows-amd64.msi" "C:\clpm-installer.msi"
+#     - Start-Process msiexec.exe -Wait -ArgumentList '/I C:\clpm-installer.msi'
+#     - Update-SessionEnvironment
+#     - clpm version -VV
+#     - sbcl --script scripts/test.lisp
+#   needs:
+#     - dynamic-release:windows:amd64
+#   tags:
+#     - windows-amd64
+#   rules:
+#     - if: '$CLPM_CI_WINDOWS_AMD64'
