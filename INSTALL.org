@@ -80,20 +80,20 @@ install the dependencies:
    and run:
 
    #+begin_src shell
-     sbcl --script scripts/build.lisp
+     sbcl --script scripts/build-release.lisp
    #+end_src
 
-   If you're on GNU/Linux, you can then run =sh install.sh= to install (see
-   above).
+   This will place a release tarball in the =releases/dynamic/= folder that you
+   can unpack and install as above. Alternatively, you can build only the
+   exectuable using the =scripts/build.lisp= script. This will place the
+   executable in =build/bin/=.
 
    If you're on Windows, you need to additionally install [[https://wixtoolset.org/][WiX v3.x]] and run the
    following:
 
    #+begin_src shell
-     sbcl --script scripts/build-wxs.lisp
-     cd build
-     %PATH_TO_WIX_INSTALL%/bin/candle clpm.wxs
-     %PATH_TO_WIX_INSTALL%/bin/light clpm.wxs -ext %PATH_TO_WIX_INSTALL%/bin/WixUIExtension.dll -cultures:en-us -out clpm.msi
+     $env:WIX=%PATH_TO_WIX_INSTALL%
+     sbcl --script scripts/build-msi.lisp
    #+end_src
 
    This will get you an installer you can use.

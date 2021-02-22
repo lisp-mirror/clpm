@@ -1,6 +1,28 @@
 #+TITLE: CLPM Changelog
 
+* v0.4.0 - Unreleased
+
+  + Changed layout of release tarballs.
+  + Published tarballs now contain a static executable (#11).
+  + No longer using the deploy library to build releases (#15 #11).
+  + Updated build script to more easily build static or dynamic executables
+    (#11).
+  + Fixed bug in computing the source-registry.d file for the clpm client (#16)
+  + Starting to build up a test suite (#3)
+  + Added automated testing on Gitlab CI.
+
+  Fixes from the aborted 0.3.6:
+
+  + Fix bug saving project metadata on Windows.
+  + Fix client's UIOP dependency to better suit ECL's bundled fork of ASDF.
+  + Fix issue READing strings in client from a lisp that is not SBCL (#13).
+  + Parse inherited CL_SOURCE_REGISTRY config in client using ASDF (#14).
+
+
 * v0.3.6 - 2021-01-11
+
+  Note that this release never got published. There was a build and packaging
+  issue. These fixes will be released in 0.4.0.
 
   + Fix bug saving project metadata on Windows.
   + Fix client's UIOP dependency to better suit ECL's bundled fork of ASDF.
