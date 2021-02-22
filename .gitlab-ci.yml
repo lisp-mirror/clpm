@@ -96,17 +96,33 @@ debian-image:arm:
     - when: on_success
 
 ##############################################################################
+# Utils
+##############################################################################
+
+.git-repo-needed:
+  before_script:
+    # This looks a little funky, but only one of
+    # $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME and $CI_COMMIT_BRANCH will ever be
+    # defined at once.
+    - git checkout -B $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME $CI_COMMIT_BRANCH $CI_COMMIT_SHA
+
+.git-repo-needed:windows:
+  before_script:
+    # This looks a little funky, but only one of
+    # $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME and $CI_COMMIT_BRANCH will ever be
+    # defined at once.
+    - git checkout -B $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME $CI_COMMIT_BRANCH $CI_COMMIT_SHA
+    - git submodule init
+    - git submodule update
+
+##############################################################################
 # Build static releases
 ##############################################################################
 
 .static-release:
   stage: build
   image: $CI_REGISTRY_IMAGE/ci:$SBCL_VERSION-alpine$ALPINE_VERSION-$ARCH
-  before_script:
-    # This looks a little funky, but only one of
-    # $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME and $CI_COMMIT_BRANCH will ever be
-    # defined at once.
-    - git checkout -B $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME $CI_COMMIT_BRANCH $CI_COMMIT_SHA
+  extends: .git-repo-needed
   script:
     - sbcl --script scripts/build-release.lisp --static
   artifacts:
@@ -134,11 +150,7 @@ static-release:linux:arm64:
 .dynamic-release:
   stage: build
   image: $CI_REGISTRY_IMAGE/ci:$SBCL_VERSION-$DEBIAN_VERSION-$ARCH
-  before_script:
-    # This looks a little funky, but only one of
-    # $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME and $CI_COMMIT_BRANCH will ever be
-    # defined at once.
-    - git checkout -B $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME $CI_COMMIT_BRANCH $CI_COMMIT_SHA
+  extends: .git-repo-needed
   script:
     - sbcl --script scripts/build-release.lisp
   artifacts:
@@ -180,17 +192,11 @@ dynamic-release:macos:amd64:
 dynamic-release:windows:amd64:
   stage: build
   image: $CI_REGISTRY_IMAGE/ci:$SBCL_VERSION-windowsservercore
+  extends: .git-repo-needed:windows
   variables:
     GIT_STRATEGY: clone
     GIT_SUBMODULE_STRATEGY: none
     GIT_CHECKOUT: "false"
-  before_script:
-    # This looks a little funky, but only one of
-    # $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME and $CI_COMMIT_BRANCH will ever be
-    # defined at once.
-    - git checkout -B $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME $CI_COMMIT_BRANCH $CI_COMMIT_SHA
-    - git submodule init
-    - git submodule update
   script:
     - $env:WIX = "C:\wix"
     - sbcl --script scripts/build-release.lisp
@@ -208,25 +214,115 @@ dynamic-release:windows:amd64:
 # Tests
 ##############################################################################
 
-test-static-release:linux:amd64:
+.linux-test:
   stage: test
   image: clfoundation/sbcl:$SBCL_VERSION
-  variables:
-    ARCH: amd64
-  before_script:
-    # This looks a little funky, but only one of
-    # $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME and $CI_COMMIT_BRANCH will ever be
-    # defined at once.
-    - git checkout -B $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME $CI_COMMIT_BRANCH $CI_COMMIT_SHA
+  extends: .git-repo-needed
   script:
     # Install from the release archive!
     - VERSION=$(sbcl --script scripts/version.lisp)
     - cd /tmp
-    - tar xvf $CI_PROJECT_DIR/releases/static/clpm-$VERSION-linux-$ARCH.tar.gz
+    - tar xvf $CI_PROJECT_DIR/releases/$VARIANT/clpm-$VERSION-linux-$ARCH.tar.gz
     - cd clpm-$VERSION-linux-$ARCH
     - sh install.sh
     - clpm version -VV
     - cd $CI_PROJECT_DIR
     - sbcl --script scripts/test.lisp
+
+test-static-release:linux:amd64:
+  extends: .linux-test
+  variables:
+    ARCH: amd64
+    VARIANT: static
   needs:
     - static-release:linux:amd64
+
+test-static-release:linux:arm64:
+  extends: .linux-test
+  variables:
+    ARCH: arm64
+    VARIANT: static
+  needs:
+    - static-release:linux:arm64
+  tags:
+    - arm64
+  rules:
+    - if: '$CLPM_CI_LINUX_ARM64'
+
+test-dynamic-release:linux:amd64:
+  extends: .linux-test
+  variables:
+    ARCH: amd64
+    VARIANT: dynamic
+  needs:
+    - dynamic-release:linux:amd64
+
+test-dynamic-release:linux:arm64:
+  extends: .linux-test
+  variables:
+    ARCH: arm64
+    VARIANT: dynamic
+  needs:
+    - dynamic-release:linux:arm64
+  tags:
+    - arm64
+  rules:
+    - if: '$CLPM_CI_LINUX_ARM64'
+
+test-dynamic-release:linux:arm:
+  extends: .linux-test
+  # We need an image that specifes the arch directly since we're testing on an
+  # arm64 machine.
+  image: $CI_REGISTRY_IMAGE/ci:$SBCL_VERSION-$DEBIAN_VERSION-$ARCH
+  variables:
+    ARCH: arm
+    VARIANT: dynamic
+  needs:
+    - dynamic-release:linux:arm
+  tags:
+    - arm64
+  rules:
+    - if: '$CLPM_CI_LINUX_ARM64'
+
+test-dynamic-release:macos:amd64:
+  stage: test
+  extends: .git-repo-needed
+  variables:
+    ARCH: amd64
+    VARIANT: dynamic
+  script:
+    # Install from the release archive!
+    - VERSION=$(sbcl --script scripts/version.lisp)
+    - cd /tmp
+    - tar xvf $CI_PROJECT_DIR/releases/$VARIANT/clpm-$VERSION-darwin-$ARCH.tar.gz
+    - cd clpm-$VERSION-darwin-$ARCH
+    - sh install.sh
+    - clpm version -VV
+    - cd $CI_PROJECT_DIR
+    - sbcl --script scripts/test.lisp
+  needs:
+    - dynamic-release:macos:amd64
+  tags:
+    - macos-0.4-amd64
+  rules:
+    - if: '$CLPM_CI_MACOS_AMD64'
+
+test-dynamic-release:windows:amd64:
+  stage: test
+  extends: .git-repo-needed:windows
+  image: $CI_REGISTRY_IMAGE/ci:$SBCL_VERSION-windowsservercore
+  variables:
+    ARCH: amd64
+    VARIANT: dynamic
+  script:
+    - $VERSION = sbcl --script scripts/version.lisp
+    - cp "releases/$VARIANT/clpm-$VERSION-windows-amd64.msi" "C:\clpm-installer.msi"
+    - Start-Process msiexec.exe -Wait -ArgumentList '/I C:\clpm-installer.msi'
+    - clpm version -VV
+    - sbcl --script scripts/test.lisp
+  needs:
+    - dynamic-release:windows:amd64
+  tags:
+    - windows-amd64
+  rules:
+    - if: '$CLPM_CI_WINDOWS_AMD64'
