@@ -107,6 +107,10 @@ debian-image:arm:
     - git checkout -B $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME $CI_COMMIT_BRANCH $CI_COMMIT_SHA
 
 .git-repo-needed:windows:
+  variables:
+    GIT_STRATEGY: clone
+    GIT_SUBMODULE_STRATEGY: none
+    GIT_CHECKOUT: "false"
   before_script:
     # This looks a little funky, but only one of
     # $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME and $CI_COMMIT_BRANCH will ever be
@@ -193,10 +197,6 @@ dynamic-release:windows:amd64:
   stage: build
   image: $CI_REGISTRY_IMAGE/ci:$SBCL_VERSION-windowsservercore
   extends: .git-repo-needed:windows
-  variables:
-    GIT_STRATEGY: clone
-    GIT_SUBMODULE_STRATEGY: none
-    GIT_CHECKOUT: "false"
   script:
     - $env:WIX = "C:\wix"
     - sbcl --script scripts/build-release.lisp
