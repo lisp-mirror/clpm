@@ -4,5 +4,5 @@
 
 variables:
   ALPINE_VERSION: "3.13"
-  DEBIAN_VERSION: stretch
+  DEBIAN_VERSION: buster
   SBCL_VERSION: 2.1.1
