@@ -20,20 +20,13 @@ install the dependencies:
   [[https://files.clpm.dev/clpm/]]. Each release of CLPM consists of the following
   files:
 
-  + =clpm-amd64-darwin-$VERSION.tar.gz= :: CLPM compiled for 64bit Mac OS.
-  + =clpm-amd64-linux-gnu-$VERSION.tar.gz= :: CLPM compiled for 64bit
-    Linux using GNU libc (by far the most common).
-  + =clpm-amd64-linux-musl-$VERSION.tar.gz= :: CLPM compiled for 64bit
-    Linux using musl libc (e.g., Alpine Linux).
-  + =clpm-arm64-linux-gnu-$VERSION.tar.gz= :: CLPM compiled for 64bit
-    Linux on ARM processors using GNU libc.
-  + =clpm-arm64-linux-musl-$VERSION.tar.gz= :: CLPM compiled for 64bit
-    Linux on ARM processors using musl libc.
-  + =clpm-armv7-linux-gnu-$VERSION.tar.gz= :: CLPM compiled for 32bit
-    Linux on ARM processors using GNU libc.
-  + =clpm-armv7-linux-musl-$VERSION.tar.gz= :: CLPM compiled for 32bit
-    Linux on ARM processors using musl libc.
-  + =clpm-amd64-windows-$VERSION.msi= :: CLPM installer for 64 bit Windows.
+  + =clpm-$VERSION-darwin-amd64.tar.gz= :: CLPM compiled for 64bit Mac OS.
+  + =clpm-$VERSION-linux-amd64.tar.gz= :: CLPM compiled for 64bit Linux.
+  + =clpm-$VERSION-linux-arm64.tar.gz= :: CLPM compiled for 64bit Linux on ARM
+    processors.
+  + =clpm-$VERSION-linux-arm.tar.gz= :: CLPM compiled for 32bit Linux on ARM
+    processors.
+  + =clpm-$VERSION-windows-amd64.msi= :: CLPM installer for 64 bit Windows.
   + =clpm-$VERSION.DIGESTS= :: Text file containing the SHA512 sums for every
     previously mentioned file.
   + =clpm-$VERSION.DIGESTS.asc= :: Same as =clpm-$VERSION.DIGESTS=, but signed
