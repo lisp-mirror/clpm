@@ -10,6 +10,8 @@
   + Fixed bug in computing the source-registry.d file for the clpm client (#16)
   + Starting to build up a test suite (#3)
   + Added automated testing on Gitlab CI.
+  + Added =clpm-client:*activate-asdf-integration*= to control default
+    integration with ASDF upon context activation.
 
   Fixes from the aborted 0.3.6:
 

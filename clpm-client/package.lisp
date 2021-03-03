@@ -5,7 +5,8 @@
 
 (uiop:define-package #:clpm-client
     (:use #:cl)
-  (:export #:*asdf-system-not-found-behavior*
+  (:export #:*activate-asdf-integration*
+           #:*asdf-system-not-found-behavior*
            #:*cleanup-on-dump-p*
            #:*clpm-dribble*
            #:*clpm-dribble-input-prefix*

@@ -28,6 +28,9 @@ ignored.")
 (defvar *active-context-visible-primary-system-names* nil
   "List of primary system names visible to ASDF in the active context.")
 
+(defvar *activate-asdf-integration* t
+  "The default value of :ACTIVATE-ASDF-INTEGRATION in ACTIVATE-CONTEXT.")
+
 (defun configure-from-env ()
   "Determine if there is any active context by looking at environment
 variables."
@@ -145,7 +148,7 @@ directories containing the files."
     (clpm-proc-print proc `(source-registry :context ,context :ignore-inherited-source-registry ,ignore-inherited :with-client-p t))
     (clpm-proc-read proc)))
 
-(defun activate-context (context &key activate-asdf-integration
+(defun activate-context (context &key (activate-asdf-integration *activate-asdf-integration*)
                                    (ignore-inherited-source-registry (context-bundle-p context)))
   "Activate a CLPM context. This clears ASDF's current configuration and
 replaces it with configuration appropriate for CONTEXT.
