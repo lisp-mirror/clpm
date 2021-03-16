@@ -138,6 +138,7 @@ debian-image:arm:
   artifacts:
     paths:
       - releases/
+    expire_in: 2 weeks
 
 static-release:linux:amd64:
   extends: .static-release
@@ -166,6 +167,7 @@ static-release:linux:arm64:
   artifacts:
     paths:
       - releases/
+    expire_in: 2 weeks
 
 dynamic-release:linux:amd64:
   extends: .dynamic-release
@@ -210,6 +212,7 @@ dynamic-release:windows:amd64:
   artifacts:
     paths:
       - releases/
+    expire_in: 2 weeks
   rules:
     - if: '$CLPM_CI_WINDOWS_AMD64'
   needs: []
