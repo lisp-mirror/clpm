@@ -5,4 +5,4 @@
 variables:
   ALPINE_VERSION: "3.13"
   DEBIAN_VERSION: buster
-  SBCL_VERSION: 2.1.1
+  SBCL_VERSION: 2.1.2

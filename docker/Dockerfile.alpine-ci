@@ -1,6 +1,6 @@
 # This Dockerfile builds a Linux image for use on Gitlab CI.
 
-ARG sbcl_version=2.1.1
+ARG sbcl_version=2.1.2
 ARG daewok_signing_key=823DF61DEDB633B3DE7B2B7C181191EF9ACF6934
 ARG alpine_version=3.13
 ARG image_repo=clfoundation/sbcl
