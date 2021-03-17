@@ -12,6 +12,9 @@
   + Added automated testing on Gitlab CI.
   + Added =clpm-client:*activate-asdf-integration*= to control default
     integration with ASDF upon context activation.
+  + The default directories for CLPM cache, config, and data have changed on
+    Windows. They are now =%LOCALAPPDATA%\clpm\cache\=,
+    =%LOCALAPPDATA%\clpm\config\=, and =%LOCALAPPDATA%\clpm\data\=.
 
   Fixes from the aborted 0.3.6:
 

@@ -260,12 +260,14 @@
 
 *** Config
 
-    CLPM's configuration is stored in the =clpm/= subfolder of your [[https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html][XDG]] config
-    directory. The typical locations for your XDG user config directory are:
+    On non-Windows systems, CLPM's configuration is stored in the =clpm/=
+    subfolder of your [[https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html][XDG]] config directory. On Windows, it is stored in the
+    =config/= subfolder of the clpm directory in your local app data
+    folder. Therefore, the typical locations are:
 
-    + Linux :: =/home/$USER/.config/=
-    + MacOS :: =/Users/$USER/.config/=
-    + Windows :: =%LOCALAPPDATA%\config\=
+    + Linux :: =/home/$USER/.config/clpm/=
+    + MacOS :: =/Users/$USER/.config/clpm/=
+    + Windows :: =%LOCALAPPDATA%\clpm\config\=
 
     #+ATTR_REVEAL: :frag t
     This can be overriden using the =CLPM_CONFIG_DIRS= environment variable.
@@ -281,12 +283,16 @@
 *** Cache
 
     CLPM caches many files during its operation, including tarballs and package
-    metadata. These files are stored in the =clpm/= subfolder of your XDG cache
-    directory. The typical locations for your XDG cache directory are:
+    metadata.
 
-    + Linux :: =/home/$USER/.cache/=
-    + MacOS :: =/Users/$USER/.cache/=
-    + Windows :: =%LOCALAPPDATA%\cache\=
+    On non-Windows systems, these files are stored in the =clpm/= subfolder of
+    your XDG cache directory. On Windows, it is stored in the =cache/=
+    subfolder of the clpm directory in your local app data folder. Therefore,
+    the typical locations are:
+
+    + Linux :: =/home/$USER/.cache/clpm/=
+    + MacOS :: =/Users/$USER/.cache/clpm/=
+    + Windows :: =%LOCALAPPDATA%\clpm\cache\=
 
     #+ATTR_REVEAL: :frag t
     This location can be overriden using the =CLPM_CACHE_DIR= environment
@@ -299,12 +305,16 @@
 *** Data
 
     CLPM stores context data, unpacked releases, metadata for installed
-    packages, etc. in the =clpm/= subfolder of your XDG data directory. The
-    typical locations for your XDG data directory are:
+    packages, etc. in its data directory.
 
-    + Linux :: =/home/$USER/.local/share/=
-    + MacOS :: =/Users/$USER/.local/share/=
-    + Windows :: =%LOCALAPPDATA%=
+    On non-Windows systems, these files are stored in the =clpm/= subfolder of
+    your XDG data directory. On Windows, it is stored in the =data/= subfolder
+    of the clpm directory in your local app data folder. Therefore, the typical
+    locations are:
+
+    + Linux :: =/home/$USER/.local/share/clpm/=
+    + MacOS :: =/Users/$USER/.local/share/clpm/=
+    + Windows :: =%LOCALAPPDATA%\clpm\data\=
 
     #+ATTR_REVEAL: :frag t
     This location can be overriden using the =CLPM_DATA_DIR= environment

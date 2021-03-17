@@ -19,7 +19,13 @@
 
 (defun user-config-directories ()
   "Returns the pathnames to the user's XDG default config directories."
-  (uiop:xdg-config-pathnames "clpm/"))
+  (append
+   (when (uiop:os-windows-p)
+     (list (uiop:resolve-absolute-location (list (uiop:get-folder-path :local-appdata)
+                                                 "clpm"
+                                                 "config")
+                                           :ensure-directory t)))
+   (uiop:xdg-config-pathnames "clpm/")))
 
 (defparameter *default-clpm-config-directories*
   (list 'user-config-directories
