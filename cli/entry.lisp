@@ -25,9 +25,9 @@
 (defparameter *default-ui*
   (adopt:make-interface
    :name "clpm"
-   :summary "Common Lisp Package Manager"
+   :summary "Common Lisp Project Manager"
    :usage "[options] subcommand"
-   :help "Common Lisp Package Manager"
+   :help "Common Lisp Project Manager"
    :contents (list *group-common*)))
 
 (defun clpm-debugger (c v)

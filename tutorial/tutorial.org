@@ -15,7 +15,7 @@
 
 ** What is it?
 
-   CLPM stands for Common Lisp Package Manager.
+   CLPM stands for Common Lisp Project Manager.
 
    #+ATTR_REVEAL: :frag t
    CLPM has several primary goals:
@@ -52,7 +52,7 @@
    #+REVEAL_HTML: <div class='leftcol'>
    Two major pieces:
 
-   + CLPM :: The core of the package manager, intended to be run in a separate
+   + CLPM :: The core of the project manager, intended to be run in a separate
      process. Additionally, has a command line interface for use outside of
      Lisp.
    + CLPM Client :: A small, portable system meant to be loaded into

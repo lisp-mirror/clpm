@@ -28,9 +28,9 @@
 (defparameter *client-rc-ui*
   (adopt:make-interface
    :name "clpm client rc"
-   :summary "Common Lisp Package Manager"
+   :summary "Common Lisp Project Manager"
    :usage "client rc [options]"
-   :help "Common Lisp Package Manager"
+   :help "Common Lisp Project Manager"
    :contents (list *group-common*
                    *option-quicklisp-alternative*)))
 

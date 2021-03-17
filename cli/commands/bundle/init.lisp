@@ -25,7 +25,7 @@
 (defparameter *bundle-init-ui*
   (adopt:make-interface
    :name "clpm bundle init"
-   :summary "Common Lisp Package Manager Bundle Init"
+   :summary "Common Lisp Project Manager Bundle Init"
    :usage "bundle init [options]"
    :help "Create a clpmfile"
    :contents (list *group-common*

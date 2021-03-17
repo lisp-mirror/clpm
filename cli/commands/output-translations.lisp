@@ -16,7 +16,7 @@
 (defparameter *output-translations-ui*
   (adopt:make-interface
    :name "clpm output-translations"
-   :summary "Common Lisp Package Manager Output-Translations"
+   :summary "Common Lisp Project Manager Output-Translations"
    :usage "output-translations [options]"
    :help "Print an ASDF output-translations form using the projects installed in a context"
    :contents (list *group-common*

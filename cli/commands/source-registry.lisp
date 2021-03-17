@@ -39,7 +39,7 @@
 (defparameter *source-registry-ui*
   (adopt:make-interface
    :name "clpm source-registry"
-   :summary "Common Lisp Package Manager Source-Registry"
+   :summary "Common Lisp Project Manager Source-Registry"
    :usage "source-registry [options]"
    :help "Print an ASDF source-registry form using the projects installed in a context"
    :contents (list *group-common*

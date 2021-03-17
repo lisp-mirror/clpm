@@ -22,7 +22,7 @@ upgrade CLPM.")
 (defparameter *client-install-ui*
   (adopt:make-interface
    :name "clpm client install"
-   :summary "Common Lisp Package Manager"
+   :summary "Common Lisp Project Manager"
    :usage "client install [options]"
    :help *help-text*
    :contents (list *group-common*)))

@@ -15,7 +15,7 @@
 (defparameter *client-repl-ui*
   (adopt:make-interface
    :name "clpm client repl"
-   :summary "Common Lisp Package Manager"
+   :summary "Common Lisp Project Manager"
    :usage "client repl [options]"
    :help "Starts a REPL for interacting with CLPM. Intended to be used by clpm-client library, interface is not guaranteed to be stable yet."))
 

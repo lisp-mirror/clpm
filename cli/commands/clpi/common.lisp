@@ -16,7 +16,7 @@
    :name "clpm clpi"
    :summary "CLPM CLPI commands"
    :usage "clpi [options] subcommand"
-   :help "Common Lisp Package Manager"
+   :help "Common Lisp Project Manager"
    :contents (list *group-common*)))
 
 (define-cli-command-folder (("clpi") *default-ui*))

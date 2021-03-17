@@ -18,7 +18,7 @@
 (defparameter *sync-ui*
   (adopt:make-interface
    :name "clpm-sync"
-   :summary "Common Lisp Package Manager Sync"
+   :summary "Common Lisp Project Manager Sync"
    :usage "sync [SOURCE-NAME*]"
    :help *help-text*
    :manual *help-text*

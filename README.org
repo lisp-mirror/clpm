@@ -1,4 +1,4 @@
-#+TITLE: Common Lisp Package Manager - CLPM
+#+TITLE: Common Lisp Project Manager - CLPM
 #+AUTHOR: Eric Timmons
 #+EMAIL: clpm-devel@common-lisp.net
 #+OPTIONS: email:t toc:1 num:nil
@@ -14,8 +14,10 @@ appropriate tag or see [[http://www.clpm.dev]].
 
 * Description
 
-  CLPM is a package manager for Common Lisp. It can manage packages in both
-  global and project specific contexts.
+  CLPM is a project manager for Common Lisp. It can manage projects in both
+  global and project specific contexts. It would be called a "package manager"
+  in most other contexts, but the use of "package" unfortunately collides with
+  the use of "package" in the Common Lisp spec as a namespace for symbols.
 
   It consists of two major pieces. First is a standalone program that is
   responsible for all the heavy lifting of downloading and unpacking releases
@@ -153,7 +155,7 @@ appropriate tag or see [[http://www.clpm.dev]].
 
 * Project Goals
 
-  CLPM is far from the only package manager available for Common Lisp[fn:1], but
+  CLPM is far from the only project manager available for Common Lisp[fn:1], but
   it makes very different assumptions and design choices than the other
   available solutions. In this section we describe our high level goals and how
   they affect our design decisions.
@@ -168,8 +170,8 @@ appropriate tag or see [[http://www.clpm.dev]].
    code the Quicklisp client depends on and the code you're developing depends
    on, and it helps ensure that Quicklisp works on a broad set of Common Lisp
    implementations. However, it has a major downside: the maintenance and
-   development costs of the package manager are high, potentially making it
-   difficult to implement new features and the package manager does not really
+   development costs of the project manager are high, potentially making it
+   difficult to implement new features and the project manager does not really
    drive the quality of code in the community at large higher.
 
    The desire to use existing libraries drives the decision for the CLPM core
@@ -202,8 +204,8 @@ appropriate tag or see [[http://www.clpm.dev]].
 
    Many Common Lisp implementations allow you to deliver programs by dumping an
    image to file. For most programs generated this way there is no need to have
-   a bundled package manager. Therefore, there should be an easy way to use a
-   package manager without leaving traces if it in your deployed system.
+   a bundled project manager. Therefore, there should be an easy way to use a
+   project manager without leaving traces if it in your deployed system.
 
    To this end, CLPM can be used without ever loading the client (for example,
    =clpm bundle exec= configures ASDF entirely through environment variables)

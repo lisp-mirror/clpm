@@ -23,7 +23,7 @@
 (defparameter *bundle-source-registry-ui*
   (adopt:make-interface
    :name "clpm bundle source-registry"
-   :summary "Common Lisp Package Manager Bundle Source-registry"
+   :summary "Common Lisp Project Manager Bundle Source-registry"
    :usage "bundle source-registry [options]"
    :help "Print the source registry for a bundle."
    :contents (list *group-common*

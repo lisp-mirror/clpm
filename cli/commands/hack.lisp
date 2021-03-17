@@ -44,7 +44,7 @@
 (defparameter *hack-ui*
   (adopt:make-interface
    :name "clpm hack"
-   :summary "Common Lisp Package Manager Hack"
+   :summary "Common Lisp Project Manager Hack"
    :usage "hack [options] SYSTEM-OR-PROJECT"
    :help *help-text*
    :contents (list *group-common*

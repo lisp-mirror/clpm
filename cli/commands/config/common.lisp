@@ -14,9 +14,9 @@
 (defparameter *default-ui*
   (adopt:make-interface
    :name "clpm config"
-   :summary "Common Lisp Package Manager"
+   :summary "Common Lisp Project Manager"
    :usage "config [options] subcommand"
-   :help "Common Lisp Package Manager"
+   :help "Common Lisp Project Manager"
    :contents (list *group-common*)))
 
 (define-cli-command-folder (("config") *default-ui*))

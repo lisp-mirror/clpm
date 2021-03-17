@@ -17,9 +17,9 @@
 (defparameter *config-info-ui*
   (adopt:make-interface
    :name "clpm config info"
-   :summary "Common Lisp Package Manager"
+   :summary "Common Lisp Project Manager"
    :usage "config info [options]"
-   :help "Common Lisp Package Manager"
+   :help "Common Lisp Project Manager"
    :contents (list *group-common*)))
 
 (define-cli-command (("config" "info") *config-info-ui*) (args options)

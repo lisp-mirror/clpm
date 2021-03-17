@@ -22,7 +22,7 @@ about the build, host, and features.")
 (defparameter *version-ui*
   (adopt:make-interface
    :name "clpm-version"
-   :summary "Common Lisp Package Manager Version"
+   :summary "Common Lisp Project Manager Version"
    :usage "version [options]"
    :help *help-text*
    :contents (list *group-common*)))

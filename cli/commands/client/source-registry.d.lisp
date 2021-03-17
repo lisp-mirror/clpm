@@ -30,7 +30,7 @@ Place the outputs of this command in a file such as
 (defparameter *client-source-registry.d-ui*
   (adopt:make-interface
    :name "clpm client source-registry.d"
-   :summary "Common Lisp Package Manager"
+   :summary "Common Lisp Project Manager"
    :usage "client source-registry.d [options]"
    :help *help-text*
    :contents (list *group-common*)))

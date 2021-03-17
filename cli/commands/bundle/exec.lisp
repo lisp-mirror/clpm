@@ -23,7 +23,7 @@
 (defparameter *bundle-exec-ui*
   (adopt:make-interface
    :name "clpm bundle exec"
-   :summary "Common Lisp Package Manager Bundle Exec"
+   :summary "Common Lisp Project Manager Bundle Exec"
    :usage "bundle exec [options] [command]"
    :help "Execute a command in the contet of a bundle"
    :contents (list *group-common*

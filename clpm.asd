@@ -13,7 +13,7 @@
 
 (defsystem #:clpm
   :version (:read-file-form "version.lisp-expr")
-  :description "A Common Lisp Package Manager"
+  :description "A Common Lisp Project Manager"
   :license "BSD-2-Clause"
   :pathname "clpm/"
   :entry-point "clpm-cli/entry:main"

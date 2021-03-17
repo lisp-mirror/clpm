@@ -97,7 +97,7 @@ with version constraint).
 (defparameter *install-ui*
   (adopt:make-interface
    :name "clpm install"
-   :summary "Common Lisp Package Manager Install"
+   :summary "Common Lisp Project Manager Install"
    :usage "install [options] SYSTEM-SPECIFIER*"
    :help *help-text*
    :manual *manual-text*

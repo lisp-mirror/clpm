@@ -18,7 +18,7 @@
 (defparameter *client-cat-ui*
   (adopt:make-interface
    :name "clpm client cat"
-   :summary "Common Lisp Package Manager"
+   :summary "Common Lisp Project Manager"
    :usage "client cat"
    :help "Print the CLPM client source code to stdout"
    :contents (list *group-common*)))

@@ -32,9 +32,9 @@
 (defparameter *update-ui*
   (adopt:make-interface
    :name "clpm update"
-   :summary "Common Lisp Package Manager Update"
+   :summary "Common Lisp Project Manager Update"
    :usage "update [options] SYSTEM-NAMES*"
-   :help "Common Lisp Package Manager"
+   :help "Common Lisp Project Manager"
    :contents (list *group-common*
                    *option-update-project*
                    *option-update-yes*

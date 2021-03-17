@@ -28,7 +28,7 @@ exist in the lock file.")
 (defparameter *bundle-install-ui*
   (adopt:make-interface
    :name "clpm bundle install"
-   :summary "Common Lisp Package Manager Bundle Install"
+   :summary "Common Lisp Project Manager Bundle Install"
    :usage "bundle install [options]"
    :help *help-string*
    :contents (list *group-common*

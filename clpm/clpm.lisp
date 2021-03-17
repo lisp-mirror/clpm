@@ -1,4 +1,4 @@
-;;;; Common Lisp Package Manager - CLPM.
+;;;; Common Lisp Project Manager - CLPM.
 ;;;;
 ;;;; This software is part of CLPM. See README.org for more information. See
 ;;;; LICENSE for license information.

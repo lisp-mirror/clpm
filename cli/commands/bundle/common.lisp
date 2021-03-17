@@ -44,7 +44,7 @@
 (defparameter *default-ui*
   (adopt:make-interface
    :name "clpm bundle"
-   :summary "Common Lisp Package Manager Bundle"
+   :summary "Common Lisp Project Manager Bundle"
    :usage "bundle [options] subcommand"
    :help "Bundle commands"
    :contents (list *group-common*

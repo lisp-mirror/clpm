@@ -31,7 +31,7 @@ preference is to update everything to the latest version possible.")
 (defparameter *bundle-update-ui*
   (adopt:make-interface
    :name "clpm bundle update"
-   :summary "Common Lisp Package Manager Bundle Update"
+   :summary "Common Lisp Project Manager Bundle Update"
    :usage "bundle update [options] <SYSTEM>*"
    :help *help-string*
    :contents (list *group-common*

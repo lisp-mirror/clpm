@@ -22,7 +22,7 @@
 (defparameter *exec-ui*
   (adopt:make-interface
    :name "clpm exec"
-   :summary "Common Lisp Package Manager Exec"
+   :summary "Common Lisp Project Manager Exec"
    :usage "exec [options] [command]"
    :help "Execute a command with environment variables configured to use a context"
    :contents (list *group-common*

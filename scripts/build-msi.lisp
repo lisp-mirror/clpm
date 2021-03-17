@@ -88,7 +88,7 @@
       (gather-all-files files nil "CLPM" (clpm-asdf::base-version) "CLPMFile" "CLPMDir")
     `(("Wix" "xmlns" "http://schemas.microsoft.com/wix/2006/wi")
       (("Product" "Id" "*"
-                  "Name" "Common Lisp Package Manager (CLPM)"
+                  "Name" "Common Lisp Project Manager (CLPM)"
                   ;; We can only use base version in WXS.
                   "Version" ,(clpm-asdf::base-version)
                   "Manufacturer" "https://www.clpm.dev"

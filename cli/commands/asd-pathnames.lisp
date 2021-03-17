@@ -16,7 +16,7 @@
 (defparameter *asd-pathnames-ui*
   (adopt:make-interface
    :name "clpm asd-pathnames"
-   :summary "Common Lisp Package Manager Asd-Pathnames"
+   :summary "Common Lisp Project Manager Asd-Pathnames"
    :usage "asd-pathnames [options]"
    :help "List the pathnames to all ASD files in the context, one per line."
    :contents (list *group-common*

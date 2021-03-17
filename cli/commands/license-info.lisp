@@ -49,7 +49,7 @@ cleared when UIOP's clear configuration hook is run (such as on image dump).")
 (defparameter *license-info-ui*
   (adopt:make-interface
    :name "clpm license-info"
-   :summary "Common Lisp Package Manager License Info"
+   :summary "Common Lisp Project Manager License Info"
    :usage "license-info [options]"
    :help "Display the license info for CLPM and its dependencies."
    :contents (list *group-common*)))
