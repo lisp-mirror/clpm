@@ -67,6 +67,17 @@ This file lists the bundled dependencies and their licenses.~%~%")
             "clpm"
             ;; Covered by clpm-multi-http-client
             "clpm-multi-http-client-impl"
+            ;; Covered by fare-quasiquote
+            "fare-quasiquote-extras"
+            "fare-quasiquote-optima"
+            "fare-quasiquote-readtable"
+            ;; Covered by trivia
+            "trivia.balland2006"
+            "trivia.level0"
+            "trivia.level1"
+            "trivia.level2"
+            "trivia.quasiquote"
+            "trivia.trivial"
             ;; Covered by sbcl
             "sb-bsd-sockets"
             "sb-cltl2"

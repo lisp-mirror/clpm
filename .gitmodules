@@ -247,3 +247,45 @@
 [submodule "ext/rfc2388"]
 	path = ext/rfc2388
 	url = https://github.com/jdz/rfc2388.git
+[submodule "ext/cl-shlex"]
+	path = ext/cl-shlex
+	url = https://github.com/ruricolist/cl-shlex/
+[submodule "ext/serapeum"]
+	path = ext/serapeum
+	url = https://github.com/ruricolist/serapeum.git
+[submodule "ext/trivia"]
+	path = ext/trivia
+	url = https://github.com/guicho271828/trivia.git
+[submodule "ext/lisp-namespace"]
+	path = ext/lisp-namespace
+	url = https://github.com/guicho271828/lisp-namespace.git
+[submodule "ext/trivial-cltl2"]
+	path = ext/trivial-cltl2
+	url = https://github.com/Zulu-Inuoe/trivial-cltl2.git
+[submodule "ext/type-i"]
+	path = ext/type-i
+	url = https://github.com/guicho271828/type-i.git
+[submodule "ext/introspect-environment"]
+	path = ext/introspect-environment
+	url = https://github.com/Bike/introspect-environment/
+[submodule "ext/fare-quasiquote"]
+	path = ext/fare-quasiquote
+	url = https://gitlab.common-lisp.net/frideau/fare-quasiquote
+[submodule "ext/fare-utils"]
+	path = ext/fare-utils
+	url = https://gitlab.common-lisp.net/frideau/fare-utils.git
+[submodule "ext/string-case"]
+	path = ext/string-case
+	url = https://github.com/pkhuong/string-case.git
+[submodule "ext/parse-number"]
+	path = ext/parse-number
+	url = https://github.com/sharplispers/parse-number.git
+[submodule "ext/parse-declarations"]
+	path = ext/parse-declarations
+	url = https://gitlab.common-lisp.net/parse-declarations/parse-declarations.git
+[submodule "ext/trivial-file-size"]
+	path = ext/trivial-file-size
+	url = https://github.com/ruricolist/trivial-file-size.git
+[submodule "ext/trivial-macroexpand-all"]
+	path = ext/trivial-macroexpand-all
+	url = https://github.com/cbaggers/trivial-macroexpand-all.git
