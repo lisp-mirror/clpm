@@ -15,6 +15,14 @@
   + The default directories for CLPM cache, config, and data have changed on
     Windows. They are now =%LOCALAPPDATA%\clpm\cache\=,
     =%LOCALAPPDATA%\clpm\config\=, and =%LOCALAPPDATA%\clpm\data\=.
+  + Added new config option =(:grovel :lisp :command)=. This string is split
+    via shlex into a list of arguments that can be used to start the child lisp
+    process.
+  + Deprecated =(:grovel :lisp :path)= in favor of =(:grovel :lisp :command)=.
+  + Added new value for =(:grovel :lisp :implementation)= - =:custom=. When
+    =:custom= is used, no arguments are taken from the lisp-invocation library,
+    the user must specify a command that completely starts the child lisp in a
+    clean state.
 
   Fixes from the aborted 0.3.6:
 
