@@ -14,6 +14,7 @@
           #:exit-hooks
           #:lisp-invocation)
   (:shadow #:make-groveler)
+  (:import-from #:shlex)
   (:reexport #:asdf-system-groveler)
   (:export #:*active-groveler*
            #:active-groveler-ensure-asd-loaded
@@ -32,7 +33,6 @@
    (zerop (nth-value 2 (uiop:run-program
                         (lisp-invocation-arglist
                          :implementation-type implementation
-                         :lisp-path (config-value :grovel :lisp :path)
                          :eval "(print (lisp-implementation-type))"
                          :eval (quit-form :code 0 :implementation-type implementation))
                         :input nil
@@ -47,12 +47,16 @@
         config-value)))
 
 (defun make-groveler ()
-  (let ((dir (asdf-system-groveler:mkdtemp (merge-pathnames "clpm"
-                                                            (uiop:temporary-directory)))))
+  (let* ((dir (asdf-system-groveler:mkdtemp (merge-pathnames "clpm"
+                                                             (uiop:temporary-directory))))
+         (command-string (or (config-value :grovel :lisp :command)
+                             (config-value :grovel :lisp :path)))
+         (command-list (unless (null command-string) (shlex:split command-string))))
     (flet ((rewrite (args)
              (sandbox-augment-command args :read-write-pathnames (list dir))))
       (aprog1 (asdf-system-groveler:make-groveler (get-groveler-implementation)
-                                                  :lisp-path (config-value :grovel :lisp :path)
+                                                  :lisp-path (first command-list)
+                                                  :lisp-args (rest command-list)
                                                   :asdf-fasl-cache-dir dir
                                                   :keep-asdf-fasl-cache-dir nil
                                                   :rewrite-arguments-callback #'rewrite)

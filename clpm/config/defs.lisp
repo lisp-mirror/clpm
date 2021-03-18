@@ -148,16 +148,23 @@
      :type hash-table)
     ((:grovel :lisp)
      :type hash-table)
+    ((:grovel :lisp :command)
+     :type string
+     :documentation
+     "The command to use when executing the Lisp process for groveling. If a
+     string, it is processed via shlex to split it into a list of strings.")
     ((:grovel :lisp :implementation)
      :type keyword
      :default :auto
      :documentation
      "The implementation to use when groveling. Must be recognized by
-      lisp-invocation library.")
+      lisp-invocation library or :CUSTOM. If :CUSTOM, the :COMMAND must start
+      the implementation in the desired state.")
     ((:grovel :lisp :path)
      :type string
      :documentation
-     "The command to use when executing the Lisp process for groveling.")
+     "DEPRECATED - USE :COMMAND INSTEAD. The command to use when executing the
+     Lisp process for groveling.")
     ((:grovel :sandbox)
      :type hash-table)
     ((:grovel :sandbox :type)
