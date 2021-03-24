@@ -23,6 +23,7 @@
     =:custom= is used, no arguments are taken from the lisp-invocation library,
     the user must specify a command that completely starts the child lisp in a
     clean state.
+  + Better support for using MSYS2's git on Windows.
 
   Fixes from the aborted 0.3.6:
 
