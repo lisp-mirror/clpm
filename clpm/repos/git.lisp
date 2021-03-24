@@ -116,7 +116,7 @@ process list."
     (when password
       (push (cons "CLPM_GIT_PASS_HELPER_PASS" password) env)
       (push "-c" prefix)
-      (push "credential.helper=!f() { while read line; do sleep 0; done; echo \"password=${CLPM_GIT_PASS_HELPER_PASS}\"; }; f"
+      (push "credential.helper=!f() { while read line; do sleep 0; done; echo password=${CLPM_GIT_PASS_HELPER_PASS}; }; f"
             prefix))
 
     (values (nreverse prefix)
