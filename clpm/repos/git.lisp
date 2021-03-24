@@ -146,9 +146,13 @@ returning. The stream must be CLOSEd when finished to clean up the process info.
   "Calls ~git cat-file~ with the provided commit and returns the result,
 optionally changing into the local dir for ~repo~."
   (with-git-dir (repo)
-    (uiop:run-program `("git" "cat-file" "-e" ,(uiop:strcat commit "^{commit}"))
-                      :output '(:string :stripped t)
-                      :ignore-error-status ignore-error-status)))
+    (apply #'uiop:run-program
+           `("git" "cat-file" "-e" ,(uiop:strcat commit "^{commit}"))
+           :output '(:string :stripped t)
+           :ignore-error-status ignore-error-status
+           ;; Needed when using git from MSYS2 on Windows. Otherwise it
+           ;; "helpfully" tries to expand {commit} as a glob.
+           (run-program-augment-env-args '(("MSYS" . "noglob"))))))
 
 (defun git-rev-parse (rev &key repo abbrev-ref ignore-error-status)
   "Calls ~git rev-parse~ with the provided revision and returns the result,
