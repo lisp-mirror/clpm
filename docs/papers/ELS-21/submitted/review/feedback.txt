@@ -1,0 +1,73 @@
+SUBMISSION: 9
+TITLE: Common Lisp Project Manager
+
+----------------------- REVIEW 1 ---------------------
+SUBMISSION: 9
+TITLE: Common Lisp Project Manager
+AUTHORS: Eric Timmons
+
+----------- Overall evaluation -----------
+SCORE: 3 (strong accept)
+----- TEXT:
+I suppose that this paper, being 4 pages long, is a demo paper.
+
+It presents a project manager called CLPM (Common Lisp Project Manager to become
+Common Lisp Package Manager) claimed to be compatible with
+ASDF and Quicklisp while adding new features among them managing
+multiple versions of dependencies.
+
+The system client has the advantage of being highly configurable
+while having a default behaviour for standard users.
+
+I would have liked more references to other similar systems for other programming languages
+and a more detailed list of what are the features that they have and that Common Lisp
+(with ASDF and Quicklisp) is missing.
+
+It looks like a neat system that would be useful to the common Lisp community that I would
+like to be demonstrated during the conference. Also the paper is well written and presented.
+
+Details:
+P1: define CLI: Command Line Interface
+
+Remark:
+I downloaded and installed the system easily. But I did not succeed in creating
+a bundle for a local project (did not know how to load clpm into the REPL).
+
+----------------------- REVIEW 2 ---------------------
+SUBMISSION: 9
+TITLE: Common Lisp Project Manager
+AUTHORS: Eric Timmons
+
+----------- Overall evaluation -----------
+SCORE: 1 (weak accept)
+----- TEXT:
+The author describes a package manager of his design. My main problem
+with this paper is that it is written assuming the reader is expertly
+conversant with the issues and design details of a package manager;
+little is described in detail. The fundamental architecture of the system
+is split into client, worker and "groveler," but the functionality of
+each element and their interplay is not described in meaningful detail.
+I am *not* an expert on package-management systems, so I didn't get much
+from the paper. More detail fleshing out the presentation would be good,
+as would, perhaps, a running example.
+
+It would be nice if a brief description was provided of the functional
+taxonomy of these systems. What does a package manage like CLPM do? What
+does it do that a system-construction tool like ASDF doesn't do? How do
+these things fit together, work with "contexts" and "indices"?
+
+It would also be nice if more comparisons were made between CLPM and
+alternative systems.
+
+----------------------- REVIEW 3 ---------------------
+SUBMISSION: 9
+TITLE: Common Lisp Project Manager
+AUTHORS: Eric Timmons
+
+----------- Overall evaluation -----------
+SCORE: 2 (accept)
+----- TEXT:
+The author presents a system called CLPM which is a light weight package manager for Common Lisp development.
+One of the apparent advantages of this system over existing systems is its lack of external dependencies--the problem being that dependencies of the package manager should not polite the VM of the application you are trying to develop.
+
+I believe this demo will be interesting to a large number of ELS attendees.
