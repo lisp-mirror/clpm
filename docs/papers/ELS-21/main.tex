@@ -1,16 +1,23 @@
-\documentclass[sigconf]{acmart}
+\documentclass[format=sigconf]{acmart}
 
 \usepackage[utf8]{inputenc}
 \usepackage{hyperref}
+\usepackage{listings}
 
 \title{Common Lisp Project Manager}
 \author{Eric Timmons}
-\email{eric@timmons.dev}
+\email{etimmons@mit.edu}
 
-\acmConference[ELS '21]{14th European Lisp Symposium}{May 3--4, 2021}{Online}
+\affiliation{
+  \institution{CSAIL, Massachusetts Institute of Technology}
+  \streetaddress{32 Vassar St}
+  \city{Cambridge, MA}
+  \country{USA}
+}
+
+\acmConference[ELS’21]{the 14th European Lisp Symposium}{May 03--04 2021}{Online, Everywhere}
 \acmISBN{}
-\acmDOI{}
-\startPage{1}
+\acmDOI{10.5281/zenodo.4716466}
 \setcopyright{rightsretained}
 \copyrightyear{2021}
 
@@ -42,15 +49,15 @@
 \begin{document}
 
 \begin{abstract}
-  In this paper we describe the Common Lisp Project Manager (CLPM), a new
-  addition to the Common Lisp dependency management ecosystem. CLPM provides a
-  superset of features provided by the Quicklisp client, the current de facto
-  project manager, while maintaining compatibility with both ASDF and the
-  primary Quicklisp project distribution. These new features bring the Common
-  Lisp dependency management experience closer to what can be achieved in other
-  programming languages without mandating a particular development
-  workflow/environment and without sacrificing Common Lisp's trademark
-  interactive style of development.
+  In this paper we describe and demonstrate the Common Lisp Project Manager
+  (CLPM), a new addition to the Common Lisp dependency management
+  ecosystem. CLPM provides a superset of features provided by the Quicklisp
+  client, the current de facto project manager, while maintaining compatibility
+  with both ASDF and the primary Quicklisp project distribution. These new
+  features bring the Common Lisp dependency management experience closer to
+  what can be achieved in other programming languages without mandating a
+  particular development workflow/environment and without sacrificing Common
+  Lisp's trademark interactive style of development.
 \end{abstract}
 
 \maketitle
@@ -61,11 +68,12 @@ One way to manage the complexity of software is to reuse code by packaging up a
 project and using it as a dependency in another. Unfortunately, this ends up
 introducing another level of complexity: you have to manage your dependencies
 and their versions as well! In the Common Lisp world, this management is
-usually performed by three interacting pieces: ASDF \cite{asdf} to ensure all
-dependencies are compiled and loaded in the right order and the version of each
-is sufficient, the Quicklisp client \cite{ql} for installing the dependencies
-locally and configuring ASDF to find them, and a Quicklisp distribution
-containing an index listing available projects and metadata about them.
+usually performed by three interacting pieces: Another System Definition
+Facility (ASDF) \cite{asdf} to ensure all dependencies are compiled and loaded
+in the right order and the version of each is sufficient, the Quicklisp client
+\cite{ql} for installing the dependencies locally and configuring ASDF to find
+them, and a Quicklisp distribution containing an index that lists available
+projects and metadata about them.
 
 While effective and widely used, this combination of components is missing many
 features that are taken for granted in other programming language specific
@@ -77,10 +85,102 @@ Project Manager (CLPM)\footnote{CLPM is in the process of being renamed from
   Lisp}, a potential replacement for the Quicklisp client in the Common Lisp
 dependency management ecosystem that provides many of these missing features.
 
-We begin by highlighting several of the key features that CLPM implements,
+We begin by first defining some terminology used throughout the paper. We then
+provide an overview of the tasks a dependency management solution must
+perform. Next we highlight several of the key features that CLPM implements,
 along with the overarching design philosophy. We then describe the high-level
 design of CLPM. Last, we provide information on how to obtain CLPM and several
 examples on how to use it.
+
+\section{Terminology}
+
+In this section, we describe some of the terminology used throughout the rest
+of the paper. While the broad ideas are general, we do focus on Common Lisp and
+particularly on projects that use ASDF.
+
+\begin{description}
+\item[Project] Primary development unit of code. Typically corresponds to the
+  contents of a single version control system (VCS) repository, such as
+  git.
+\item[Release] A snapshot of a project. Typically identified using a version
+  number, date, or VCS commit identifier. May contain multiple systems.
+\item[System] Defined via ASDF's \verb=defsystem=. Describes components
+  (typically source code files) to be compiled/loaded, the version of the
+  system, and dependencies on other systems.
+\item[Dependency] A tuple $\langle f, s, v \rangle$. $f$ is a feature
+  expression, $s$ is a system name, and $v$ is a version constraint. States
+  that if $f$ is satisfied when evaluated against \verb=*features*=, then a
+  system with the name $s$ is required whose version satisfies
+  $v$.\footnote{Currently, ASDF only supports version constraints that specify
+    a minimum version number.}
+\item[Source/Index] A collection of project and system metadata.
+\end{description}
+
+\section{Dependency Management Overview}
+
+Broadly speaking, there are three tasks that any dependency management solution
+must perform: dependencies must be resolved, installed, and built. In this
+section, we explain each task, describe the Common Lisp tools involved in each
+(when using the current de facto workflow), and then provide further grounding
+by briefly explaining what tools are used for each task in selected other
+language ecosystems.
+
+In the building phase, every dependency must be compiled and/or loaded, in the
+correct order. Additionally, there should be some feedback if dependencies are
+not met (for instance, system A needs version 2 of system B, but only version 1
+is available). In current practice, ASDF performs this function. It uses system
+definitions to determine what dependencies any given system. Then it finds
+every dependent system, checks the version constraints, produces a plan that
+contains an ordered set of operations to perform, and executes it.
+
+However, ASDF has no support for installing dependencies; they must be placed
+on the file system or in the Lisp image by another tool. While it could be done
+manually, this installation phase is routinely performed by the Quicklisp
+client. The client fetches tarballs from the internet, unpacks them to the
+local file system, and configures ASDF so that it can find them.
+
+Deciding which releases need to be installed is called dependency resolution. A
+highly manual approach to dependency resolution is to install a single release,
+try building it, see what's missing, install another release, and
+repeat. However, the process can be sped up using an index that specifies a
+list of known systems and their direct dependencies. The index can then be
+consulted recursively for each direct dependency (and their dependencies, and
+their dependencies, and so on) to produce a complete list of releases that need
+to be installed, before even attempting to build anything. This is the approach
+taken by Quicklisp. The client downloads a set of files containing this index
+from any distributions that it is configured to consult (such as the primary
+distribution, also named ``quicklisp'', hosted at
+\url{https://beta.quicklisp.org/dist/quicklisp.txt}).
+
+While we have described each of these tasks as happening in distinct stages, in
+reality the tasks can be jumbled together. For instance, \verb=ql:quickload=
+attempts to resolve and install all dependencies before invoking ASDF
+operations. However, it's possible that the Quicklisp distribution's index is
+missing some information (for example, if a local project is used that has no
+info in the index). Therefore, \verb=ql:quickload= handles conditions that ASDF
+signals corresponding to missing dependencies by another round of resolution
+and installation.
+
+\subsection{Comparison to Other Languages}
+
+To further ground these concepts, we briefly describe the components
+responsible for each of these tasks in the Python and Ruby ecosystems.
+
+In Python \cite{python}, building is mostly performed by the Python interpreter
+itself. When a package is \verb|import|ed, it is byte compiled if needed and
+then loaded into the interpreter. Pip \cite{pip} is the tool predominately used
+for dependency installation and resolution. During resolution, pip uses
+metadata gathered from the Python Package Index (PyPI) \cite{pypi} and a
+\verb|setup.py| file for packages not in the index.
+
+In Ruby \cite{ruby}, building is performed by a combination of the gem tool
+\cite{gem} and the Ruby interpreter. Gem handles building native extensions
+(foreign libraries) while the Ruby interpreter loads \verb|require|d packages
+much like Python's interpreter. Dependency resolution and installation is
+typically handled with a combination of gem and bundler \cite{bundler}. Gem is
+largely used for installing releases locally, while bundler is used for project
+specific installs. Both gem and bundler can consult indices such as the one
+hosted at \url{https://rubygems.org/}.
 
 \section{Features and Philosophy}
 
@@ -89,37 +189,48 @@ package managers for other languages, have not seen wide adoption in the Common
 Lisp community. The most important of these include:
 
 \begin{enumerate}
-\item support for HTTPS,
+\item the ability to download over HTTPS,
+\item the ability to reason over dependency version constraints during
+  resolution,
 \item the ability to manage both global and project-local contexts,
 \item the ability to ``lock'' (or ``pin'', ``freeze'', etc.) dependencies to
   specific versions and replicate that setup exactly on another machine,
-\item a robust CLI for easy interfacing with shell scripts and other languages,
-\item and the ability to install unreleased, development versions of
-  dependencies from source control.
+\item the ability to compile to a standalone executable with a robust command
+  line interface (CLI) for easy interfacing with shell scripts and other
+  languages,
+\item and the ability to install development releases directly from a project's
+  VCS.
 \end{enumerate}
 
-While CLPM is not the first to implement any of these given features for Common
+While CLPM is not the first to implement most of these features for Common
 Lisp, we believe it is the first to do so in a complete package that also
 places minimal constraints on the workflow of the developer using it. For
 example, the quicklisp-https \cite{quicklisp-https} project adds HTTPS support
-to the Quicklisp client, but it does so at the cost of requiring that Dexador
+to the Quicklisp client, but it does so at the cost of requiring Dexador
 \cite{dexador} (and all of its dependencies, including foreign SSL libraries)
-be loaded into the development image.
+are loaded into the development image.
 
 Another example is the qlot \cite{qlot} project. It adds project-local contexts
-(but not global), locking, a CLI, and using development versions of
-dependencies. One of the biggest drawbacks of qlot, however, is that its CLI
-requires Roswell \cite{roswell}, which in turn implies that Roswell is
-responsible for managing and installing your Lisp implementations.
+(but not global), locking, a CLI, and installing directly from VCS. However, it
+still requires that the Quicklisp client is installed and loaded. Until very
+recently its executable and CLI required Roswell \cite{roswell}. To date its
+executable is not distributed and must be built locally.
+
+To our knowledge, no other solution exists that attempts to include version
+constraints during resolution. To wit, Quicklisp's index format completely
+elides the version constraint in its dependency lists. So no project manager
+that uses only Quicklisp style indices for dependency resolution can ensure
+that a system's version constraints are satisfied.
 
 As just alluded, the most important guiding principle of CLPM is that it should
 place minimal constraints on developer workflow. An example of this principle
 in action is illustrated by how CLPM is distributed. For Linux systems, a
 static executable is provided that runs on a wide variety of distributions with
-no dependencies. For MacOS systems, a binary is provided that requires only OS
-provided foreign libraries. And on Windows, CLPM is distributed using a
-standalone installer and again depends only on OS provided foreign
-libraries.
+no dependencies on foreign libraries (some features, such as VCS integration,
+require other programs, such as git, to be installed). For MacOS systems, a
+binary is provided that requires only OS provided foreign libraries. And on
+Windows, CLPM is distributed using a standalone installer and again depends
+only on OS provided foreign libraries.
 
 % More examples of this principle in action are provided in
 % Sections~\ref{sec:architecture}~and~\ref{sec:worker-non-portable-code}.
@@ -134,11 +245,14 @@ complete trust in CLPM and the projects they are installing.
 
 \section{Design}
 
-In this section we discuss the design of CLPM. First, we describe the overall
-architecture, including the three main CLPM components. Second, we describe
-some of the benefits the architecture provides and how CLPM leverages
-them. Third, we describe where CLPM locates the metadata for projects that it
-installs. Last, we describe global and project-local contexts in CLPM.
+CLPM participates in both the installation and resolution phases of dependency
+management. It leaves building completely up to ASDF. In this section we
+discuss the design of CLPM and how it completes both of these tasks. First, we
+describe the overall architecture, including the three main CLPM
+components. Second, we describe some of the benefits the architecture provides
+and how CLPM leverages them. Third, we describe where CLPM locates the metadata
+needed for dependency resolution. Last, we describe global and project-local
+contexts in CLPM.
 
 \subsection{Architecture}\label{sec:architecture}
 
@@ -156,33 +270,41 @@ CLPM client.
 
 The client is a small system, written in portable Common Lisp, with ASDF/UIOP
 as its only dependency. The client is meant to be loaded into a Lisp image to
-facilitate the interactive management of contexts and development of code. It
-does this by exposing a set of functions corresponding to the operations the
-worker can perform as well as integrating with ASDF's system search
-functions. Additionally, it has functionality to remove itself from an image if
-it is no longer required (such as when dumping an executable). In order to
-interact with the worker, the client spawns a new worker process, starts its
-REPL, and they communicate back and forth with S-expressions.
+facilitate the interactive management of dependencies and development of
+code. It does this by exposing a set of functions corresponding to the
+operations the worker can perform as well as integrating with ASDF's system
+search functions. Additionally, it has functionality to remove itself from an
+image if it is no longer required (such as when dumping an executable). In
+order to interact with the worker, the client spawns a new worker process,
+starts its REPL, and they communicate back and forth with S-expressions.
 
 The last component is the groveler. Ideally users never interact directly with
-this component; instead, it is used by the worker to gather information from
-ASDF system definitions in a clean environment. Nominally, the data that CLPM
-require about a system would be distributed in metadata published by project
-indices. However this metadata is not available for development versions of a
-project. As ASDF allows systems to specify that some dependencies must be
-loaded before the system definition can even be processed, it is in general not
-possible to extract system metadata without running arbitrary code.
+this component. Instead, it is used by the worker to gather the metadata needed
+for dependency resolution from systems that are not present in any index. For
+example, the groveler is used to extract dependencies from development versions
+of projects.
 
-The groveler consists of a small set of portable Common Lisp functions that the
-worker loads into a fresh Common Lisp instance. Once loaded, the groveler and
-worker communicate via S-expressions, with the worker specifying which systems
-to load and extract information from and the groveler reporting back the
-information as well as any errors. If there is an error, the worker addresses
-it by recording any missing dependencies in the dependency resolution process,
-loading them into the groveler, and trying again. The worker keeps track of the
-project releases loaded in the groveler and starts a new groveler process if
-needed (e.g., the groveler has v2 of system A loaded, but a requirement
-determined later in the resolution process caps system A at v1).
+An aspect that makes extracting this metadata difficult is ASDF system
+definition files can contain arbitrary code and can require that certain
+dependencies be loaded before a system can even be correctly parsed. As such,
+it may not be possible to extract this metadata without running arbitrary code.
+
+To address this, the groveler consists of a small set of portable Common Lisp
+functions that the worker loads into a fresh Common Lisp instance. Once loaded,
+the groveler and worker communicate via S-expressions, with the worker
+specifying which systems to load and extract information from and the groveler
+reporting back the information as well as any errors. If there is an error, the
+worker addresses it by recording any missing dependencies in the dependency
+resolution process, loading them into the groveler, and trying again. The
+worker keeps track of the systems loaded in the groveler and starts a new
+groveler process if needed (e.g., the groveler has v1 of system A loaded, but a
+dependency determined later in the resolution process requires v2).
+
+Additionally, CLPM has experimental support to run the groveler in a
+sandbox. This sandbox has reduced permissions and cannot write to much of the
+file system. This sandbox is currently implemented using Firejail
+\cite{firejail} on Linux, but we desire to add support for other OSes and
+sandbox solutions.
 
 \subsection{Dependencies and Non-portable Code in the Worker}\label{sec:worker-non-portable-code}
 
@@ -191,9 +313,9 @@ leverage both dependencies (Common Lisp and foreign) and non-portable
 implementation features.
 
 There are two benefits with respect to dependencies in the worker. First, the
-worker can reuse code without worrying about interference with the code the
-user wishes to develop. This interference may manifest itself in many ways,
-including as package nickname conflicts, version incompatibilities (CLPM needs
+worker can reuse code without worrying about interfering with the code the user
+wishes to develop. This interference may manifest itself in many ways,
+including package nickname conflicts, version incompatibilities (CLPM needs
 version x of a system, but the user's code needs version y), or image size
 (e.g., the user's code uses few dependencies and they care about the final size
 of the image for application delivery).
@@ -221,8 +343,8 @@ many of these features, they are not perfect and do not necessarily extend
 support to all implementations \cite{portability}. The worker/client split
 allows us to choose a small number of target implementations and focus our
 testing and distribution efforts using only those implementations while not
-worrying about restricting what implementation the user chooses to develop
-their code.
+worrying about restricting what implementation the user uses to develop their
+code.
 
 Currently, CLPM targets only SBCL \cite{sbcl} for worker support. This is due
 to SBCL's broad compatibility with OSes and CPU architectures. We look to
@@ -246,15 +368,18 @@ specification as to what constitutes a Quicklisp distribution, including what
 files are required and their contents. For instance, at the time of writing
 CLPM does not work with the Ultralisp distribution because Ultralisp does not
 publish a list of all its historical versions, unlike the primary Quicklisp
-distribution.
+distribution (see:
+\url{https://beta.quicklisp.org/dist/quicklisp-versions.txt}).
 
-In addition to supporting Quicklisp distributions as project indices, CLPM
-supports Common Lisp Project Indices (CLPI). CLPI is part of the overarching
-CLPM project and seeks to fully document an index format as well as add
-features that CLPM can take advantage of that are missing from Quicklisp
-distributions. One feature CLPI adds is that system versions (taken from ASDF
-system definitions) are provided. Quicklisp provides only the date at which the
-project snapshot was taken.
+As discussed above, the Quicklisp distributions strip the version constraints
+from dependencies. However, CLPM actually supports reasoning over those
+constraints. This was the main motivation to develop and support Common Lisp
+Project Indices (CLPI). CLPI is part of the overarching CLPM project and seeks
+to fully document an index format as well as add features that CLPM can take
+advantage of that are missing from Quicklisp distributions. CLPI adds fields to
+record both a system's version (Quicklisp indices provide only the date at
+which the project snapshot was taken) and the version constraints of its
+dependencies.
 
 A second major difference is that projects and systems are the top-level
 concepts in CLPI instead of distribution version. Additionally, CLPI defines
@@ -320,15 +445,66 @@ Last, you may wish to consider loading the CLPM client every time you start
 your Lisp implementation. You can determine the currently recommended way of
 doing so by running {\tt clpm client rc} and reading the printed
 instructions. The remainder of this section assumes you have CLPM installed and
-have a REPL to an image where the CLPM client is loaded.
+have a REPL where the CLPM client is loaded.
+
+\subsection{Configuration}
+
+CLPM reads its configuration files from the \verb|~/.config/clpm/| folder on
+non-Windows OSes and \verb|%LOCALAPPDATA%\clpm\config\| on
+Windows. The file {\tt clpm.conf} contains most of the configuration, but the
+defaults should be sufficient for this demo.
+
+The file {\tt sources.conf} contains a list of sources for CLPM to use when
+finding projects and their metadata. For this demo, it will be easiest if we
+populate this file with a pointer to the primary Quicklisp distribution. Place
+{\it only one} of the following forms in {\tt sources.conf}.
+
+This form uses the primary Quicklisp distribution directly. Note that we are
+fetching it over HTTPS. All of the primary Quicklisp distribution's files are
+served over both HTTPS and HTTP, even though the Quicklisp client itself can
+only use HTTP.
+
+\begin{verbatim}
+(:source "quicklisp"
+ :url "https://beta.quicklisp.org/dist/quicklisp.txt"
+ :type :quicklisp)
+\end{verbatim}
+
+This form uses a mirror of the primary Quicklisp distribution. This mirror
+exposes the same data, formatted using the CLPI specification. Using this
+source will result in CLPM performing some operations faster (because it can
+download only the needed data). However, this source may take some time to be
+updated after a new version of the Quicklisp distribution is released.
+
+\begin{verbatim}
+("quicklisp"
+ :url
+ "https://quicklisp.common-lisp-project-index.org/"
+ :type :ql-clpi)
+\end{verbatim}
+
+\subsection{Downloading the Demo System}
+
+We have a simple project designed for use in CLPM demos. It is located at
+\url{https://gitlab.common-lisp.net/clpm/clpm-demo}. Clone it anywhere on your
+file system and checkout the {\tt els-21} branch.
 
 \subsection{Creating a Bundle}
 
-The simplest possible bundle is one that uses a single project index and
-specifies that all constraints come from an .asd file. To create such a bundle
-you need to perform two actions. First, a {\tt clpmfile} must be created. This
-can be done at the REPL using the client's {\tt bundle-init} function. After
-running this function, you will have a {\tt clpmfile} that looks similar to the
+We will now create a bundle for the demo system. The simplest possible bundle
+is one that uses a single project index and specifies that all constraints come
+from .asd files. To create such a bundle you need to perform two
+actions. First, a {\tt clpmfile} must be created. This can be done at the REPL
+by evaluating:
+
+\begin{verbatim}
+(clpm-client:bundle-init
+ #p"/path/to/clpm-demo/clpmfile"
+ :asds '("clpm-demo.asd" "clpm-demo-test.asd"))
+\end{verbatim}
+
+
+After evaluating this, you will have a {\tt clpmfile} that looks similar to the
 following:
 
 \begin{verbatim}
@@ -338,7 +514,8 @@ following:
  :url "https://beta.quicklisp.org/dist/quicklisp.txt"
  :type :quicklisp)
 
-(:asd "my-system.asd")
+(:asd "clpm-demo.asd")
+(:asd "clpm-demo-test.asd")
 \end{verbatim}
 
 Notice that the first statement in the {\tt clpmfile} declares the bundle API
@@ -347,28 +524,40 @@ backward compatibility. Second, notice that every directive is simply a
 plist. This makes it trivial for any Common Lisp project to read and manipulate
 the file.
 
-After the {\tt clpmfile} is created, the bundle must be installed (that is all
-the constraints must be resolved and dependencies downloaded). This can be done
-at the REPL using the {\tt install} function.
+After the {\tt clpmfile} is created, the bundle dependencies must be resolved
+and installed. To do this, evaluate the following at the REPL:
+
+\begin{verbatim}
+(clpm-client:install
+ :context #p"/path/to/clpm-demo/clpmfile")
+\end{verbatim}
 
 CLPM does not believe in modifying a context without explicit permission from
 the developer. As such, the client will by default produce a condition before
 it performs any modifications. This condition describes the actions that are
 about to be performed and has two restarts established for it: one to approve
-and perform the changes, and one to abort. Therefore, upon evaluating {\tt
-  install}, you will be dropped into the debugger to approve the changes. Of
-course, this behavior can be customized.
+and perform the changes, and one to abort. Therefore, upon evaluating the above
+form, you will be dropped into the debugger to approve the changes. Of course,
+this behavior can be customized.
 
+This will create a file {\tt clpmfile.lock}. This file should not be modified
+by hand. It contains all the information necessary for CLPM to reproduce the
+bundle on another machine, including a complete dependency graph.
 
 \subsection{Activating the Bundle}
 
 Once a bundle has been installed, the next step is to activate it. The
 activation process configures ASDF so that it can locate all systems in the
 bundle. The activation process also optionally integrates the CLPM client with
-ASDF so that CLPM is aware when you try to find a system that is not present in
-the bundle and can provide options on adding it to the bundle. This integration
-is enabled by default and discussed more next. Activation is performed using
-the {\tt activate-context} function.
+ASDF. This allows CLPM to notice when you try to find a system that is not
+present in the bundle and can provide options on adding it to the bundle. This
+integration is enabled by default and discussed more next. You can activate the
+bundle by evaluating:
+
+\begin{verbatim}
+(clpm-client:activate-context
+ #p"/path/to/clpm-demo/clpmfile")
+\end{verbatim}
 
 The CLPM CLI has an equivalent command that configures ASDF using only
 environment variables. This feature is particularly useful when running scripts
@@ -377,14 +566,19 @@ is configured to use only the systems in the bundle {\it without} also needing
 to have the client loaded, simply run {\tt clpm bundle exec -{}- sbcl} in the
 same directory as the {\tt clpmfile}.
 
+You can now load the demo system by evaluating:
+\begin{verbatim}
+(asdf:load-system "clpm-demo")
+\end{verbatim}
+
 \subsection{Modifying the Bundle}
 
 The most common modification made to a bundle is to add more dependencies to
 it. If your system acquires a new dependency you have two options on how to add
 it to the bundle. The first option is to explicitly reinstall the bundle using
-{\tt install}. This option will find any new dependency and install it, while
-trying its best to not change the installed versions of the projects already in
-the bundle.
+{\tt install}. This will find any new dependency and install it, while trying
+its best to not change the installed versions of the projects already in the
+bundle.
 
 The second option is to just use {\tt asdf:load-system} to reload your
 system. If you have the client's ASDF integration enabled, the client will
@@ -394,7 +588,60 @@ several restarts in place. Following CLPM's guiding principles, however, this
 behavior can be modified to, for example, automatically install the dependency
 \`a la the Quicklisp client.
 
-\section{Conclusion}
+To see this in action, open the file {\tt clpm-demo-test.asd} and add
+\verb|"fiveam"| to the \verb|:depends-on| list. Then try to run the system's
+test suite by evaluating \verb|(asdf:test-system "clpm-demo")|. Fiveam was
+originally not part of the bundle so ASDF signals a condition when it tries to
+load it. However, we can use the
+\verb|reresolve-requirements-and-reload-config| restart to install fiveam and
+then see the tests pass.
+
+\subsection{Using Development Versions}
+
+Now, let's say that fiveam's author has added a really cool new feature that
+you want to start using before it's released into Quicklisp. You can easily do
+this by telling CLPM to install fiveam directly from git. Simply add the
+following directive to your \verb|clpmfile|.
+
+\begin{verbatim}
+(:github "fiveam"
+ :path "lispci/fiveam"
+ :branch "master")
+\end{verbatim}
+
+Then evaluate \verb|(clpm-client:install)|. Note that you do not have to
+specify the context if you have already activated it. If you evaluate
+\verb|(asdf:test-system "clpm-demo")| again, you can see that it loads fiveam
+from a different path than it did previously.
+
+\subsection{Developing a Dependency}
+
+Last, let's say that you would like to add a new feature to fiveam and use it
+in clpm-demo. You should not modify any files installed by CLPM, as they may be
+reused between projects and the \verb|.git| folder is stripped from any
+dependencies installed directly from their git repo.
+
+Instead, you should clone the project you want to work on yourself and tell
+CLPM to use that checkout instead of the one it installs. To demonstrate this,
+clone fiveam (\url{https://github.com/lispci/fiveam}) so that it is next to the
+clpm-demo repository. Then, create the file \verb|.clpm/bundle.conf| inside the
+clpm-demo repository with the following contents:
+
+\begin{verbatim}
+(version "0.2")
+
+((:bundle :local "fiveam")
+ "../fiveam/")
+\end{verbatim}
+
+This tells CLPM to not install fiveam (as you have already done it) and to use
+the git repository located at \verb|../fiveam/| (relative to clpm-demo's
+\verb|clpmfile|) when resolving dependencies.
+
+A \verb|clpm-client:hack| function that performs these steps automatically is
+currently being developed. It is slated for inclusion in CLPM v0.5.
+
+\section{Conclusion and Future Work}
 
 We have presented CLPM --- the Common Lisp Project Manager. CLPM introduces
 many features to the Common Lisp community that are taken for granted in other
@@ -403,8 +650,6 @@ HTTPS support, a standalone CLI to the worker, global and project-local context
 management, and lock files. Additionally, CLPM adds these features without
 forcing a particular development practice or environment and without
 sacrificing ``Lispy-ness'' or interactive development.
-
-\section{Future Work}
 
 We plan to continue developing CLPM and continue adding useful features. Two
 planned features of note are an extensible architecture for client/worker
@@ -417,12 +662,12 @@ isolated from other processes on the system.
 In addition to improvements to CLPM itself, we aim to continue contributing
 back to the upstreams of our dependencies. Notably, we are in the process of
 interacting with the ASDF developers to add support for more expressive version
-numbers and dependency constraints in {\tt defsystem} forms.
+numbers and dependency version constraints in {\tt defsystem} forms.
 
 Last, it is our strong preference to enable developers to use the complete
 power of CLPM without introducing a split in the community with regards to
-project indices. Therefore, we would like to take lessons learned from and
-features added to CLPI and integrate them into Quicklisp distributions.
+project indices. Therefore, we would like to take ideas and lessons learned
+from CLPI and integrate them into Quicklisp distributions.
 
 \bibliographystyle{plainnat}
 \bibliography{main}
