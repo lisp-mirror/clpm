@@ -42,12 +42,11 @@ with zero configuration or helpers needed (other than ASDF, of course).
 
 *** ~:source~
 
-    Each clpmfile must include at least one source directive. All source
-    directives must come immediately after the api-version directive. This
-    tells CLPM which sources it is allowed to search for dependencies in. The
-    first argument to this directive is the name of the source as a string. The
-    remainder is a plist describing the source. For example, to use the primary
-    quicklisp distribution, you can write:
+    All source directives must come immediately after the api-version
+    directive. This tells CLPM which sources it is allowed to search for
+    dependencies in. The first argument to this directive is the name of the
+    source as a string. The remainder is a plist describing the source. For
+    example, to use the primary quicklisp distribution, you can write:
 
     #+begin_src common-lisp
       (:source "quicklisp"
