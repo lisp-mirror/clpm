@@ -82,8 +82,7 @@ satisfied. Returns one of :SAT, :UNSAT, or :UNKNOWN."))
     (cond
       ((not system-release)
        :unknown)
-      ((not (eql (system-release-source system-release)
-                 (get-source :implicit-file)))
+      ((not (typep (system-release-source system-release) 'fs-source))
        :unsat)
       (t
        :sat))))
@@ -150,7 +149,7 @@ a plist. This plist can contain :system-releases or :system-files."))
 (defmethod resolve-requirement ((req fs-system-requirement) node)
   ;; Make a release from the file system.
   (let* ((system-name (requirement-name req))
-         (fs-source (get-source :implicit-file))
+         (fs-source (get-source (requirement-pathname req)))
          (system (source-system fs-source system-name))
          (releases (system-releases system))
          (release (first releases))
@@ -164,7 +163,7 @@ a plist. This plist can contain :system-releases or :system-files."))
 (defmethod resolve-requirement ((req fs-system-file-requirement) node)
   ;; Make a release from the file system.
   (let* ((asd-pathname (requirement-name req))
-         (fs-source (get-source :implicit-file))
+         (fs-source (get-source asd-pathname))
          (release (source-project-release fs-source (namestring asd-pathname) :newest)))
     (list (list release
                 :system-files (list (cons (release-system-file release asd-pathname) t))))))

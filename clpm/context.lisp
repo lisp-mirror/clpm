@@ -24,7 +24,7 @@
            #:context-asd-pathnames
            #:context-editable-primary-system-names
            #:context-find-system-asd-pathname
-           #:context-fs-source
+           #:context-fs-sources-ht
            #:context-installed-primary-system-names
            #:context-installed-system-names
            #:context-name
@@ -61,10 +61,12 @@ pathname (if this is an anonymous context).")
     :initform nil
     :initarg :requirements
     :accessor context-requirements)
-   (fs-source
-    :accessor context-fs-source
+   (fs-sources-ht
+    :initarg :fs-sources-ht
+    :initform (make-hash-table :test 'equal)
+    :accessor context-fs-sources-ht
     :documentation
-    "The implicit filesystem source rooted for this context.")
+    "The implicit filesystem sources rooted for this context.")
    (vcs-source
     :accessor context-vcs-source
     :documentation
@@ -96,11 +98,11 @@ in the context, the requirements that gave rise to those releases, etc. Contexts
 can be named, global contexts, or anonymous."))
 
 (defmethod initialize-instance :after ((context context) &key &allow-other-keys)
-  (setf (context-fs-source context)
-        (make-source 'fs-source
-                     :name :implicit-file))
   (setf (context-vcs-source context)
         (make-source 'vcs-source :name :implicit-vcs)))
+
+(defmethod context-fs-sources ((context context))
+  (hash-table-values (context-fs-sources-ht context)))
 
 (defgeneric context-name (context))
 
@@ -134,6 +136,7 @@ can be named, global contexts, or anonymous."))
                  :requirements (copy-list (context-requirements context))
                  :reverse-dependencies (copy-alist (context-reverse-dependencies context))
                  :user-sources (copy-list (context-user-sources context))
+                 :fs-sources-ht (copy-hash-table (context-fs-sources-ht context))
                  :system-releases (copy-tree (context-system-releases context))))
 
 (defun global-context-pathname (name)
@@ -154,9 +157,9 @@ can be named, global contexts, or anonymous."))
      (error "Unable to translate ~S to a context object" context-designator))))
 
 (defun context-sources (context)
-  (list* (context-fs-source context)
-         (context-vcs-source context)
-         (context-user-sources context)))
+  (append (context-fs-sources context)
+          (list (context-vcs-source context))
+          (context-user-sources context)))
 
 (defun make-vcs-override-fun (root-pathname)
   (let ((root-pathname (uiop:pathname-directory-pathname root-pathname)))
@@ -198,9 +201,11 @@ in place with the same name. Return the new requirement if it was modified."
   (let ((existing-req (context-find-requirement context (requirement-type-keyword req)
                                                 (requirement-name req))))
     (when (typep req 'fs-system-file-requirement)
-      (fs-source-register-asd (context-fs-source context) (requirement-name req)))
+      (ensure-gethash (requirement-name req) (context-fs-sources-ht context)
+                      (make-source 'fs-source :name (requirement-name req))))
     (when (typep req 'fs-system-requirement)
-      (fs-source-register-asd (context-fs-source context) (requirement-pathname req)))
+      (ensure-gethash (requirement-pathname req) (context-fs-sources-ht context)
+                      (make-source 'fs-source :name (requirement-pathname req))))
     (if existing-req
         (progn
           (log:debug "Replacing requirement ~A with ~A" existing-req req)
@@ -223,7 +228,7 @@ in place with the same name. Return the new requirement if it was modified."
 
 (defun context-editable-primary-system-names (context)
   (let* ((releases (context-releases context))
-         (editable-releases (remove-if-not (lambda (x) (eql x (context-fs-source context)))
+         (editable-releases (remove-if-not (lambda (x) (member x (context-fs-sources context)))
                                            releases
                                            :key #'release-source))
          (editable-system-files (mapcan #'release-system-files editable-releases)))
@@ -442,7 +447,9 @@ in place with the same name. Return the new requirement if it was modified."
 
 (defmethod process-form (context (section (eql :releases)) form)
   (destructuring-bind (name &key version source systems) form
-    (let* ((source (get-source source))
+    (let* ((source (if (eql source :implicit-file)
+                       (get-source name)
+                       (get-source source)))
            (release (source-project-release source name version)))
       (push release
             (context-releases context))
@@ -461,7 +468,8 @@ in place with the same name. Return the new requirement if it was modified."
                                      (first project-description))))
     (:implicit-file
      (dolist (sf (getf (rest form) :system-files))
-       (fs-source-register-asd (context-fs-source context) sf)))
+       (ensure-gethash sf (context-fs-sources-ht context)
+                       (make-source 'fs-source :name sf))))
     (t
      (let ((source (load-source-from-form form)))
        (unless (or (source-can-lazy-sync-p source)
@@ -597,7 +605,11 @@ in place with the same name. Return the new requirement if it was modified."
 (defun context-release-to-form (release system-names)
   `(,(project-name (release-project release))
     :version ,(release-version release)
-    :source ,(source-name (release-source release))
+    ;; TODO: Bundle v0.4 maybe replace with the .asd pathname instead of
+    ;; :IMPLICIT-FILE?
+    :source ,(if (typep (release-source release) 'fs-source)
+                 :implicit-file
+                 (source-name (release-source release)))
     :systems ,(safe-sort system-names #'string<)))
 
 (defun context-reverse-deps-to-form (release-and-reverse-deps)

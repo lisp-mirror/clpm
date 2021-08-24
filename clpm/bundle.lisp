@@ -61,7 +61,8 @@ the lock file if necessary."
               ;; Nuke the lockfile's requirements so that we pick up deletions
               ;; from the clpmfile.
               (setf (context-requirements lockfile) nil)
-              (setf (context-user-sources lockfile) (context-user-sources clpmfile))
+              (setf (context-user-sources lockfile) (context-user-sources clpmfile)
+                    (context-fs-sources-ht lockfile) (context-fs-sources-ht clpmfile))
               (setf lockfile (install-requirements (context-requirements clpmfile)
                                                    :context lockfile
                                                    :validate validate

@@ -87,9 +87,10 @@ source."
       (error "The argument to :ASD must be a string"))
     (unless (probe-file (merge-pathnames asd-file))
       (error "The argument to :ASD must exist"))
-    (let ((fs-source (context-fs-source clpmfile)))
-      ;; Register the system with the fs-source
-      (fs-source-register-asd fs-source asd-file)
+    (let* ((fs-sources-ht (context-fs-sources-ht clpmfile))
+           (fs-source
+             (ensure-gethash asd-file fs-sources-ht
+                             (make-source 'fs-source :name asd-file))))
       (if systems
           (dolist (system-name systems)
             (context-add-requirement! clpmfile
