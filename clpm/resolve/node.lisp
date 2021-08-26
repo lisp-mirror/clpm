@@ -20,6 +20,7 @@
            #:node-find-project-if-active
            #:node-find-system-if-active
            #:node-groveler
+           #:node-groveler-loaded-asds
            #:node-load-asd-in-groveler!
            #:node-register-asd-loaded-in-groveler!
            #:node-system-files-pending-groveling
@@ -89,6 +90,7 @@
                     (unresolved-reqs nil unresolved-reqs-p)
                     (unresolved-grovel-reqs nil unresolved-grovel-reqs-p)
                     (system-files-pending-groveling nil system-files-pending-groveling-p)
+                    (groveler-loaded-asds nil groveler-loaded-asds-p)
                     (groveler (node-groveler node)))
   "Given a search node, return a shallow copy of it."
   (make-instance 'node
@@ -104,7 +106,9 @@
                                                   (if system-files-pending-groveling-p
                                                       system-files-pending-groveling
                                                       (node-system-files-pending-groveling node)))
-                 :groveler-loaded-asds (node-groveler-loaded-asds node)
+                 :groveler-loaded-asds (if groveler-loaded-asds-p
+                                           (copy-list groveler-loaded-asds)
+                                           (node-groveler-loaded-asds node))
                  :groveler groveler))
 
 (defun collapse-system-files-needing-groveling (left right)

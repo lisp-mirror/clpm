@@ -53,7 +53,13 @@
          ;; it'd be provided by another system file on our list of files to
          ;; grovel, reorder the list so that it's first. Otherwise, add the
          ;; requirement to the unresolved grovel-reqs list.
-         (let ((new-search-node (copy-node parent-node)))
+         ;;
+         ;; When we copy the parent node, we inherit the GROVELER-LOADED-ASDS
+         ;; list from the node we've been working in (NOMINAL-NODE). This is so
+         ;; that we don't have to immediately spawn a new groveler due to
+         ;; mismatching ASDs.
+         (let ((new-search-node (copy-node parent-node
+                                           :groveler-loaded-asds (node-groveler-loaded-asds nominal-node))))
            (log:trace "When groveling, found ~A is unsatisfied" missing-req)
            (if-let ((candidate-file
                      (and (typep missing-req 'system-requirement)
