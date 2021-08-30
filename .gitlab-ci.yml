@@ -210,8 +210,13 @@ dynamic-release:windows:amd64:
     - $BASH = "C:\msys64\usr\bin\bash"
     - $env:BASH = "C:\msys64\usr\bin\bash"
     - "& $BASH -lc ' '"
-    - Stop-Process -ErrorAction Ignore -Force -Name gpg-agent
-    - Stop-Process -ErrorAction Ignore -Force -Name dirmngr
+    - |
+      If (Get-Process -ErrorAction Ignore -Name gpg-agent) {
+        Stop-Process -ErrorAction Ignore -Force -Name gpg-agent
+      }
+    - If (Get-Process -ErrorAction Ignore -Name dirmngr) {
+        Stop-Process -ErrorAction Ignore -Force -Name dirmngr
+      }
     # Configure msys2
     - $env:CHERE_INVOKING = 'yes'
     - $env:MSYSTEM = 'MINGW64'
