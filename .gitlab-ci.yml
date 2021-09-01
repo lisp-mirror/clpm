@@ -33,7 +33,7 @@ stages:
   stage: build
   image: daewok/static-sbcl:$SBCL_VERSION-alpine$ALPINE_VERSION
   before_script:
-    - apk add git ca-certificates curl openssl-dev openssl-libs-static pkgconfig gcc
+    - apk add git ca-certificates curl openssl-dev openssl-libs-static pkgconfig gcc musl-dev linux-headers zlib-dev zlib-static
     - !reference [.git-repo-needed, before_script]
   script:
     - sbcl --script scripts/build-release.lisp --static
