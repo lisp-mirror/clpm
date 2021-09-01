@@ -97,8 +97,12 @@ dynamic-release:macos:arm64:
   stage: build
   extends: .dynamic-release
   script:
+    - FASL_DIR="$(mktemp -d)"
+    - ASDF_OUTPUT_TRANSLATIONS="(:output-translations :ignore-inherited-configuration (:root (\"$FASL_DIR/\" :implementation :**/ :*.*.*)))"
+    - export ASDF_OUTPUT_TRANSLATIONS
     - export PATH="/Users/clpm/.local/bin:$PATH"
     - sbcl --script scripts/build-release.lisp
+    - rm -rf "$FASL_DIR"
   tags:
     - macos-arm64
   needs: []
@@ -277,16 +281,22 @@ test-dynamic-release:macos:arm64:
     ARCH: arm64
     VARIANT: dynamic
   script:
+    - FASL_DIR="$(mktemp -d)"
+    - ASDF_OUTPUT_TRANSLATIONS="(:output-translations :ignore-inherited-configuration (:root (\"$FASL_DIR/\" :implementation :**/ :*.*.*)))"
+    - export ASDF_OUTPUT_TRANSLATIONS
+    - INSTALL_ROOT="$(mktemp -d)"
+    - export INSTALL_ROOT
     - export PATH="/Users/clpm/.local/bin:$PATH"
     # Install from the release archive!
     - VERSION=$(sbcl --script scripts/version.lisp)
     - cd /tmp
     - tar xvf $CI_PROJECT_DIR/releases/$VARIANT/clpm-$VERSION-darwin-$ARCH.tar.gz
     - cd clpm-$VERSION-darwin-$ARCH
-    - sudo sh install.sh
-    - clpm version -VV
+    - sh install.sh
+    - $INSTALL_ROOT/bin/clpm version -VV
     - cd $CI_PROJECT_DIR
-    - sbcl --script scripts/test.lisp
+    - sbcl --script scripts/test.lisp --clpm $INSTALL_ROOT/bin/clpm
+    - rm -rf "$FASL_DIR"
   needs:
     - dynamic-release:macos:arm64
   tags:
