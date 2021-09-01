@@ -96,6 +96,9 @@ dynamic-release:macos:amd64:
 dynamic-release:macos:arm64:
   stage: build
   extends: .dynamic-release
+  script:
+    - export PATH="/Users/clpm/.local/bin:$PATH"
+    - sbcl --script scripts/build-release.lisp
   tags:
     - macos-arm64
   needs: []
@@ -274,6 +277,7 @@ test-dynamic-release:macos:arm64:
     ARCH: arm64
     VARIANT: dynamic
   script:
+    - export PATH="/Users/clpm/.local/bin:$PATH"
     # Install from the release archive!
     - VERSION=$(sbcl --script scripts/version.lisp)
     - cd /tmp
