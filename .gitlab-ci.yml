@@ -17,7 +17,6 @@ stages:
 
 .git-repo-needed:
   before_script:
-    - apk add git ca-certificates curl || true
     # This looks a little funky, but only one of
     # $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME and $CI_COMMIT_BRANCH will ever be
     # defined at once.
@@ -33,7 +32,9 @@ stages:
 .static-release:
   stage: build
   image: daewok/static-sbcl:$SBCL_VERSION-alpine$ALPINE_VERSION
-  extends: .git-repo-needed
+  before_script:
+    - apk add git ca-certificates curl openssl-dev openssl-libs-static pkgconfig
+    - !reference [.git-repo-needed, before_script]
   script:
     - sbcl --script scripts/build-release.lisp --static
   artifacts:
