@@ -1,97 +1,15 @@
 variables:
+  ALPINE_VERSION: "3.14"
+  DEBIAN_VERSION: bullseye
+  SBCL_VERSION: 2.1.8
   GIT_SUBMODULE_STRATEGY: recursive
-  DOCKER_HUB_CI_REPO: daewok/clpm-ci
 
 include:
   - template: 'Workflows/MergeRequest-Pipelines.gitlab-ci.yml'
-  - local: "/.gitlab-ci.versions.yml"
 
 stages:
-  - prep
   - build
   - test
-
-##############################################################################
-# Build Docker images for CI
-##############################################################################
-
-.alpine-image:
-  stage: prep
-  image:
-    name: gcr.io/kaniko-project/executor:debug
-    entrypoint: [""]
-  variables:
-    GIT_SUBMODULE_STRATEGY: none
-  script:
-    - mkdir -p /kaniko/.docker
-    - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}" > /kaniko/.docker/config.json
-    - |
-      /kaniko/executor --cache --cache-repo $CI_REGISTRY_IMAGE/kaniko \
-                       --context $CI_PROJECT_DIR \
-                       --build-arg sbcl_version=$SBCL_VERSION \
-                       --build-arg alpine_version=$ALPINE_VERSION \
-                       --dockerfile $CI_PROJECT_DIR/docker/Dockerfile.alpine-ci \
-                       --destination $CI_REGISTRY_IMAGE/ci:$SBCL_VERSION-alpine$ALPINE_VERSION-$ARCH
-  rules:
-    - if: '($CI_PIPELINE_SOURCE == "merge_request_event" || $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH) && ($ARCH == "amd64" || ($ARCH == "arm" && $CLPM_CI_LINUX_ARM64) || ($ARCH == "arm64" && $CLPM_CI_LINUX_ARM64))'
-      changes:
-        - .gitlab-ci.versions.yml
-        - docker/Dockerfile.alpine-ci
-
-.debian-image:
-  stage: prep
-  image:
-    name: gcr.io/kaniko-project/executor:debug
-    entrypoint: [""]
-  variables:
-    GIT_SUBMODULE_STRATEGY: none
-  script:
-    - mkdir -p /kaniko/.docker
-    - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}" > /kaniko/.docker/config.json
-    - |
-      /kaniko/executor --cache --cache-repo $CI_REGISTRY_IMAGE/kaniko \
-                       --context $CI_PROJECT_DIR \
-                       --build-arg sbcl_version=$SBCL_VERSION \
-                       --build-arg debian_version=$DEBIAN_VERSION \
-                       --customPlatform=linux/$ARCH \
-                       --dockerfile $CI_PROJECT_DIR/docker/Dockerfile.debian-ci \
-                       --destination $CI_REGISTRY_IMAGE/ci:$SBCL_VERSION-$DEBIAN_VERSION-$ARCH
-  rules:
-    - if: '($CI_PIPELINE_SOURCE == "merge_request_event" || $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH) && ($ARCH == "amd64" || ($ARCH == "arm" && $CLPM_CI_LINUX_ARM64) || ($ARCH == "arm64" && $CLPM_CI_LINUX_ARM64))'
-      changes:
-        - .gitlab-ci.versions.yml
-        - docker/Dockerfile.debian-ci
-
-alpine-image:amd64:
-  extends: .alpine-image
-  variables:
-    ARCH: amd64
-
-alpine-image:arm64:
-  extends: .alpine-image
-  variables:
-    ARCH: arm64
-  tags:
-    - arm64
-
-debian-image:amd64:
-  extends: .debian-image
-  variables:
-    ARCH: amd64
-
-debian-image:arm64:
-  extends: .debian-image
-  variables:
-    ARCH: arm64
-  tags:
-    - arm64
-
-debian-image:arm:
-  extends: .debian-image
-  variables:
-    ARCH: arm
-  tags:
-    - arm64
 
 ##############################################################################
 # Utils
@@ -113,7 +31,7 @@ debian-image:arm:
 
 .static-release:
   stage: build
-  image: $CI_REGISTRY_IMAGE/ci:$SBCL_VERSION-alpine$ALPINE_VERSION-$ARCH
+  image: daewok/static-sbcl:$SBCL_VERSION-alpine$ALPINE_VERSION
   extends: .git-repo-needed
   script:
     - sbcl --script scripts/build-release.lisp --static
@@ -124,13 +42,9 @@ debian-image:arm:
 
 static-release:linux:amd64:
   extends: .static-release
-  variables:
-    ARCH: amd64
 
 static-release:linux:arm64:
   extends: .static-release
-  variables:
-    ARCH: arm64
   tags:
     - arm64
   rules:
@@ -142,7 +56,7 @@ static-release:linux:arm64:
 
 .dynamic-release:
   stage: build
-  image: $CI_REGISTRY_IMAGE/ci:$SBCL_VERSION-$DEBIAN_VERSION-$ARCH
+  image: daewok/static-sbcl:$SBCL_VERSION-$DEBIAN_VERSION
   extends: .git-repo-needed
   script:
     - sbcl --script scripts/build-release.lisp
@@ -153,13 +67,9 @@ static-release:linux:arm64:
 
 dynamic-release:linux:amd64:
   extends: .dynamic-release
-  variables:
-    ARCH: amd64
 
 dynamic-release:linux:arm64:
   extends: .dynamic-release
-  variables:
-    ARCH: arm64
   tags:
     - arm64
   rules:
@@ -167,12 +77,10 @@ dynamic-release:linux:arm64:
 
 dynamic-release:linux:arm:
   extends: .dynamic-release
-  variables:
-    ARCH: arm
   tags:
-    - arm64
+    - armv7
   rules:
-    - if: '$CLPM_CI_LINUX_ARM64'
+    - if: '$CLPM_CI_LINUX_ARM'
 
 dynamic-release:macos:amd64:
   stage: build
@@ -314,18 +222,16 @@ test-dynamic-release:linux:arm64:
 
 .test-dynamic-release:linux:arm:
   extends: .linux-test
-  # We need an image that specifes the arch directly since we're testing on an
-  # arm64 machine.
-  image: $CI_REGISTRY_IMAGE/ci:$SBCL_VERSION-$DEBIAN_VERSION-$ARCH
+  image: clfoundation/sbcl:$SBCL_VERSION
   variables:
     ARCH: arm
     VARIANT: dynamic
   needs:
     - dynamic-release:linux:arm
   tags:
-    - arm64
+    - armv7
   rules:
-    - if: '$CLPM_CI_LINUX_ARM64'
+    - if: '$CLPM_CI_LINUX_ARM'
 
 test-dynamic-release:macos:amd64:
   stage: test

@@ -1,8 +1,0 @@
-# This file contains the variables defining parts of our build configuration
-# (SBCL, Alpine, and Debian) versions. It's in a separate file so that we can
-# more easily rebuild images only when the configuration changes.
-
-variables:
-  ALPINE_VERSION: "3.13"
-  DEBIAN_VERSION: buster
-  SBCL_VERSION: 2.1.2
