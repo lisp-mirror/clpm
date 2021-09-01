@@ -17,6 +17,7 @@ stages:
 
 .git-repo-needed:
   before_script:
+    - apk add git ca-certificates curl || true
     # This looks a little funky, but only one of
     # $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME and $CI_COMMIT_BRANCH will ever be
     # defined at once.
