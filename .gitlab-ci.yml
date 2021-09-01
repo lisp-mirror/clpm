@@ -93,6 +93,15 @@ dynamic-release:macos:amd64:
   rules:
     - if: '$CLPM_CI_MACOS_AMD64'
 
+dynamic-release:macos:arm64:
+  stage: build
+  extends: .dynamic-release
+  tags:
+    - macos-arm64
+  needs: []
+  rules:
+    - if: '$CLPM_CI_MACOS_ARM64'
+
 dynamic-release:windows:amd64:
   stage: build
   image: clfoundation/sbcl:$SBCL_VERSION-windowsservercore
@@ -257,6 +266,29 @@ test-dynamic-release:macos:amd64:
     - macos-0.4-amd64
   rules:
     - if: '$CLPM_CI_MACOS_AMD64'
+
+test-dynamic-release:macos:arm64:
+  stage: test
+  extends: .git-repo-needed
+  variables:
+    ARCH: arm64
+    VARIANT: dynamic
+  script:
+    # Install from the release archive!
+    - VERSION=$(sbcl --script scripts/version.lisp)
+    - cd /tmp
+    - tar xvf $CI_PROJECT_DIR/releases/$VARIANT/clpm-$VERSION-darwin-$ARCH.tar.gz
+    - cd clpm-$VERSION-darwin-$ARCH
+    - sudo sh install.sh
+    - clpm version -VV
+    - cd $CI_PROJECT_DIR
+    - sbcl --script scripts/test.lisp
+  needs:
+    - dynamic-release:macos:arm64
+  tags:
+    - macos-arm64
+  rules:
+    - if: '$CLPM_CI_MACOS_ARM64'
 
 # test-dynamic-release:windows:amd64:
 #   stage: test
