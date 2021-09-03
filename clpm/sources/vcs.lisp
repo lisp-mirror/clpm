@@ -61,7 +61,6 @@ source using VCS-SOURCE-REGISTER_PROJECT!."))
 (defmethod make-source ((type (eql 'vcs-source)) &key repo project-name)
   (let* ((repo-object (make-repo-from-description repo))
          (name (repo-to-form repo-object)))
-    (format t "~S~%" project-name)
     (with-clpm-session (:key `(make-source ,type ,name))
       (make-instance type :name name
                           :project-name project-name
