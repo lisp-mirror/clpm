@@ -37,7 +37,8 @@
            #:context-to-asdf-source-registry-form
            #:context-to-asdf-source-registry.d-forms
            #:context-user-sources
-           #:context-vcs-source
+           #:context-vcs-sources
+           #:context-vcs-sources-ht
            #:context-visible-primary-system-names
            #:context-write-asdf-files
            #:copy-context
@@ -67,10 +68,12 @@ pathname (if this is an anonymous context).")
     :accessor context-fs-sources-ht
     :documentation
     "The implicit filesystem sources rooted for this context.")
-   (vcs-source
-    :accessor context-vcs-source
+   (vcs-sources-ht
+    :initarg :vcs-sources-ht
+    :initform (make-hash-table :test 'equal)
+    :accessor context-vcs-sources-ht
     :documentation
-    "A VCS source to where raw vcs requirements can be homed.")
+    "The implicit VCS sources rooted for this context.")
    (user-sources
     :initform nil
     :initarg :user-sources
@@ -97,12 +100,11 @@ pathname (if this is an anonymous context).")
 in the context, the requirements that gave rise to those releases, etc. Contexts
 can be named, global contexts, or anonymous."))
 
-(defmethod initialize-instance :after ((context context) &key &allow-other-keys)
-  (setf (context-vcs-source context)
-        (make-source 'vcs-source :name :implicit-vcs)))
-
 (defmethod context-fs-sources ((context context))
   (hash-table-values (context-fs-sources-ht context)))
+
+(defmethod context-vcs-sources ((context context))
+  (hash-table-values (context-vcs-sources-ht context)))
 
 (defgeneric context-name (context))
 
@@ -137,6 +139,7 @@ can be named, global contexts, or anonymous."))
                  :reverse-dependencies (copy-alist (context-reverse-dependencies context))
                  :user-sources (copy-list (context-user-sources context))
                  :fs-sources-ht (copy-hash-table (context-fs-sources-ht context))
+                 :vcs-sources-ht (copy-hash-table (context-vcs-sources-ht context))
                  :system-releases (copy-tree (context-system-releases context))))
 
 (defun global-context-pathname (name)
@@ -158,7 +161,7 @@ can be named, global contexts, or anonymous."))
 
 (defun context-sources (context)
   (append (context-fs-sources context)
-          (list (context-vcs-source context))
+          (context-vcs-sources context)
           (context-user-sources context)))
 
 (defun make-vcs-override-fun (root-pathname)
@@ -428,7 +431,8 @@ in place with the same name. Return the new requirement if it was modified."
                                 ((or branch tag commit ref)
                                  (make-instance 'vcs-project-requirement
                                                 :name name
-                                                :source (get-source source)
+                                                :source (when (eql source :implicit-vcs)
+                                                          (get-vcs-source-for-project name))
                                                 :commit commit
                                                 :branch branch
                                                 :tag tag
@@ -447,9 +451,13 @@ in place with the same name. Return the new requirement if it was modified."
 
 (defmethod process-form (context (section (eql :releases)) form)
   (destructuring-bind (name &key version source systems) form
-    (let* ((source (if (eql source :implicit-file)
-                       (get-source name)
-                       (get-source source)))
+    (let* ((source (cond
+                     ((eql source :implicit-file)
+                      (get-source name))
+                     ((eql source :implicit-vcs)
+                      (get-vcs-source-for-project name))
+                     (t
+                      (get-source source))))
            (release (source-project-release source name version)))
       (push release
             (context-releases context))
@@ -463,9 +471,13 @@ in place with the same name. Return the new requirement if it was modified."
   (case (first form)
     (:implicit-vcs
      (dolist (project-description (getf (rest form) :projects))
-       (vcs-source-register-project! (context-vcs-source context)
-                                     (make-repo-from-description (rest project-description))
-                                     (first project-description))))
+       (let* ((project-name (car project-description))
+              (repo-description (cdr project-description))
+              (repo (make-repo-from-description repo-description)))
+         (ensure-gethash (repo-to-form repo)
+                         (context-vcs-sources-ht context)
+                         (make-source 'vcs-source :repo repo-description
+                                                  :project-name project-name)))))
     (:implicit-file
      (dolist (sf (getf (rest form) :system-files))
        (ensure-gethash sf (context-fs-sources-ht context)
@@ -545,17 +557,6 @@ in place with the same name. Return the new requirement if it was modified."
       (format stream ":sources~%")
       (dolist (source (context-sources context))
         (let ((form (source-to-form source)))
-          (when (typep source 'vcs-source)
-            ;; Strip out the projects that aren't installed
-            (setf (getf (rest form) :projects)
-                  (remove-if-not (lambda (x)
-                                   (when-let ((release (find x (context-releases context)
-                                                             :test #'equal
-                                                             :key (compose #'project-name
-                                                                           #'release-project))))
-                                     (equal source (release-source release))))
-                                 (getf (rest form) :projects)
-                                 :key #'car)))
           (format stream "~S~%" form)))
       (terpri stream)
       (terpri stream)
@@ -606,10 +607,14 @@ in place with the same name. Return the new requirement if it was modified."
   `(,(project-name (release-project release))
     :version ,(release-version release)
     ;; TODO: Bundle v0.4 maybe replace with the .asd pathname instead of
-    ;; :IMPLICIT-FILE?
-    :source ,(if (typep (release-source release) 'fs-source)
-                 :implicit-file
-                 (source-name (release-source release)))
+    ;; :IMPLICIT-FILE? Same with :IMPLICIT-VCS.
+    :source ,(typecase (release-source release)
+               (fs-source
+                :implicit-file)
+               (vcs-source
+                :implicit-vcs)
+               (t
+                (source-name (release-source release))))
     :systems ,(safe-sort system-names #'string<)))
 
 (defun context-reverse-deps-to-form (release-and-reverse-deps)

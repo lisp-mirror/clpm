@@ -30,7 +30,7 @@
            #:vcs-remote-release
            #:vcs-source
            #:vcs-source-clear-visible-releases
-           #:vcs-source-register-project!
+           #:vcs-source-project
            #:vcs-system))
 
 (in-package #:clpm/sources/vcs)
@@ -44,10 +44,12 @@
   ((name
     :initarg :name
     :reader source-name)
-   (projects-by-name
-    :initform (make-hash-table :test 'equal)
-    :accessor vcs-source-projects-by-name
-    :documentation "hash table mapping project names to project objects.")
+   (repo
+    :initarg :repo
+    :reader vcs-source-repo)
+   (project
+    :accessor vcs-source-project
+    :documentation "The single project for the source.")
    (systems-by-name
     :initform (make-hash-table :test 'equalp)
     :accessor vcs-source-systems-by-name
@@ -56,38 +58,22 @@
    "A source for any bare VCS projects. Projects must be registered with the
 source using VCS-SOURCE-REGISTER_PROJECT!."))
 
-(defmethod make-source ((type (eql 'vcs-source)) &rest initargs &key name projects)
-  (with-clpm-session (:key `(make-source ,type ,name))
-    (aprog1 (apply #'make-instance
-                   type
-                   initargs)
-      (dolist (project projects)
-        (destructuring-bind (project-name . repo-form) project
-          (vcs-source-register-project! it (make-repo-from-description repo-form) project-name))))))
+(defmethod make-source ((type (eql 'vcs-source)) &key repo project-name)
+  (let* ((repo-object (make-repo-from-description repo))
+         (name (repo-to-form repo-object)))
+    (format t "~S~%" project-name)
+    (with-clpm-session (:key `(make-source ,type ,name))
+      (make-instance type :name name
+                          :project-name project-name
+                          :repo repo-object))))
 
-(defmethod initialize-instance :after ((source vcs-source)
-                                       &rest initargs
-                                       &key projects
-                                         &allow-other-keys)
-  (declare (ignore initargs))
-  (dolist (project projects)
-    (destructuring-bind (project-name . repo-form) project
-      (vcs-source-register-project! source (make-repo-from-description repo-form) project-name))))
+(defmethod initialize-instance :after ((source vcs-source) &key project-name)
+  (setf (vcs-source-project source) (make-instance 'vcs-project
+                                                   :source source
+                                                   :name project-name)))
 
 (defun vcs-source-clear-visible-releases (vcs-source)
-  (maphash (lambda (k v)
-             (declare (ignore k))
-             (setf (vcs-project-visible-releases v) nil))
-           (vcs-source-projects-by-name vcs-source)))
-
-(defun vcs-source-register-project! (vcs-source repo project-name)
-  "Registers a project with the vcs source and returns it."
-  (let ((projects-by-name (vcs-source-projects-by-name vcs-source)))
-    (ensure-gethash project-name projects-by-name
-                    (make-instance 'vcs-project
-                                   :repo repo
-                                   :source vcs-source
-                                   :name project-name))))
+  (setf (vcs-project-visible-releases (vcs-source-project vcs-source)) nil))
 
 (defmethod source-ensure-system ((source vcs-source) system-name)
   (ensure-gethash
@@ -100,7 +86,8 @@ source using VCS-SOURCE-REGISTER_PROJECT!."))
   t)
 
 (defmethod source-project ((source vcs-source) project-name &optional (error t))
-  (or (gethash project-name (vcs-source-projects-by-name source))
+  (if (equal project-name (project-name (vcs-source-project source)))
+      (vcs-source-project source)
       (when error
         (error 'source-missing-project
                :source source
@@ -108,27 +95,20 @@ source using VCS-SOURCE-REGISTER_PROJECT!."))
 
 (defmethod source-system ((source vcs-source) system-name &optional (error t))
   (or (gethash system-name (vcs-source-systems-by-name source))
-      (some (lambda (project)
-              (some (lambda (release)
-                      (when-let ((system-release (release-system-release release system-name nil)))
-                        (system-release-system system-release)))
-                    (project-releases project)))
-            (hash-table-values (vcs-source-projects-by-name source)))
+      (some (lambda (release)
+              (when-let ((system-release (release-system-release release system-name nil)))
+                (system-release-system system-release)))
+            (project-releases (vcs-source-project source)))
       (when error
         (error 'source-missing-system
                :source source
                :system-name system-name))))
 
 (defmethod source-to-form ((source vcs-source))
-  (let ((projects nil))
-    (maphash (lambda (project-name project)
-               (push (cons project-name
-                           (repo-to-form (project-repo project)))
-                     projects))
-             (vcs-source-projects-by-name source))
-    (list (source-name source)
-          :type :vcs
-          :projects (safe-sort projects #'string< :key #'car))))
+  (let ((project (vcs-source-project source)))
+    `(:implicit-vcs
+      :type :vcs
+      :projects ((,(project-name project) . ,(repo-to-form (project-repo project)))))))
 
 (defmethod sync-source ((source vcs-source))
   nil)
@@ -168,15 +148,15 @@ local override when requesting a VCS release.")
    (name
     :initarg :name
     :reader project-name)
-   (repo
-    :initarg :repo
-    :reader project-repo)
    (visible-releases
     :initform nil
     :accessor vcs-project-visible-releases)
    (releases-by-spec
     :initform (make-hash-table :test 'equal)
     :accessor vcs-project-releases-by-spec)))
+
+(defmethod project-repo ((project vcs-project))
+  (vcs-source-repo (project-source project)))
 
 (defmethod project-releases ((project vcs-project))
   (vcs-project-visible-releases project))

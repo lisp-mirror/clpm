@@ -205,15 +205,24 @@ represents."))
 
 (defgeneric requirement-to-plist (req))
 
+;; TODO: context version 0.4, get rid of :implicit-vcs.
+(defun backward-compatible-source-name (source)
+  (typecase source
+    (clpm-source
+     ;; HACK to avoid circular dep.
+     (if (string-equal 'vcs-source (class-name (class-of source)))
+         :implicit-vcs
+         (source-name source)))
+    (t
+     source)))
+
 (defmethod requirement-to-plist ((req versioned-requirement))
   (append
    (list :name (requirement-name req))
    (awhen (requirement-version-spec req)
      (list :version it))
    (awhen (requirement-source req)
-     (list :source (if (typep it 'clpm-source)
-                       (source-name it)
-                       it)))
+     (list :source (backward-compatible-source-name it)))
    (awhen (requirement-no-deps-p req)
      (list :no-deps-p it))))
 
@@ -229,9 +238,7 @@ represents."))
    (awhen (requirement-ref req)
      (list :ref it))
    (awhen (requirement-source req)
-     (list :source (if (typep it 'clpm-source)
-                       (source-name it)
-                       it)))
+     (list :source (backward-compatible-source-name it)))
    (awhen (requirement-no-deps-p req)
      (list :no-deps-p it))))
 

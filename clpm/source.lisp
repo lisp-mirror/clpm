@@ -17,6 +17,7 @@
   (:reexport #:clpm/sources/fs)
   (:reexport #:clpm/sources/vcs)
   (:export #:get-source
+           #:get-vcs-source-for-project
            #:sources
            #:with-sources))
 
@@ -43,6 +44,14 @@
        (when (and (not source) errorp)
          (error "Unable to find source named ~S" source-designator))
        source))))
+
+(defun get-vcs-source-for-project (project-name &optional (errorp t))
+  (or
+   (loop :for vcs-source :in (remove-if-not (lambda (x) (typep x 'vcs-source)) (sources))
+         :when (equal project-name (project-name (vcs-source-project vcs-source)))
+           :do (return vcs-source))
+   (when errorp
+     (error "Unable to find VCS source for project ~S" project-name))))
 
 (defun call-with-sources (sources thunk)
   (let ((*visible-sources* sources))

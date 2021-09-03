@@ -111,10 +111,12 @@ source."
 instance."
   (destructuring-bind (name &key (host "github.com") path branch commit tag systems)
       args
-    (let ((source (context-vcs-source clpmfile))
-          (repo (make-repo-from-description (list :github :host host :path path))))
-      ;; Register the git project.
-      (vcs-source-register-project! source repo name)
+    (let* ((repo-description (list :github :host host :path path))
+           (repo (make-repo-from-description repo-description))
+           (vcs-sources-ht (context-vcs-sources-ht clpmfile))
+           (source (ensure-gethash (repo-to-form repo) vcs-sources-ht
+                                   (make-source 'vcs-source :repo repo-description
+                                                            :project-name name))))
       (assert (xor branch commit tag))
       (push (make-instance 'vcs-project-requirement
                            :systems systems
@@ -132,10 +134,12 @@ instance."
 instance."
   (destructuring-bind (name &key (host "gitlab.com") path branch commit tag systems)
       args
-    (let ((source (context-vcs-source clpmfile))
-          (repo (make-repo-from-description (list :gitlab :host host :path path))))
-      ;; Register the git project.
-      (vcs-source-register-project! source repo name)
+    (let* ((repo-description (list :gitlab :host host :path path))
+           (repo (make-repo-from-description repo-description))
+           (vcs-sources-ht (context-vcs-sources-ht clpmfile))
+           (source (ensure-gethash (repo-to-form repo) vcs-sources-ht
+                                   (make-source 'vcs-source :repo repo-description
+                                                            :project-name name))))
       (assert (xor branch commit tag))
       (push (make-instance 'vcs-project-requirement
                            :systems systems
