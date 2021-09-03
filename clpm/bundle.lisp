@@ -33,7 +33,7 @@
         (with-open-file (s (clpmfile-pathname clpmfile) :direction :output :if-exists if-exists)
           (write-string ";;; -*- Mode: common-lisp; -*-" s)
           (terpri s)
-          (prin1 '(:api-version "0.3") s)
+          (prin1 '(:api-version "0.4") s)
           (terpri s)
           (terpri s)
           (dolist (source (sources))

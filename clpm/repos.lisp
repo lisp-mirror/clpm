@@ -9,7 +9,8 @@
           #:clpm/repos/git
           #:clpm/repos/github
           #:clpm/repos/gitlab
-          #:clpm/repos/local-git-override)
+          #:clpm/repos/local-git-override
+          #:clpm/repos/plain-git)
   (:reexport #:clpm/repos/defs)
   (:reexport #:clpm/repos/git)
   (:reexport #:clpm/repos/github)
@@ -22,6 +23,8 @@
 (defun make-repo-from-description (desc)
   (destructuring-bind (repo-type &rest args) desc
     (ecase repo-type
+      (:git
+       (apply #'make-instance 'plain-git-repo args))
       (:github
        (apply #'make-instance 'github-repo args))
       (:gitlab

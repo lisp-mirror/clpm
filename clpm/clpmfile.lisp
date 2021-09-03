@@ -23,6 +23,8 @@
 
 
 
+(defvar *clpmfile-version*)
+
 (defgeneric clpmfile-pathname (clpmfile))
 
 (defmethod clpmfile-pathname ((clpmfile context))
@@ -104,6 +106,32 @@ source."
                                                    :source fs-source
                                                    :name asd-file
                                                    :why t))))))
+
+(defmethod parse-clpmfile-form (clpmfile (type (eql :git)) args)
+
+  "Parse a :git statement from a clpmfile into a vcs-project-requirement
+instance."
+  (unless (equal *clpmfile-version* "0.4")
+    (error "This form requires API-VERSION 0.3"))
+  (destructuring-bind (name &key repository branch commit tag systems)
+      args
+    (assert repository)
+    (let* ((repo-description (list :git :repository repository))
+           (repo (make-repo-from-description repo-description))
+           (vcs-sources-ht (context-vcs-sources-ht clpmfile))
+           (source (ensure-gethash (repo-to-form repo) vcs-sources-ht
+                                   (make-source 'vcs-source :repo repo-description
+                                                            :project-name name))))
+      (assert (xor branch commit tag))
+      (push (make-instance 'vcs-project-requirement
+                           :systems systems
+                           :name name
+                           :source source
+                           :branch branch
+                           :commit commit
+                           :tag tag
+                           :why t)
+            (context-requirements clpmfile)))))
 
 (defmethod parse-clpmfile-form (clpmfile (type (eql :github)) args)
 
@@ -198,12 +226,15 @@ instance."
 
 (defun read-clpmfile-from-stream (stream pathname)
   (let ((clpmfile (make-instance 'context :name pathname))
-        (source-allowed-p t))
+        (source-allowed-p t)
+        *clpmfile-version*)
     (uiop:with-safe-io-syntax ()
       ;; The first form in the stream must be an API declaration.
       (let ((f (read stream nil)))
-        (unless (equal f '(:api-version "0.3"))
-          (error "Unknown clpmfile API version")))
+        (unless (or (equal f '(:api-version "0.3"))
+                    (equal f '(:api-version "0.4")))
+          (error "Unknown clpmfile API version"))
+        (setf *clpmfile-version* (second f)))
       (with-forms-from-stream (stream form)
         (destructuring-bind (type . args) form
           (when (and (eql type :source)

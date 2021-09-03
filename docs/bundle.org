@@ -28,7 +28,7 @@ with zero configuration or helpers needed (other than ASDF, of course).
    consists of a series of directives where each directive is a list starting
    with a keyword. The directives are described below. Additionally, the first
    directive in the file must be the ~:api-version~ directive. This document
-   describes version "0.3".
+   describes version "0.4".
 
 *** ~:api-version~
 
@@ -37,7 +37,7 @@ with zero configuration or helpers needed (other than ASDF, of course).
     file is described in. Example:
 
     #+begin_src common-lisp
-      (:api-version "0.3")
+      (:api-version "0.4")
     #+end_src
 
 *** ~:source~
@@ -91,6 +91,27 @@ with zero configuration or helpers needed (other than ASDF, of course).
       version specifier (such as ~(= "1.2")~), or a list of version specifiers
       (such as ~((>= "1.1") (< "2"))~).
 
+
+*** ~:git~
+
+    The git directive specifies a requirement that must be satisfied by a git
+    repository hosted at an arbitrary location. Unless specified otherwise,
+    every explicitly defined system (and their dependencies) are included in
+    the bundle.
+
+    #+begin_src common-lisp
+      (name &key repository branch commit tag systems)
+    #+end_src
+
+    + ~name~ :: must be a string, unique in the file.
+    + ~:repository~ :: must be a string, the url of the repository.
+    + ~:branch~ :: If specified, must be a string naming the branch to use. If
+      none of branch, commit, or tag are specified, the branch defaults to the
+      default branch from the server.
+    + ~:commit~ :: If specified, must be a string naming the commit to use.
+    + ~:tag~ :: If specified, must be a string naming the tag to use.
+    + ~:systems~ :: A list naming the systems to require in the bundle. If NIL,
+      all systems are required.
 
 *** ~:github~
 

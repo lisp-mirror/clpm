@@ -18,7 +18,9 @@
   (:export #:git-repo
            #:git-repo-credentials
            #:git-repo-local-dir
-           #:git-repo-uri-string))
+           #:git-repo-uri-string
+           #:git-uri/real-host
+           #:parse-git-uri))
 
 (in-package #:clpm/repos/git)
 
@@ -36,7 +38,7 @@
 
 ;; * URI parsing
 
-(defclass git-uri (uri)
+(defclass git-uri (puri:uri)
   ((user-name
     :initform nil
     :accessor git-uri/user-name)
@@ -69,6 +71,8 @@
              :ssh)
             ("file"
              :file)
+            ("git"
+             :git)
             (t
              :scp)))
         ;; Implicit file protocol
@@ -87,7 +91,7 @@
       (:scp
        (puri:parse-uri (convert-scp-to-ssh uri-string)
                        :class 'git-uri))
-      ((:http :https :ssh :file)
+      ((:http :https :ssh :file :git)
        (puri:parse-uri uri-string
                        :class 'git-uri)))))
 
