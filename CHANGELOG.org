@@ -24,6 +24,16 @@
     the user must specify a command that completely starts the child lisp in a
     clean state.
   + Better support for using MSYS2's git on Windows.
+  + Support for Mac M1 (#20).
+  + Fixed bug causing groveling to take an inordinately long time for systems
+    with =:defsystem-depends-on= or direct calls to =asdf:load-system= in their
+    system definition files (!9).
+  + Fixed bug causing unused git and asd directives to linger in
+    =clpmfile.lock= (#32).
+  + Add support for bare git repos in clpmfile (not from Github or
+    Gitlab) (#22).
+  + Add clpmfile =:api-version= ="0.4"=. Remains backwards compatible with
+    0.3. (#22).
 
   Fixes from the aborted 0.3.6:
 
