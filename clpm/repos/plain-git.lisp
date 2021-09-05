@@ -19,7 +19,7 @@
 
 (defclass plain-git-repo (git-repo)
   ((repository
-    :initarg :repository
+    :initarg :url
     :reader git-repo-uri-string)))
 
 (defmethod git-repo-credentials ((repo plain-git-repo))
@@ -70,4 +70,4 @@
 
 (defmethod repo-to-form ((repo plain-git-repo))
   `(:git
-    :repository ,(git-repo-uri-string repo)))
+    :url ,(git-repo-uri-string repo)))

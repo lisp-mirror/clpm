@@ -113,10 +113,10 @@ source."
 instance."
   (unless (equal *clpmfile-version* "0.4")
     (error "This form requires API-VERSION 0.3"))
-  (destructuring-bind (name &key repository branch commit tag systems)
+  (destructuring-bind (name &key url branch commit tag systems)
       args
-    (assert repository)
-    (let* ((repo-description (list :git :repository repository))
+    (assert url)
+    (let* ((repo-description (list :git :url url))
            (repo (make-repo-from-description repo-description))
            (vcs-sources-ht (context-vcs-sources-ht clpmfile))
            (source (ensure-gethash (repo-to-form repo) vcs-sources-ht

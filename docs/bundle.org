@@ -100,11 +100,11 @@ with zero configuration or helpers needed (other than ASDF, of course).
     the bundle.
 
     #+begin_src common-lisp
-      (name &key repository branch commit tag systems)
+      (name &key url branch commit tag systems)
     #+end_src
 
     + ~name~ :: must be a string, unique in the file.
-    + ~:repository~ :: must be a string, the url of the repository.
+    + ~:url~ :: must be a string, the url of the repository.
     + ~:branch~ :: If specified, must be a string naming the branch to use. If
       none of branch, commit, or tag are specified, the branch defaults to the
       default branch from the server.
