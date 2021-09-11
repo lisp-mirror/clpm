@@ -188,12 +188,12 @@ appropriate tag or see [[http://www.clpm.dev]].
    everywhere possible. This trend is not going away, therefore CLPM should
    natively support HTTPS.
 
-   As only LispWorks is the only Common Lisp implementation I am aware of that
-   has native support for TLS, this means that CLPM has to use third party
-   tools to achieve this support. This further drives the separation of the
-   core and client, as CLPM can use foreign libraries to provide TLS support
-   and this is not something that should be brought into a development image
-   that does not otherwise need it.
+   As LispWorks is the only Common Lisp implementation I am aware of that has
+   native support for TLS, this means that CLPM has to use third party tools to
+   achieve this support. This further drives the separation of the core and
+   client, as CLPM can use foreign libraries to provide TLS support and this is
+   not something that should be brought into a development image that does not
+   otherwise need it.
 
    Additionally, Quicklisp packages are served over HTTPS. While the Quicklisp
    client cannot take advantage of that (without
