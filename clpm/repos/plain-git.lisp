@@ -26,6 +26,8 @@
   nil)
 
 (defun split-path (path)
+  (when (eql (aref path 0) #\/)
+    (setf path (subseq path 1)))
   (aprog1 (split-sequence #\/ path)
     (dolist (segment it)
       (assert (not (equal "" segment)))
