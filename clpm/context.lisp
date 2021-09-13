@@ -515,7 +515,6 @@ in place with the same name. Return the new requirement if it was modified."
 ;; * Serializing
 
 (defun save-context (context)
-  (assert (context-reverse-dependencies context))
   (let ((pn (if (context-anonymous-p context)
                 (merge-pathnames (make-pathname :type "lock") (context-name context))
                 (global-context-pathname (context-name context)))))
