@@ -1,6 +1,6 @@
 #+TITLE: CLPM Changelog
 
-* v0.4.0 - Unreleased
+* v0.4.0 - 2021-09-13
 
   + Changed layout of release tarballs.
   + Published tarballs now contain a static executable (#11).
